@@ -1,0 +1,14 @@
+# Editor
+.vscode/
+.idea/
+.ipynb*
+*.ipynb
+
+# Virtual environments
+.envrc
+.direnv/
+.venv/
+venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/

@@ -83,8 +83,8 @@ class StreamingInterface:
 async def main(event_loop):
     parser = argparse.ArgumentParser(description="pyConditionWave")
     parser.add_argument("ip", help="IP address of conditionWave device")
-    parser.add_argument("--samplerate", type=int, default=MAX_SAMPLERATE, help="Sample rate in Hz")
-    parser.add_argument("--blocksize", type=int, default=1000000, help="Block size")
+    parser.add_argument("--samplerate", "-s", type=int, default=MAX_SAMPLERATE, help="Sample rate in Hz")
+    parser.add_argument("--blocksize", "-b", type=int, default=1000000, help="Block size")
 
     args = parser.parse_args()
 
@@ -99,7 +99,7 @@ async def main(event_loop):
 
     with ThreadPoolExecutor(max_workers=1) as pool:
         async for y in stream.read(args.blocksize):
-            Y = await loop.run_in_executor(pool, fft, y)
+            Y = await event_loop.run_in_executor(pool, fft, y)
             y_max = np.max(y)
             cols = int(80 * y_max / 2**15)
             print(f"{y_max:<8d}" + "#" * cols + "-" * (80 - cols), end="\r")

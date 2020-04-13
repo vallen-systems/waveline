@@ -6,7 +6,7 @@ import logging
 import coloredlogs
 import numpy as np
 
-from conditionwave import ConditionWave, _MAX_SAMPLERATE
+from conditionwave import ConditionWave, MAX_SAMPLERATE
 
 
 logger_fmt = "%(asctime)s %(levelname)s %(message)s"
@@ -26,7 +26,7 @@ async def main(ip: str, samplerate: int, blocksize: int, event_loop):
     await cw.connect()
     await cw.get_info()
     await cw.set_range(0)
-    await cw.set_decimation(int(_MAX_SAMPLERATE / samplerate))
+    await cw.set_decimation(int(MAX_SAMPLERATE / samplerate))
     await cw.start_acquisition()
 
     with ThreadPoolExecutor(max_workers=1) as pool:
@@ -42,7 +42,7 @@ async def main(ip: str, samplerate: int, blocksize: int, event_loop):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="pyConditionWave")
     parser.add_argument("ip", help="IP address of conditionWave device")
-    parser.add_argument("--samplerate", "-s", type=int, default=_MAX_SAMPLERATE, help="Sample rate in Hz")
+    parser.add_argument("--samplerate", "-s", type=int, default=MAX_SAMPLERATE, help="Sample rate in Hz")
     parser.add_argument("--blocksize", "-b", type=int, default=1000000, help="Block size")
 
     args = parser.parse_args()

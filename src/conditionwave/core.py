@@ -7,26 +7,26 @@ from typing import List
 import numpy as np
 
 
-_CHANNELS = (1, 2)
-_MAX_SAMPLERATE = 10_000_000
-_RANGES = {
+CHANNELS = (1, 2)
+MAX_SAMPLERATE = 10_000_000
+RANGES = {
     0: 0.05,  # 50 mV
     1: 5.0,  # 5 V
 }
-_DEFAULT_RANGE = 0
-_PORT = 5432
+DEFAULT_RANGE = 0
+PORT = 5432
 
 
 logger = logging.getLogger(__name__)
 
 
 class ConditionWave:
-    def __init__(self, address: str, port: int = _PORT):
+    def __init__(self, address: str, port: int = PORT):
         self._address = address
-        self._port = port
+        self.PORT = port
         self._reader = None
         self._writer = None
-        self._range = _RANGES[_DEFAULT_RANGE]
+        self._range = RANGES[DEFAULT_RANGE]
         self._decimation = 1
         self._daq_active = False
 
@@ -40,10 +40,10 @@ class ConditionWave:
         # enable broadcasting mode
         server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         # bind to port
-        server.bind(("", _PORT))
+        server.bind(("", PORT))
 
         # send broadcast message
-        server.sendto(MESSAGE, ("<broadcast>", _PORT))
+        server.sendto(MESSAGE, ("<broadcast>", PORT))
 
         def get_response(timeout=timeout):   
             server.settimeout(timeout)
@@ -65,9 +65,9 @@ class ConditionWave:
         return self._decimation
 
     async def connect(self):
-        logger.info(f"Open connection {self._address}:{self._port}...")
+        logger.info(f"Open connection {self._address}:{self.PORT}...")
         self._reader, self._writer = await asyncio.open_connection(
-            self._address, self._port,
+            self._address, self.PORT,
         )
 
     async def _write(self, message):
@@ -82,11 +82,11 @@ class ConditionWave:
         print(data.decode())
 
     async def set_range(self, range_index: int):
-        if range_index not in _RANGES.keys():
+        if range_index not in RANGES.keys():
             raise ValueError(f"Invalid range index.")
-        logger.info(f"Set range to {range_index} ({_RANGES[range_index]} V)...")
+        logger.info(f"Set range to {range_index} ({RANGES[range_index]} V)...")
         await self._write(f"set_adc_range 0 {range_index:d}")
-        self._range = _RANGES[range_index]
+        self._range = RANGES[range_index]
 
     async def set_decimation(self, factor: int):
         factor = int(factor)
@@ -100,8 +100,8 @@ class ConditionWave:
         self._daq_active = True
 
     async def stream(self, channel: int, blocksize: int):
-        if channel not in _CHANNELS:
-            raise ValueError(f"Channel must be in {_CHANNELS}")
+        if channel not in CHANNELS:
+            raise ValueError(f"Channel must be in {CHANNELS}")
         if not self._daq_active:
             raise RuntimeError("Data acquisition not started")
 
@@ -111,14 +111,15 @@ class ConditionWave:
                 f"(blocksize: {blocksize}, range: {self._range} V)"
             )
         )
-        port = int(self._port + channel)
+        port = int(self.PORT + channel)
         blocksize_bits = int(blocksize * 2)  # 16 bit = 2 * 8 byte
         to_volts = float(self._range) / (2 ** 15)
-        reader, _ = await asyncio.open_connection(self._address, port)
+        reader, writer = await asyncio.open_connection(self._address, port)
         while True:
             buffer = await reader.readexactly(blocksize_bits)
             yield np.frombuffer(buffer, dtype=np.int16).astype(np.float32) * to_volts
-    
+        writer.close()
+
     async def stop_acquisition(self):
         logger.info("Stop data acquisition...")
         await self._write("stop")

@@ -12,3 +12,25 @@ venv/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
+
+# Distribution / packaging
+dist/
+pip-wheel-metadata/
+*.egg-info/
+
+# Test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Tools
+.mypy_cache
+
+# Sphinx
+docs/_build/
+docs/generated/

@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import logging
 import warnings
 import socket
@@ -114,10 +115,15 @@ class ConditionWave:
         port = int(self.PORT + channel)
         blocksize_bits = int(blocksize * 2)  # 16 bit = 2 * 8 byte
         to_volts = float(self._range) / (2 ** 15)
+
+        timestamp_ms = 1000 * datetime.now().timestamp()
+        interval_ms = 1000 * self.decimation * blocksize / MAX_SAMPLERATE
+
         reader, writer = await asyncio.open_connection(self._address, port)
         while True:
             buffer = await reader.readexactly(blocksize_bits)
-            yield np.frombuffer(buffer, dtype=np.int16).astype(np.float32) * to_volts
+            yield timestamp_ms, np.frombuffer(buffer, dtype=np.int16).astype(np.float32) * to_volts
+            timestamp_ms += interval_ms
         writer.close()
 
     async def stop_acquisition(self):

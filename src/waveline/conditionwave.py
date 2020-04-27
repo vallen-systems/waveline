@@ -1,7 +1,16 @@
+"""
+conditionWave
+=============
+
+.. autosummary::
+    :toctree: generated
+
+    ConditionWave
+"""
+
 import asyncio
 from datetime import datetime
 import logging
-import warnings
 import socket
 from typing import List
 
@@ -22,9 +31,10 @@ logger = logging.getLogger(__name__)
 
 
 class ConditionWave:
-    def __init__(self, address: str, port: int = PORT):
+    """API for conditionWave device."""
+
+    def __init__(self, address: str):
         self._address = address
-        self.PORT = port
         self._reader = None
         self._writer = None
         self._range = RANGES[DEFAULT_RANGE]
@@ -33,10 +43,10 @@ class ConditionWave:
 
     @staticmethod
     def discover(timeout: float = 0.5) -> List[str]:
-        MESSAGE = b"find"
+        message = b"find"
         server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
-        # enable port reusage so we will be able to run multiple clients and servers on single (host, port) 
+        # enable port reusage, allow multiple clients and servers on single host / port
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         # enable broadcasting mode
         server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -44,13 +54,13 @@ class ConditionWave:
         server.bind(("", PORT))
 
         # send broadcast message
-        server.sendto(MESSAGE, ("<broadcast>", PORT))
+        server.sendto(message, ("<broadcast>", PORT))
 
-        def get_response(timeout=timeout):   
+        def get_response(timeout=timeout):
             server.settimeout(timeout)
             while True:
                 try:
-                    _, (ip, port) = server.recvfrom(len(MESSAGE))
+                    _, (ip, _) = server.recvfrom(len(message))
                     yield ip
                 except socket.timeout:
                     break
@@ -66,9 +76,9 @@ class ConditionWave:
         return self._decimation
 
     async def connect(self):
-        logger.info(f"Open connection {self._address}:{self.PORT}...")
+        logger.info(f"Open connection {self._address}:{PORT}...")
         self._reader, self._writer = await asyncio.open_connection(
-            self._address, self.PORT,
+            self._address, PORT,
         )
 
     async def _write(self, message):
@@ -84,7 +94,7 @@ class ConditionWave:
 
     async def set_range(self, range_index: int):
         if range_index not in RANGES.keys():
-            raise ValueError(f"Invalid range index.")
+            raise ValueError("Invalid range index.")
         logger.info(f"Set range to {range_index} ({RANGES[range_index]} V)...")
         await self._write(f"set_adc_range 0 {range_index:d}")
         self._range = RANGES[range_index]
@@ -112,7 +122,7 @@ class ConditionWave:
                 f"(blocksize: {blocksize}, range: {self._range} V)"
             )
         )
-        port = int(self.PORT + channel)
+        port = int(PORT + channel)
         blocksize_bits = int(blocksize * 2)  # 16 bit = 2 * 8 byte
         to_volts = float(self._range) / (2 ** 15)
 

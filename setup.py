@@ -6,9 +6,9 @@ INSTALL_REQUIRES = [
 
 EXTRAS_REQUIRE = {
     "docs": [
-    #     "sphinx<2.3",
-    #     "sphinx-autodoc-typehints",
-    #     "sphinx-rtd-theme",
+        # "sphinx<2.3",
+        # "sphinx-autodoc-typehints",
+        # "sphinx-rtd-theme",
     ],
     "tests": [
         "pytest",
@@ -24,11 +24,11 @@ EXTRAS_REQUIRE = {
 EXTRAS_REQUIRE["dev"] = EXTRAS_REQUIRE["docs"] + EXTRAS_REQUIRE["tests"] + EXTRAS_REQUIRE["tools"]
 
 setup(
-    name="conditionwave",
+    name="waveline",
     version="0.1.0",
-    description="API for Vallen Systeme conditionWave measurement device",
-    author="Lukas Berbuer",
-    author_email="lukas.berbuer@vallen.de",
+    description="API for Vallen Systeme waveLine devices (conditionWave, spotWave)",
+    author="Lukas Berbuer (Vallen Systeme GmbH)",
+    author_email="software@vallen.de",
     packages=find_packages("src"),
     package_dir={"": "src"},
     python_requires=">=3.6",

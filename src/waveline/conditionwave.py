@@ -46,8 +46,6 @@ class ConditionWave:
         message = b"find"
         server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
-        # enable port reusage, allow multiple clients and servers on single host / port
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         # enable broadcasting mode
         server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         # bind to port

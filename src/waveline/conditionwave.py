@@ -12,7 +12,7 @@ import asyncio
 from datetime import datetime, timedelta
 import logging
 import socket
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
@@ -26,10 +26,10 @@ class ConditionWave:
     CHANNELS = (1, 2)
     MAX_SAMPLERATE = 10_000_000
     RANGES = {
-        0: 0.05,  # 50 mV
-        1: 5.0,  # 5 V
+        0.05: 0,  # 50 mV
+        5.0: 1,  # 5 V
     }
-    DEFAULT_RANGE = 0
+    DEFAULT_RANGE = 0.05
     PORT = 5432
 
     def __init__(self, address: str):
@@ -38,6 +38,10 @@ class ConditionWave:
         self._writer = None
         self._range = self.RANGES[self.DEFAULT_RANGE]
         self._decimation = 1
+        self._filter_highpass = 0
+        self._filter_lowpass = self.MAX_SAMPLERATE
+        self._filter_order = 8
+        self._connected = False
         self._daq_active = False
 
     async def __aenter__(self):
@@ -49,6 +53,15 @@ class ConditionWave:
 
     @classmethod
     def discover(cls, timeout: float = 0.5) -> List[str]:
+        """
+        Discover conditionWave devices in network.
+
+        Args:
+            timeout: Timeout in seconds
+
+        Returns:
+            List of IP adresses
+        """
         message = b"find"
         server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
@@ -73,22 +86,30 @@ class ConditionWave:
 
     @property
     def input_range(self) -> float:
+        """Input range in volts."""
         return self._range
 
     @property
     def decimation(self) -> int:
+        """Decimation factor."""
         return self._decimation
 
     async def connect(self):
+        """Connect to device."""
+        if self._connected:
+            return
         logger.info(f"Open connection {self._address}:{self.PORT}...")
-        self._reader, self._writer = await asyncio.open_connection(
-            self._address, self.PORT,
-        )
+        self._reader, self._writer = await asyncio.open_connection(self._address, self.PORT)
+        self._connected = True
     
     async def close(self):
+        """Close connection."""
+        if not self._connected:
+            return
         try:
+            logger.info(f"Close connection {self._address}:{self.PORT}...")
             self._writer.close()
-            logger.info(f"Connection {self._address}:{self.PORT} closed...")
+            self._connected = False
         except:
             pass
 
@@ -98,30 +119,83 @@ class ConditionWave:
         await self._writer.drain()
 
     async def get_info(self):
+        """Print info."""
         logger.info("Get info...")
         await self._write("get_info")
         data = await self._reader.read(1000)
         print(data.decode())
 
-    async def set_range(self, range_index: int):
-        if range_index not in self.RANGES.keys():
-            raise ValueError("Invalid range index.")
-        logger.info(f"Set range to {range_index} ({self.RANGES[range_index]} V)...")
+    async def set_range(self, range_volts: float):
+        """
+        Set input range.
+
+        Args:
+            range_volts: Input range in volts (0.05, 5)
+        """
+        try:
+            range_index = self.RANGES[range_volts]
+        except KeyError:
+            raise ValueError(f"Invalid range. Possible values: {list(self.RANGES.keys())}")
+        logger.info(f"Set range to {range_index} ({range_volts} V)...")
         await self._write(f"set_adc_range 0 {range_index:d}")
-        self._range = self.RANGES[range_index]
+        self._range = range_volts
 
     async def set_decimation(self, factor: int):
+        """
+        Set decimation factor.
+
+        Args:
+            factor: Decimation factor [1, 16]
+        """
         factor = int(factor)
         logger.info(f"Set decimation factor to {factor}...")
         await self._write(f"set_decimation 0 {factor:d}")
         self._decimation = factor
 
+    async def set_filter(
+        self,
+        highpass: Optional[float] = None,
+        lowpass: Optional[float] = None,
+        order: int = 8,
+    ):
+        """
+        Apply IIR filter settings.
+
+        Default is bypass.
+
+        Args:
+            highpass: Highpass frequency in Hz
+            lowpass: Lowpass frequency in Hz
+            order: IIR filter order
+        """
+        self._filter_highpass = highpass
+        self._filter_lowpass = lowpass
+        self._filter_order = order
+
+        if highpass is None and lowpass is None:
+            await self._write(f"set_filter 0")
+            return
+        if lowpass:
+            highpass = 0
+        await self._write(f"set_filter 0 {highpass / 1e3} {lowpass / 1e3} {order:d}")
+
     async def start_acquisition(self):
+        """Start data acquisition."""
         logger.info("Start data acquisition...")
         await self._write("start")
         self._daq_active = True
 
     async def stream(self, channel: int, blocksize: int):
+        """
+        Async generator to stream channel data.
+
+        Args:
+            channel: Channel number [0, 1]
+            blocksize: Number of samples per block
+
+        Yields:
+            Tuple of datetime and numpy array (in volts)
+        """
         if channel not in self.CHANNELS:
             raise ValueError(f"Channel must be in {self.CHANNELS}")
         if not self._daq_active:
@@ -150,6 +224,7 @@ class ConditionWave:
         writer.close()
 
     async def stop_acquisition(self):
+        """Stop data acquisition."""
         logger.info("Stop data acquisition...")
         await self._write("stop")
         self._daq_active = False

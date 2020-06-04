@@ -136,7 +136,7 @@ class ConditionWave:
             range_index = self.RANGES[range_volts]
         except KeyError:
             raise ValueError(f"Invalid range. Possible values: {list(self.RANGES.keys())}")
-        logger.info(f"Set range to {range_index} ({range_volts} V)...")
+        logger.info(f"Set range to {range_volts} V ({range_index})...")
         await self._write(f"set_adc_range 0 {range_index:d}")
         self._range = range_volts
 

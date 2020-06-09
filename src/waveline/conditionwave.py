@@ -175,7 +175,7 @@ class ConditionWave:
         if highpass is None and lowpass is None:
             await self._write(f"set_filter 0")
             return
-        if lowpass:
+        if highpass is None and lowpass:
             highpass = 0
         await self._write(f"set_filter 0 {highpass / 1e3} {lowpass / 1e3} {order:d}")
 

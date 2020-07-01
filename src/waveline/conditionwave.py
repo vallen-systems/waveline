@@ -109,6 +109,7 @@ class ConditionWave:
         try:
             logger.info(f"Close connection {self._address}:{self.PORT}...")
             self._writer.close()
+            await self._writer.wait_closed()
             self._connected = False
         except:
             pass

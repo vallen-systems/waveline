@@ -9,6 +9,7 @@ conditionWave
 """
 
 import asyncio
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
 import socket
@@ -43,6 +44,10 @@ class ConditionWave:
         self._filter_order = 8
         self._connected = False
         self._daq_active = False
+        self._task_read_acquisition_status = None
+        self._lock = asyncio.Lock()
+        self._temperature = 0
+        self._buffersize = 0
 
     async def __aenter__(self):
         await self.connect()
@@ -63,21 +68,16 @@ class ConditionWave:
             List of IP adresses
         """
         message = b"find"
-        server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-
-        # enable broadcasting mode
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        # bind to port
-        server.bind(("", cls.PORT))
-
-        # send broadcast message
-        server.sendto(message, ("<broadcast>", cls.PORT))
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        s.bind(("", cls.PORT))
+        s.sendto(message, ("<broadcast>", cls.PORT))
 
         def get_response(timeout=timeout):
-            server.settimeout(timeout)
+            s.settimeout(timeout)
             while True:
                 try:
-                    _, (ip, _) = server.recvfrom(len(message))
+                    _, (ip, _) = s.recvfrom(len(message))
                     yield ip
                 except socket.timeout:
                     break
@@ -180,10 +180,52 @@ class ConditionWave:
             highpass = 0
         await self._write(f"set_filter 0 {highpass / 1e3} {lowpass / 1e3} {order:d}")
 
+    async def _read_acquisition_status(self):
+        logger.debug("Start reading acquisition status")
+        try:
+            while True:
+                line = await self._reader.readuntil(b'\n')  # raises IncompleteReadError on EOF
+                line = line.decode("utf-8").rstrip()
+
+                try:
+                    key, value = line.split("=")
+                except ValueError:
+                    logger.warning(f"Can not parse acqusition status '{line}'")
+                
+                if key == "temp":
+                    # logger.debug(f"Temperature = {value} °C")
+                    async with self._lock:
+                        self._temperature = value
+                elif key == "buffer_size":
+                    # logger.debug(f"Buffer size = {value}")
+                    async with self._lock:
+                        self._buffersize = value
+                elif key == "error":
+                    logging.error(f"Error during acquisition: {value}")
+                else:
+                    raise logger.warning(f"Unknown status key '{key}'")
+        except asyncio.IncompleteReadError:
+            logger.warning("No more acquisition status to read, quit task")
+        except asyncio.CancelledError:
+            logger.debug("Stop reading acquisition status")
+
+    async def get_temperature(self):
+        """Get system temperatur."""
+        async with self._lock:
+            return self._temperature
+
+    async def get_buffersize(self):
+        """Get current buffer size."""
+        async with self._lock:
+            return self._buffersize
+
     async def start_acquisition(self):
         """Start data acquisition."""
+        if self._daq_active:
+            return
         logger.info("Start data acquisition...")
         await self._write("start")
+        self._task_read_acquisition_status = asyncio.create_task(self._read_acquisition_status())
         self._daq_active = True
 
     async def stream(self, channel: int, blocksize: int):
@@ -226,9 +268,14 @@ class ConditionWave:
 
     async def stop_acquisition(self):
         """Stop data acquisition."""
+        if not self._daq_active:
+            return
         logger.info("Stop data acquisition...")
         await self._write("stop")
+        self._task_read_acquisition_status.cancel()
+        self._task_read_acquisition_status = None
         self._daq_active = False
 
     def __del__(self):
-        self.close()
+        if self._writer:
+            self._writer.close()

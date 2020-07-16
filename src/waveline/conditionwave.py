@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 import logging
 import socket
+from threading import Lock
 from typing import List, Optional
 
 import numpy as np
@@ -36,6 +37,65 @@ class ChannelSettings:
     range_volts: float
     decimation_factor: int
     filter_settings: FilterSettings
+
+
+class _AcquisitionStatus:
+    """Helper class read and parse status data on control port during acquisition."""
+
+    def __init__(self, stream_reader: asyncio.StreamReader):
+        self._reader = stream_reader
+        self._task = None
+        self._lock = Lock()
+        self._temperature = 0
+        self._buffersize = 0
+
+    async def _read_acquisition_status(self):
+        logger.debug("Start reading acquisition status")
+        try:
+            while True:
+                line = await self._reader.readuntil(b'\n')  # raises IncompleteReadError on EOF
+                line = line.decode("utf-8").rstrip()
+
+                try:
+                    key, value = line.split("=")
+                except ValueError:
+                    logger.warning(f"Can not parse acqusition status '{line}'")
+
+                if key == "temp":
+                    logger.debug(f"Temperature = {value} °C")
+                    with self._lock:
+                        self._temperature = value
+                elif key == "buffer_size":
+                    logger.debug(f"Buffer size = {value}")
+                    with self._lock:
+                        self._buffersize = value
+                elif key == "error":
+                    logging.error(f"Error during acquisition: {value}")
+                else:
+                    raise logger.warning(f"Unknown status key '{key}'")
+        except asyncio.IncompleteReadError:
+            logger.warning("No more acquisition status to read, quit task")
+        except asyncio.CancelledError:
+            logger.debug("Stop reading acquisition status")
+
+    async def start(self):
+        """Start async task."""
+        self._task = asyncio.create_task(self._read_acquisition_status())
+
+    async def stop(self):
+        """Stop async task."""
+        self._task.cancel()
+        self._task = None
+
+    def get_temperature(self):
+        """Get system temperatur."""
+        with self._lock:
+            return self._temperature
+
+    def get_buffersize(self):
+        """Get current buffer size."""
+        with self._lock:
+            return self._buffersize
 
 
 class ConditionWave:
@@ -65,10 +125,7 @@ class ConditionWave:
         self._settings = copy.deepcopy(self.DEFAULT_SETTINGS)
         self._connected = False
         self._daq_active = False
-        self._task_read_acquisition_status = None
-        self._lock = asyncio.Lock()
-        self._temperature = 0
-        self._buffersize = 0
+        self._daq_status = None
 
     async def __aenter__(self):
         await self.connect()
@@ -123,9 +180,11 @@ class ConditionWave:
         """Connect to device."""
         if self._connected:
             return
+
         logger.info(f"Open connection {self._address}:{self.PORT}...")
         self._reader, self._writer = await asyncio.open_connection(self._address, self.PORT)
         self._connected = True
+
         logger.info("Set default/saved settings...")
         await self.set_range(self.input_range)
         await self.set_decimation(self.decimation)
@@ -170,6 +229,7 @@ class ConditionWave:
             range_index = self.RANGES[range_volts]
         except KeyError:
             raise ValueError(f"Invalid range. Possible values: {list(self.RANGES.keys())}")
+
         logger.info(f"Set range to {range_volts} V ({range_index})...")
         await self._write(f"set_adc_range 0 {range_index:d}")
         self._settings.range_volts = range_volts
@@ -184,6 +244,7 @@ class ConditionWave:
         factor = int(factor)
         if not 1 <= factor <= 16:
             raise ValueError("Decimation factor must be in the range of [1, 16]")
+
         logger.info(f"Set decimation factor to {factor}...")
         await self._write(f"set_decimation 0 {factor:d}")
         self._settings.decimation_factor = factor
@@ -221,52 +282,14 @@ class ConditionWave:
             )
         )
 
-    async def _read_acquisition_status(self):
-        logger.debug("Start reading acquisition status")
-        try:
-            while True:
-                line = await self._reader.readuntil(b'\n')  # raises IncompleteReadError on EOF
-                line = line.decode("utf-8").rstrip()
-
-                try:
-                    key, value = line.split("=")
-                except ValueError:
-                    logger.warning(f"Can not parse acqusition status '{line}'")
-
-                if key == "temp":
-                    # logger.debug(f"Temperature = {value} °C")
-                    async with self._lock:
-                        self._temperature = value
-                elif key == "buffer_size":
-                    # logger.debug(f"Buffer size = {value}")
-                    async with self._lock:
-                        self._buffersize = value
-                elif key == "error":
-                    logging.error(f"Error during acquisition: {value}")
-                else:
-                    raise logger.warning(f"Unknown status key '{key}'")
-        except asyncio.IncompleteReadError:
-            logger.warning("No more acquisition status to read, quit task")
-        except asyncio.CancelledError:
-            logger.debug("Stop reading acquisition status")
-
-    async def get_temperature(self):
-        """Get system temperatur."""
-        async with self._lock:
-            return self._temperature
-
-    async def get_buffersize(self):
-        """Get current buffer size."""
-        async with self._lock:
-            return self._buffersize
-
     async def start_acquisition(self):
         """Start data acquisition."""
         if self._daq_active:
             return
         logger.info("Start data acquisition...")
         await self._write("start")
-        self._task_read_acquisition_status = asyncio.create_task(self._read_acquisition_status())
+        self._daq_status = _AcquisitionStatus(self._reader)
+        await self._daq_status.start()
         self._daq_active = True
 
     async def stream(self, channel: int, blocksize: int):
@@ -313,8 +336,7 @@ class ConditionWave:
             return
         logger.info("Stop data acquisition...")
         await self._write("stop")
-        self._task_read_acquisition_status.cancel()
-        self._task_read_acquisition_status = None
+        await self._daq_status.stop()
         self._daq_active = False
 
     def __del__(self):

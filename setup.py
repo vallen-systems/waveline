@@ -25,7 +25,7 @@ EXTRAS_REQUIRE["dev"] = EXTRAS_REQUIRE["docs"] + EXTRAS_REQUIRE["tests"] + EXTRA
 
 setup(
     name="waveline",
-    version="0.1.0",
+    version="0.1.1",
     description="API for Vallen Systeme waveLine devices (conditionWave, spotWave)",
     author="Lukas Berbuer (Vallen Systeme GmbH)",
     author_email="software@vallen.de",

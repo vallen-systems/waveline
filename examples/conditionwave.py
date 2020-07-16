@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 
-async def main(ip: str, samplerate: int, blocksize: int, event_loop):
+async def main(ip: str, samplerate: int, blocksize: int):
     async with ConditionWave(ip) as cw:
         await cw.get_info()
         await cw.set_range(0.05)
@@ -20,9 +20,11 @@ async def main(ip: str, samplerate: int, blocksize: int, event_loop):
         await cw.set_filter(100e3, 500e3, 8)
         await cw.start_acquisition()
 
+        loop = asyncio.get_event_loop()
+
         with ThreadPoolExecutor(max_workers=1) as pool:
             async for timestamp, y in cw.stream(1, blocksize):
-                # Y = await event_loop.run_in_executor(pool, lambda y: np.abs(np.fft.rfft(y)), y)
+                # Y = await loop.run_in_executor(pool, lambda y: np.abs(np.fft.rfft(y)), y)
                 y_max = np.max(y)
                 cols = int(80 * y_max / cw.input_range)
                 print(f"{y_max:<8f} V: " + "#" * cols + "-" * (80 - cols), end="\r")
@@ -38,6 +40,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(args.ip, args.samplerate, args.blocksize, loop))
-    loop.close()
+    asyncio.run(main(args.ip, args.samplerate, args.blocksize))

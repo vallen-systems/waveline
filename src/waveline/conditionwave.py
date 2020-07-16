@@ -12,6 +12,7 @@ import asyncio
 import copy
 from datetime import datetime, timedelta
 from dataclasses import dataclass
+from functools import wraps
 import logging
 import socket
 from threading import Lock
@@ -62,11 +63,11 @@ class _AcquisitionStatus:
                     logger.warning(f"Can not parse acqusition status '{line}'")
 
                 if key == "temp":
-                    logger.debug(f"Temperature = {value} °C")
+                    # logger.debug(f"Temperature = {value} °C")
                     with self._lock:
                         self._temperature = value
                 elif key == "buffer_size":
-                    logger.debug(f"Buffer size = {value}")
+                    # logger.debug(f"Buffer size = {value}")
                     with self._lock:
                         self._buffersize = value
                 elif key == "error":
@@ -96,6 +97,26 @@ class _AcquisitionStatus:
         """Get current buffer size."""
         with self._lock:
             return self._buffersize
+
+
+def require_connected(func):
+    def check(obj: "ConditionWave"):
+        if not obj.connected:
+            raise ValueError("Device not connected")
+
+    @wraps(func)
+    async def async_wrapper(self: "ConditionWave", *args, **kwargs):
+        check(self)
+        return await func(self, *args, **kwargs)
+
+    @wraps(func)
+    def sync_wrapper(self: "ConditionWave", *args, **kwargs):
+        check(self)
+        return func(self, *args, **kwargs)
+
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+    return sync_wrapper
 
 
 class ConditionWave:
@@ -163,6 +184,11 @@ class ConditionWave:
         return sorted(get_response())
 
     @property
+    def connected(self) -> bool:
+        """Check if connected to device."""
+        return self._connected
+
+    @property
     def input_range(self) -> float:
         """Input range in volts."""
         return self._settings.range_volts
@@ -178,7 +204,7 @@ class ConditionWave:
 
     async def connect(self):
         """Connect to device."""
-        if self._connected:
+        if self.connected:
             return
 
         logger.info(f"Open connection {self._address}:{self.PORT}...")
@@ -196,7 +222,7 @@ class ConditionWave:
 
     async def close(self):
         """Close connection."""
-        if not self._connected:
+        if not self.connected:
             return
         try:
             logger.info(f"Close connection {self._address}:{self.PORT}...")
@@ -206,11 +232,13 @@ class ConditionWave:
         except:  # pylint: disable=bare-except
             pass
 
+    @require_connected
     async def _write(self, message):
         logger.debug("Write message: %s", message)
         self._writer.write(f"{message}\r".encode())
         await self._writer.drain()
 
+    @require_connected
     async def get_info(self):
         """Print info."""
         logger.info("Get info...")
@@ -218,6 +246,7 @@ class ConditionWave:
         data = await self._reader.read(1000)
         print(data.decode())
 
+    @require_connected
     async def set_range(self, range_volts: float):
         """
         Set input range.
@@ -234,6 +263,7 @@ class ConditionWave:
         await self._write(f"set_adc_range 0 {range_index:d}")
         self._settings.range_volts = range_volts
 
+    @require_connected
     async def set_decimation(self, factor: int):
         """
         Set decimation factor.
@@ -249,6 +279,7 @@ class ConditionWave:
         await self._write(f"set_decimation 0 {factor:d}")
         self._settings.decimation_factor = factor
 
+    @require_connected
     async def set_filter(
         self,
         highpass: Optional[float] = None,
@@ -282,6 +313,7 @@ class ConditionWave:
             )
         )
 
+    @require_connected
     async def start_acquisition(self):
         """Start data acquisition."""
         if self._daq_active:
@@ -292,6 +324,7 @@ class ConditionWave:
         await self._daq_status.start()
         self._daq_active = True
 
+    @require_connected
     async def stream(self, channel: int, blocksize: int):
         """
         Async generator to stream channel data.
@@ -330,6 +363,7 @@ class ConditionWave:
             timestamp += interval
         writer.close()
 
+    @require_connected
     async def stop_acquisition(self):
         """Stop data acquisition."""
         if not self._daq_active:

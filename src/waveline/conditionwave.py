@@ -9,7 +9,6 @@ conditionWave
 """
 
 import asyncio
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
 import socket
@@ -37,10 +36,10 @@ class ConditionWave:
         self._address = address
         self._reader = None
         self._writer = None
-        self._range = self.RANGES[self.DEFAULT_RANGE]
+        self._range = self.DEFAULT_RANGE
         self._decimation = 1
-        self._filter_highpass = 0
-        self._filter_lowpass = self.MAX_SAMPLERATE
+        self._filter_highpass: Optional[float] = 0
+        self._filter_lowpass: Optional[float] = self.MAX_SAMPLERATE
         self._filter_order = 8
         self._connected = False
         self._daq_active = False
@@ -53,7 +52,7 @@ class ConditionWave:
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, *args, **kwargs):
         await self.close()
 
     @classmethod
@@ -68,16 +67,16 @@ class ConditionWave:
             List of IP adresses
         """
         message = b"find"
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        s.bind(("", cls.PORT))
-        s.sendto(message, ("<broadcast>", cls.PORT))
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.bind(("", cls.PORT))
+        sock.sendto(message, ("<broadcast>", cls.PORT))
 
         def get_response(timeout=timeout):
-            s.settimeout(timeout)
+            sock.settimeout(timeout)
             while True:
                 try:
-                    _, (ip, _) = s.recvfrom(len(message))
+                    _, (ip, _) = sock.recvfrom(len(message))
                     yield ip
                 except socket.timeout:
                     break
@@ -101,7 +100,7 @@ class ConditionWave:
         logger.info(f"Open connection {self._address}:{self.PORT}...")
         self._reader, self._writer = await asyncio.open_connection(self._address, self.PORT)
         self._connected = True
-    
+
     async def close(self):
         """Close connection."""
         if not self._connected:
@@ -111,7 +110,7 @@ class ConditionWave:
             self._writer.close()
             await self._writer.wait_closed()
             self._connected = False
-        except:
+        except:  # pylint: disable=bare-except
             pass
 
     async def _write(self, message):
@@ -173,12 +172,18 @@ class ConditionWave:
         self._filter_lowpass = lowpass
         self._filter_order = order
 
-        if highpass is None and lowpass is None:
-            await self._write(f"set_filter 0")
-            return
-        if highpass is None and lowpass:
-            highpass = 0
-        await self._write(f"set_filter 0 {highpass / 1e3} {lowpass / 1e3} {order:d}")
+        def value_or(value: Optional[float], default_value: float):
+            if value is None:
+                return default_value
+            return value
+
+        await self._write(
+            "set_filter 0 {highpass} {lowpass} {order}".format(
+                highpass=value_or(highpass, 0) / 1e3,
+                lowpass=value_or(lowpass, self.MAX_SAMPLERATE) / 1e3,
+                order=order,
+            )
+        )
 
     async def _read_acquisition_status(self):
         logger.debug("Start reading acquisition status")
@@ -191,7 +196,7 @@ class ConditionWave:
                     key, value = line.split("=")
                 except ValueError:
                     logger.warning(f"Can not parse acqusition status '{line}'")
-                
+
                 if key == "temp":
                     # logger.debug(f"Temperature = {value} °C")
                     async with self._lock:

@@ -9,7 +9,9 @@ conditionWave
 """
 
 import asyncio
+import copy
 from datetime import datetime, timedelta
+from dataclasses import dataclass
 import logging
 import socket
 from typing import List, Optional
@@ -18,6 +20,22 @@ import numpy as np
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class FilterSettings:
+    """Filter settings."""
+    highpass: Optional[float]
+    lowpass: Optional[float]
+    order: int = 8
+
+
+@dataclass
+class ChannelSettings:
+    """Channel settings."""
+    range_volts: float
+    decimation_factor: int
+    filter_settings: FilterSettings
 
 
 class ConditionWave:
@@ -29,18 +47,22 @@ class ConditionWave:
         0.05: 0,  # 50 mV
         5.0: 1,  # 5 V
     }
-    DEFAULT_RANGE = 0.05
     PORT = 5432
+    DEFAULT_SETTINGS = ChannelSettings(
+        range_volts=0.05,
+        decimation_factor=1,
+        filter_settings=FilterSettings(
+            highpass=None,
+            lowpass=None,
+            order=8
+        ),
+    )
 
     def __init__(self, address: str):
         self._address = address
         self._reader = None
         self._writer = None
-        self._range = self.DEFAULT_RANGE
-        self._decimation = 1
-        self._filter_highpass: Optional[float] = 0
-        self._filter_lowpass: Optional[float] = self.MAX_SAMPLERATE
-        self._filter_order = 8
+        self._settings = copy.deepcopy(self.DEFAULT_SETTINGS)
         self._connected = False
         self._daq_active = False
         self._task_read_acquisition_status = None
@@ -86,12 +108,16 @@ class ConditionWave:
     @property
     def input_range(self) -> float:
         """Input range in volts."""
-        return self._range
+        return self._settings.range_volts
 
     @property
     def decimation(self) -> int:
         """Decimation factor."""
-        return self._decimation
+        return self._settings.decimation_factor
+
+    @property
+    def filter_settings(self) -> FilterSettings:
+        return copy.deepcopy(self._settings.filter_settings)
 
     async def connect(self):
         """Connect to device."""
@@ -100,6 +126,14 @@ class ConditionWave:
         logger.info(f"Open connection {self._address}:{self.PORT}...")
         self._reader, self._writer = await asyncio.open_connection(self._address, self.PORT)
         self._connected = True
+        logger.info("Set default/saved settings...")
+        await self.set_range(self.input_range)
+        await self.set_decimation(self.decimation)
+        await self.set_filter(
+            self._settings.filter_settings.highpass,
+            self._settings.filter_settings.lowpass,
+            self._settings.filter_settings.order,
+        )
 
     async def close(self):
         """Close connection."""
@@ -138,7 +172,7 @@ class ConditionWave:
             raise ValueError(f"Invalid range. Possible values: {list(self.RANGES.keys())}")
         logger.info(f"Set range to {range_volts} V ({range_index})...")
         await self._write(f"set_adc_range 0 {range_index:d}")
-        self._range = range_volts
+        self._settings.range_volts = range_volts
 
     async def set_decimation(self, factor: int):
         """
@@ -148,9 +182,11 @@ class ConditionWave:
             factor: Decimation factor [1, 16]
         """
         factor = int(factor)
+        if not 1 <= factor <= 16:
+            raise ValueError("Decimation factor must be in the range of [1, 16]")
         logger.info(f"Set decimation factor to {factor}...")
         await self._write(f"set_decimation 0 {factor:d}")
-        self._decimation = factor
+        self._settings.decimation_factor = factor
 
     async def set_filter(
         self,
@@ -168,9 +204,9 @@ class ConditionWave:
             lowpass: Lowpass frequency in Hz
             order: IIR filter order
         """
-        self._filter_highpass = highpass
-        self._filter_lowpass = lowpass
-        self._filter_order = order
+        self._settings.filter_settings.highpass = highpass
+        self._settings.filter_settings.lowpass = lowpass
+        self._settings.filter_settings.order = order
 
         def value_or(value: Optional[float], default_value: float):
             if value is None:
@@ -252,12 +288,12 @@ class ConditionWave:
         logger.info(
             (
                 f"Start data acquisition on channel {channel} "
-                f"(blocksize: {blocksize}, range: {self._range} V)"
+                f"(blocksize: {blocksize}, range: {self.input_range} V)"
             )
         )
         port = int(self.PORT + channel)
         blocksize_bits = int(blocksize * 2)  # 16 bit = 2 * 8 byte
-        to_volts = float(self._range) / (2 ** 15)
+        to_volts = float(self.input_range) / (2 ** 15)
 
         timestamp = None
         interval = timedelta(seconds=self.decimation * blocksize / self.MAX_SAMPLERATE)

@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 async def main(ip: str, samplerate: int, blocksize: int):
     async with ConditionWave(ip) as cw:
-        await cw.get_info()
+        print(await cw.get_info())
         await cw.set_range(0.05)
         await cw.set_decimation(int(cw.MAX_SAMPLERATE / samplerate))
         await cw.set_filter(100e3, 500e3, 8)

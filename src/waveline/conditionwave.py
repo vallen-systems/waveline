@@ -146,7 +146,7 @@ class ConditionWave:
         self._settings = copy.deepcopy(self.DEFAULT_SETTINGS)
         self._connected = False
         self._daq_active = False
-        self._daq_status = None
+        self._daq_status: Optional[_AcquisitionStatus] = None
 
     async def __aenter__(self):
         await self.connect()
@@ -200,6 +200,7 @@ class ConditionWave:
 
     @property
     def filter_settings(self) -> FilterSettings:
+        """Filter settings."""
         return copy.deepcopy(self._settings.filter_settings)
 
     async def connect(self):
@@ -235,16 +236,16 @@ class ConditionWave:
     @require_connected
     async def _write(self, message):
         logger.debug("Write message: %s", message)
-        self._writer.write(f"{message}\r".encode())
+        self._writer.write(f"{message}\r".encode())  # type: ignore
         await self._writer.drain()
 
     @require_connected
-    async def get_info(self):
-        """Print info."""
+    async def get_info(self) -> str:
+        """Get device information."""
         logger.info("Get info...")
         await self._write("get_info")
-        data = await self._reader.read(1000)
-        print(data.decode())
+        data = await self._reader.read(1000)  # type: ignore
+        return data.decode()
 
     @require_connected
     async def set_range(self, range_volts: float):
@@ -372,6 +373,20 @@ class ConditionWave:
         await self._write("stop")
         await self._daq_status.stop()
         self._daq_active = False
+
+    @require_connected
+    def get_temperature(self) -> Optional[int]:
+        """Get current (only during acquisition) device temperature."""
+        if not self._daq_active or self._daq_status is None:
+            return None
+        return self._daq_status.get_temperature()
+
+    @require_connected
+    def get_buffersize(self) -> int:
+        """Get buffer size during acquisition in bytes."""
+        if not self._daq_active or self._daq_status is None:
+            return 0
+        return self._daq_status.get_buffersize()
 
     def __del__(self):
         if self._writer:

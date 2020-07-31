@@ -297,22 +297,19 @@ class ConditionWave:
             lowpass: Lowpass frequency in Hz
             order: IIR filter order
         """
-        self._settings.filter_settings.highpass = highpass
-        self._settings.filter_settings.lowpass = lowpass
-        self._settings.filter_settings.order = order
-
         def value_or(value: Optional[float], default_value: float):
             if value is None:
                 return default_value
             return value
+        
+        highpass_khz = value_or(highpass, 0) / 1e3
+        lowpass_khz = value_or(lowpass, self.MAX_SAMPLERATE) / 1e3
 
-        await self._write(
-            "set_filter 0 {highpass} {lowpass} {order}".format(
-                highpass=value_or(highpass, 0) / 1e3,
-                lowpass=value_or(lowpass, self.MAX_SAMPLERATE) / 1e3,
-                order=order,
-            )
-        )
+        logger.info(f"Set filter to {highpass_khz}-{lowpass_khz} kHz (order: {order})...")
+        await self._write(f"set_filter 0 {highpass_khz} {lowpass_khz} {order}")
+        self._settings.filter_settings.highpass = highpass
+        self._settings.filter_settings.lowpass = lowpass
+        self._settings.filter_settings.order = order
 
     @require_connected
     async def start_acquisition(self):

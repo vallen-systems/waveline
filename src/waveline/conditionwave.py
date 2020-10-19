@@ -270,11 +270,11 @@ class ConditionWave:
         Set decimation factor.
 
         Args:
-            factor: Decimation factor [1, 16]
+            factor: Decimation factor [1, 500]
         """
         factor = int(factor)
-        if not 1 <= factor <= 16:
-            raise ValueError("Decimation factor must be in the range of [1, 16]")
+        if not 1 <= factor <= 500:
+            raise ValueError("Decimation factor must be in the range of [1, 500]")
 
         logger.info(f"Set decimation factor to {factor}...")
         await self._write(f"set_decimation 0 {factor:d}")

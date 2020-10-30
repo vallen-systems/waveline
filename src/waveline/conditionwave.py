@@ -301,12 +301,17 @@ class ConditionWave:
             if value is None:
                 return default_value
             return value
-        
-        highpass_khz = value_or(highpass, 0) / 1e3
-        lowpass_khz = value_or(lowpass, self.MAX_SAMPLERATE) / 1e3
 
-        logger.info(f"Set filter to {highpass_khz}-{lowpass_khz} kHz (order: {order})...")
-        await self._write(f"set_filter 0 {highpass_khz} {lowpass_khz} {order}")
+        if highpass is None and lowpass is None:
+            logger.info("Set filter to bypass")
+            await self._write("set_filter 0")
+        else:
+            highpass_khz = value_or(highpass, 0) / 1e3
+            lowpass_khz = value_or(lowpass, self.MAX_SAMPLERATE) / 1e3
+
+            logger.info(f"Set filter to {highpass_khz}-{lowpass_khz} kHz (order: {order})...")
+            await self._write(f"set_filter 0 {highpass_khz} {lowpass_khz} {order}")
+
         self._settings.filter_settings.highpass = highpass
         self._settings.filter_settings.lowpass = lowpass
         self._settings.filter_settings.order = order

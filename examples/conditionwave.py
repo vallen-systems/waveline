@@ -34,7 +34,7 @@ async def main(ip: str, samplerate: int, blocksize: int):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="pyConditionWave")
-    parser.add_argument("ip", choices=ConditionWave.discover(), help="IP address of conditionWave device")
+    parser.add_argument("ip", help="IP address of conditionWave device")
     parser.add_argument("--samplerate", "-s", type=int, default=ConditionWave.MAX_SAMPLERATE, help="Sample rate in Hz")
     parser.add_argument("--blocksize", "-b", type=int, default=1000000, help="Block size")
 

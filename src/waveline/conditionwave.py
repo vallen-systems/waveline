@@ -236,7 +236,7 @@ class ConditionWave:
     @require_connected
     async def _write(self, message):
         logger.debug("Write message: %s", message)
-        self._writer.write(f"{message}\r".encode())  # type: ignore
+        self._writer.write(f"{message}\n".encode())  # type: ignore
         await self._writer.drain()
 
     @require_connected

@@ -86,6 +86,7 @@ class _AcquisitionStatus:
     async def stop(self):
         """Stop async task."""
         self._task.cancel()
+        await self._task
         self._task = None
 
     def get_temperature(self):

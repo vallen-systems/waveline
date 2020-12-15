@@ -243,7 +243,7 @@ class ConditionWave:
             pass
 
     @require_connected
-    async def _write(self, message):
+    async def _send_command(self, message):
         logger.debug("Write message: %s", message)
         self._writer.write(f"{message}\n".encode())  # type: ignore
         await self._writer.drain()
@@ -252,7 +252,7 @@ class ConditionWave:
     async def get_info(self) -> str:
         """Get device information."""
         logger.info("Get info...")
-        await self._write("get_info")
+        await self._send_command("get_info")
         data = await self._reader.read(1000)  # type: ignore
         return data.decode()
 
@@ -270,7 +270,7 @@ class ConditionWave:
             raise ValueError(f"Invalid range. Possible values: {list(self.RANGES.keys())}")
 
         logger.info(f"Set range to {range_volts} V ({range_index})...")
-        await self._write(f"set_adc_range 0 {range_index:d}")
+        await self._send_command(f"set_adc_range 0 {range_index:d}")
         self._settings.range_volts = range_volts
 
     @require_connected
@@ -286,7 +286,7 @@ class ConditionWave:
             raise ValueError("Decimation factor must be in the range of [1, 500]")
 
         logger.info(f"Set decimation factor to {factor}...")
-        await self._write(f"set_decimation 0 {factor:d}")
+        await self._send_command(f"set_decimation 0 {factor:d}")
         self._settings.decimation_factor = factor
 
     @require_connected
@@ -313,13 +313,13 @@ class ConditionWave:
 
         if highpass is None and lowpass is None:
             logger.info("Set filter to bypass")
-            await self._write("set_filter 0")
+            await self._send_command("set_filter 0")
         else:
             highpass_khz = value_or(highpass, 0) / 1e3
             lowpass_khz = value_or(lowpass, self.MAX_SAMPLERATE) / 1e3
 
             logger.info(f"Set filter to {highpass_khz}-{lowpass_khz} kHz (order: {order})...")
-            await self._write(f"set_filter 0 {highpass_khz} {lowpass_khz} {order}")
+            await self._send_command(f"set_filter 0 {highpass_khz} {lowpass_khz} {order}")
 
         self._settings.filter_settings.highpass = highpass
         self._settings.filter_settings.lowpass = lowpass
@@ -331,7 +331,7 @@ class ConditionWave:
         if self._daq_active:
             return
         logger.info("Start data acquisition...")
-        await self._write("start")
+        await self._send_command("start")
         self._daq_status = _AcquisitionStatus(self._reader)
         await self._daq_status.start()
         self._daq_active = True
@@ -381,7 +381,7 @@ class ConditionWave:
         if not self._daq_active:
             return
         logger.info("Stop data acquisition...")
-        await self._write("stop")
+        await self._send_command("stop")
         await self._daq_status.stop()
         self._daq_active = False
 

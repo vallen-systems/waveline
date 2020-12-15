@@ -226,6 +226,9 @@ class ConditionWave:
         if not self.connected:
             return
         try:
+            if self._daq_active:
+                await self.stop_acquisition()
+
             logger.info(f"Close connection {self._address}:{self.PORT}...")
             self._writer.close()
             await self._writer.wait_closed()

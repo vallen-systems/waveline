@@ -13,6 +13,7 @@ EXTRAS_REQUIRE = {
     ],
     "tests": [
         "pytest",
+        "freezegun",
         "coverage<5.0",
     ],
     "tools": [

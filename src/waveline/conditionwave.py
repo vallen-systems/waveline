@@ -167,9 +167,10 @@ class ConditionWave:
             List of IP adresses
         """
         message = b"find"
+        host = socket.gethostbyname(socket.gethostname())
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.bind(("", cls.PORT))
+        sock.bind((host, cls.PORT))
         sock.sendto(message, ("<broadcast>", cls.PORT))
 
         def get_response(timeout=timeout):
@@ -180,8 +181,12 @@ class ConditionWave:
                     yield ip
                 except socket.timeout:
                     break
+        
+        ip_addresses = list(get_response())
+        if host in ip_addresses:
+            ip_addresses.remove(host)
 
-        return sorted(get_response())
+        return sorted(ip_addresses)
 
     @property
     def connected(self) -> bool:

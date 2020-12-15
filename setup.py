@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 
 INSTALL_REQUIRES = [
     "numpy",
+    "pyserial>=3",
 ]
 
 EXTRAS_REQUIRE = {

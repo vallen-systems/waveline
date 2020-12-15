@@ -1,13 +1,3 @@
-"""
-conditionWave
-=============
-
-.. autosummary::
-    :toctree: generated
-
-    ConditionWave
-"""
-
 import asyncio
 import copy
 from datetime import datetime, timedelta
@@ -121,7 +111,14 @@ def require_connected(func):
 
 
 class ConditionWave:
-    """API for conditionWave device."""
+    """
+    Interface for conditionWave device.
+
+    The device is controlled via TCP/IP:
+
+    - Control port: 5432
+    - Streaming ports: 5433 for channel 1 and 5434 for channel 2
+    """
 
     CHANNELS = (1, 2)
     MAX_SAMPLERATE = 10_000_000

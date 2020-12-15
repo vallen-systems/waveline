@@ -1,12 +1,20 @@
-waveLine
+WaveLine
 ========
 
-API for Vallen Systeme waveLine devices (conditionWave, spotWave).
+Library to easily interface with Vallen Systeme WaveLine™ devices using the public APIs.
 
 .. toctree::
     :maxdepth: 1
+    :caption: Library documentation
 
     api
+
+.. toctree::
+    :caption: Development
+    :hidden:
+
+    changelog
+    todo
 
 Indices and tables
 ------------------

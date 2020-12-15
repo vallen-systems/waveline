@@ -1,9 +1,9 @@
-# pyWaveline
+# WaveLine
 
-API for Vallen Systeme waveLine devices:
+Library to easily interface with Vallen Systeme WaveLine™ devices using the public APIs:
+
 - conditionWave
-- spotWave (coming soon)
-
+- spotWave
 
 ## Install
 

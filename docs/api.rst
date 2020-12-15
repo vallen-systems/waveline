@@ -1,1 +1,1 @@
-.. automodule:: waveline.conditionwave
+.. automodule:: waveline

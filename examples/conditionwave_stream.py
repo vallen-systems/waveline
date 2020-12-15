@@ -24,6 +24,7 @@ async def main(ip: str, samplerate: int, blocksize: int):
 
         with ThreadPoolExecutor(max_workers=1) as pool:
             async for timestamp, y in cw.stream(1, blocksize):
+                # execute (longer) blocking operations in the thread pool, e.g.:
                 # Y = await loop.run_in_executor(pool, lambda y: np.abs(np.fft.rfft(y)), y)
                 y_max = np.max(y)
                 cols = int(80 * y_max / cw.input_range)
@@ -33,11 +34,27 @@ async def main(ip: str, samplerate: int, blocksize: int):
 
 
 if __name__ == "__main__":
+    print(f"Discovered devices: {ConditionWave.discover()}\n")
+
     parser = argparse.ArgumentParser(description="pyConditionWave")
     parser.add_argument("ip", help="IP address of conditionWave device")
-    parser.add_argument("--samplerate", "-s", type=int, default=ConditionWave.MAX_SAMPLERATE, help="Sample rate in Hz")
-    parser.add_argument("--blocksize", "-b", type=int, default=1000000, help="Block size")
-
+    parser.add_argument(
+        "--samplerate",
+        "-s",
+        type=int,
+        default=ConditionWave.MAX_SAMPLERATE,
+        help="Sample rate in Hz",
+    )
+    parser.add_argument(
+        "--blocksize",
+        "-b",
+        type=int,
+        default=1_000_000,
+        help="Block size",
+    )
     args = parser.parse_args()
 
-    asyncio.run(main(args.ip, args.samplerate, args.blocksize))
+    try:
+        asyncio.run(main(args.ip, args.samplerate, args.blocksize))
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Graceful shutdown")

@@ -95,7 +95,7 @@ class _AcquisitionStatus:
             return self._buffersize
 
 
-def require_connected(func):
+def _require_connected(func):
     def check(obj: "ConditionWave"):
         if not obj.connected:
             raise ValueError("Device not connected")
@@ -253,13 +253,13 @@ class ConditionWave:
         except:  # pylint: disable=bare-except
             pass
 
-    @require_connected
+    @_require_connected
     async def _send_command(self, message):
         logger.debug("Write message: %s", message)
         self._writer.write(f"{message}\n".encode())  # type: ignore
         await self._writer.drain()
 
-    @require_connected
+    @_require_connected
     async def get_info(self) -> str:
         """Get device information."""
         logger.info("Get info...")
@@ -267,7 +267,7 @@ class ConditionWave:
         data = await self._reader.read(1000)  # type: ignore
         return data.decode()
 
-    @require_connected
+    @_require_connected
     async def set_range(self, range_volts: float):
         """
         Set input range.
@@ -286,7 +286,7 @@ class ConditionWave:
         await self._send_command(f"set_adc_range 0 {range_index:d}")
         self._settings.range_volts = range_volts
 
-    @require_connected
+    @_require_connected
     async def set_decimation(self, factor: int):
         """
         Set decimation factor.
@@ -302,7 +302,7 @@ class ConditionWave:
         await self._send_command(f"set_decimation 0 {factor:d}")
         self._settings.decimation_factor = factor
 
-    @require_connected
+    @_require_connected
     async def set_filter(
         self,
         highpass: Optional[float] = None,
@@ -338,7 +338,7 @@ class ConditionWave:
         self._settings.filter_settings.lowpass = lowpass
         self._settings.filter_settings.order = order
 
-    @require_connected
+    @_require_connected
     async def start_acquisition(self):
         """Start data acquisition."""
         if self._daq_active:
@@ -349,7 +349,7 @@ class ConditionWave:
         await self._daq_status.start()
         self._daq_active = True
 
-    @require_connected
+    @_require_connected
     async def stream(self, channel: int, blocksize: int):
         """
         Async generator to stream channel data.
@@ -388,7 +388,7 @@ class ConditionWave:
             timestamp += interval
         writer.close()
 
-    @require_connected
+    @_require_connected
     async def stop_acquisition(self):
         """Stop data acquisition."""
         if not self._daq_active:
@@ -398,14 +398,14 @@ class ConditionWave:
         await self._daq_status.stop()
         self._daq_active = False
 
-    @require_connected
+    @_require_connected
     def get_temperature(self) -> Optional[int]:
         """Get current (only during acquisition) device temperature."""
         if not self._daq_active or self._daq_status is None:
             return None
         return self._daq_status.get_temperature()
 
-    @require_connected
+    @_require_connected
     def get_buffersize(self) -> int:
         """Get buffer size during acquisition in bytes."""
         if not self._daq_active or self._daq_status is None:

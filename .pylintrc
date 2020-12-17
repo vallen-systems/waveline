@@ -1,10 +1,11 @@
 [MESSAGES CONTROL]
 disable =
     import-error,  # run without install in tox
-    bad-continuation, # code style by black
+    bad-continuation,  # code style by black
     missing-module-docstring,
     missing-function-docstring,
     logging-fstring-interpolation,
+    too-many-instance-attributes,
 
 [FORMAT]
 max-line-length = 100

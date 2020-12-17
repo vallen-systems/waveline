@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Status:
+    """Status information."""
     device_id: str
     firmware_version: str
     temperature: int
@@ -30,6 +31,7 @@ class Status:
 
 @dataclass
 class Setup:
+    """Setup."""
     acq_enabled: bool
     cont_enabled: bool
     log_enabled: bool
@@ -49,6 +51,7 @@ class Setup:
 
 @dataclass
 class AERecord:
+    """AE data record, either status or hit data."""
     type_: str  #: Record type (hit or status data)
     time: float  #: Time in seconds
     amplitude: float  #: Peak amplitude in volts
@@ -62,6 +65,7 @@ class AERecord:
 
 @dataclass
 class TRRecord:
+    """Transient data record."""
     trai: int  #: Transient recorder index (key between `HitRecord` and `TRRecord`)
     time: float  #: Time in seconds
     samples: int  #: Number of samples
@@ -209,7 +213,11 @@ class SpotWave:
                 dig.filter:  10-max kHz, order=4, stages=2
             """
             match_filter = re.search(
-                rb"dig\.filter:\s+(?P<none>none)?((?P<hipass>\d+)-(?P<lopass>\d+|max) kHz, order=(?P<order>\d))?",
+                (
+                    rb"dig\.filter:\s+"
+                    rb"(?P<none>none)?"
+                    rb"((?P<hipass>\d+)-(?P<lopass>\d+|max) kHz, order=(?P<order>\d))?"
+                ),
                 b"".join(lines),
             )
             if match_filter.group("none"):

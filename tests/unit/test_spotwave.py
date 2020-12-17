@@ -277,3 +277,20 @@ def test_get_tr_data(serial_mock):
     assert tr_data[1].time == 43686983 / 2e6
     assert tr_data[1].samples == 27
     assert_allclose(tr_data[1].data, data[1] * ADC_TO_VOLTS)
+
+
+@pytest.mark.parametrize("samples", (
+    32,
+    128,
+    65536,
+))
+def test_get_data(serial_mock, samples):
+    sw = SpotWave(serial_mock)
+
+    mock_data = (2 ** 15 * np.random.randn(samples)).astype(np.int16)
+    serial_mock.read.return_value = mock_data.tobytes()
+
+    data = sw.get_data(samples)
+    serial_mock.write.assert_called_with(f"get_data b {samples}\n".encode())
+    serial_mock.read.assert_called_with(samples * 2)
+    assert_allclose(data, mock_data * ADC_TO_VOLTS)

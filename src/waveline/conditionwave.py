@@ -8,11 +8,13 @@ import asyncio
 import copy
 import logging
 import socket
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from functools import wraps
 from threading import Lock
 from typing import List, Optional
 
 import numpy as np
-
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +193,7 @@ class ConditionWave:
                     yield ip
                 except socket.timeout:
                     break
-        
+
         ip_addresses = list(get_response())
         if host in ip_addresses:
             ip_addresses.remove(host)
@@ -276,7 +278,9 @@ class ConditionWave:
         try:
             range_index = self.RANGES[range_volts]
         except KeyError:
-            raise ValueError(f"Invalid range. Possible values: {list(self.RANGES.keys())}")
+            raise ValueError(
+                f"Invalid range. Possible values: {list(self.RANGES.keys())}"
+            ) from None
 
         logger.info(f"Set range to {range_volts} V ({range_index})...")
         await self._send_command(f"set_adc_range 0 {range_index:d}")

@@ -12,6 +12,12 @@ Library to easily interface with Vallen Systeme WaveLine™ devices using the pu
     waveline.spotwave
 
 .. toctree::
+    :caption: Examples
+    :hidden:
+
+    Examples <https://github.com/vallen-systems/pyWaveline/tree/master/examples>
+
+.. toctree::
     :caption: Development
     :hidden:
 

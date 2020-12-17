@@ -1,3 +1,10 @@
+"""
+Module for spotWave device.
+
+All functions are exposed by the `SpotWave` class.
+"""
+
+
 import logging
 import re
 from contextlib import contextmanager
@@ -75,6 +82,15 @@ class SpotWave:
     CLOCK = 2_000_000  # 2 MHz
 
     def __init__(self, port: Union[str, Serial]):
+        """
+        Initialize device.
+
+        Args:
+            port: Either the serial port id (e.g. 'COM6') or a `serial.Serial` port instance.
+                Please us the method `discover` to get a list of ports with connected devices.
+        Returns:
+            Instance of `SpotWave`
+        """
         if isinstance(port, str):
             self._ser = Serial(port=port)
         elif isinstance(port, Serial):
@@ -136,6 +152,12 @@ class SpotWave:
         self._ser.write(command_bytes)
 
     def get_setup(self) -> Setup:
+        """
+        Get setup.
+
+        Returns:
+            Dataclass with setup information
+        """
         self._send_command("get_setup")
         with self._timeout_context(0.1):
             lines = self._ser.readlines()
@@ -187,6 +209,12 @@ class SpotWave:
         )
 
     def get_status(self) -> Status:
+        """
+        Get status.
+
+        Returns:
+            Dataclass with status information
+        """
         self._send_command("get_status")
         with self._timeout_context(0.1):
             lines = self._ser.readlines()
@@ -203,27 +231,83 @@ class SpotWave:
         )
 
     def set_continuous_mode(self, enabled: bool):
+        """
+        Enable/disable continuous mode.
+
+        Threshold will be ignored.
+        The length of the records is determined by `ddt` with `set_ddt`.
+
+        Args:
+            enabled: Set to `True` to enable continuous mode
+        """
         self._send_command(f"set_acq cont {int(enabled)}")
 
     def set_ddt(self, microseconds: int):
+        """
+        Set duration discrimination time (DDT).
+
+        Args:
+            microseconds: DDT in µs
+        """
         self._send_command(f"set_acq ddt {int(microseconds)}")
 
     def set_status_interval(self, milliseconds: int):
+        """
+        Set status interval.
+
+        Args:
+            milliseconds: Status interval in ms
+        """
         self._send_command(f"set_acq status_interval {int(milliseconds)}")
 
     def set_tr_enabled(self, enabled: bool):
+        """
+        Enable/disable recording of transient data.
+
+        Args:
+            enabled: Set to `True` to enable transient data
+        """
         self._send_command(f"set_acq tr_enabled {int(enabled)}")
 
     def set_tr_decimation(self, factor: int):
+        """
+        Set decimation factor of transient data.
+
+        The sampling rate of transient data will be 2 MHz / `factor`.
+
+        Args:
+            factor: Decimation factor
+        """
         self._send_command(f"set_acq tr_decimation {int(factor)}")
 
     def set_tr_pretrigger(self, samples: int):
+        """
+        Set pre-trigger samples for transient data.
+
+        Args:
+            samples: Pre-trigger samples
+        """
         self._send_command(f"set_acq tr_pre_trig {int(samples)}")
 
     def set_tr_postduration(self, samples: int):
+        """
+        Set post-duration samples for transient data.
+
+        Args:
+            samples: Post-duration samples
+        """
         self._send_command(f"set_acq tr_post_dur {int(samples)}")
 
     def set_cct(self, interval_seconds: int):
+        """
+        Set coupling check ransmitter (CCT) / pulser interval.
+
+        The pulser amplitude is 3.3 V.
+
+        Args:
+            interval_seconds: Pulser interval in seconds
+            sync: Synchronize the pulser with the first sample of the `get_data` command
+        """
         self._send_command(f"set_cct {interval_seconds}")
 
     def set_filter(self, highpass: float, lowpass: float, order: int = 4):
@@ -238,18 +322,32 @@ class SpotWave:
         self._send_command(f"set_filter {int(highpass)} {int(lowpass)} {int(order)}")
 
     def set_datetime(self, timestamp: Optional[datetime] = None):
+        """
+        Set current date and time.
+
+        Args:
+            timestamp: `datetime.datetime` object, current time if `None`
+        """
         if not timestamp:
             timestamp = datetime.now()
         timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
         self._send_command(f"set_datetime {timestamp_str}")
 
     def set_threshold(self, microvolts: float):
+        """
+        Set threshold for hit-based acquisition.
+
+        Args:
+            microvolts: Threshold in µV
+        """
         self._send_command(f"set_acq thr {microvolts}")
 
     def start_acquisition(self):
+        """Start acquisition."""
         self._send_command("set_acq enabled 1")
 
     def stop_acquisition(self):
+        """Stop acquisition."""
         self._send_command("set_acq enabled 0")
 
     def get_ae_data(self):
@@ -259,6 +357,15 @@ class SpotWave:
         ...
 
     def get_data(self, samples: int) -> np.ndarray:
+        """
+        Read snapshot of transient data.
+
+        Args:
+            samples: Number of samples to read
+        
+        Returns:
+            Array with ADC values
+        """
         samples = int(samples)
         self._send_command(f"get_data b {samples}")
         return np.frombuffer(

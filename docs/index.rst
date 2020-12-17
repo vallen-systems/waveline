@@ -3,11 +3,13 @@ WaveLine
 
 Library to easily interface with Vallen Systeme WaveLine™ devices using the public APIs.
 
-.. toctree::
-    :maxdepth: 1
+.. autosummary::
     :caption: Library documentation
+    :toctree: generated
+    :recursive:
 
-    api
+    waveline.conditionwave
+    waveline.spotwave
 
 .. toctree::
     :caption: Development

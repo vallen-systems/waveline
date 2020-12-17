@@ -1,8 +1,11 @@
+"""
+Module for conditionWave device.
+
+All functions are exposed by the `ConditionWave` class.
+"""
+
 import asyncio
 import copy
-from datetime import datetime, timedelta
-from dataclasses import dataclass
-from functools import wraps
 import logging
 import socket
 from threading import Lock
@@ -138,6 +141,15 @@ class ConditionWave:
     )
 
     def __init__(self, address: str):
+        """
+        Initialize device.
+
+        Args:
+            address: IP address of device.
+                Please us the method `discover` to discover available devices.
+        Returns:
+            Instance of `ConditionWave`
+        """
         self._address = address
         self._reader = None
         self._writer = None

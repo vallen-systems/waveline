@@ -42,7 +42,7 @@ extensions = [
 ]
 
 autosummary_generate = True
-autodoc_member_order = "bysource"
+autodoc_member_order = "alphabetical"
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

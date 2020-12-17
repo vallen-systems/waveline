@@ -398,7 +398,7 @@ class SpotWave:
         number_lines = int(headerline)
 
         for _ in range(number_lines):
-            line = self._ser.readline().decode()
+            line = self._ser.readline().decode(errors="replace")
             logger.debug(f"Received AE data: {line}")
 
             record_type = line[:1]
@@ -436,7 +436,43 @@ class SpotWave:
                 logger.warning(f"Unknown AE data record: {line}")
 
     def get_tr_data(self) -> Iterator[TRRecord]:
-        ...
+        """
+        Get transient data records.
+
+        Yields:
+            Transient data records
+        """
+        self._send_command("get_tr_data b")
+
+        while True:
+            headerline = self._ser.readline().decode(errors="replace")
+
+            # parse header
+            matches = re.match(
+                r"TRAI=(?P<TRAI>\d+) T=(?P<T>\d+) NS=(?P<NS>\d+).*",
+                headerline.upper(),
+            )
+            if not matches:  # last line is empty or 0
+                logger.debug(f"Last TR headerline {headerline}")
+                break
+
+            trai = int(matches.group("TRAI"))
+            time = int(matches.group("T"))
+            samples = int(matches.group("NS"))
+            data_adc = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
+            data_volts = np.multiply(data_adc, self._adc_to_volts, dtype=np.float32)
+
+            if len(data_volts) != samples:
+                raise RuntimeError(
+                    f"TR data samples ({len(data_volts)}) do not match expected number ({samples})"
+                )
+
+            yield TRRecord(
+                trai=trai,
+                time=time / self.CLOCK,
+                samples=samples,
+                data=data_volts,
+            )
 
     def get_data(self, samples: int) -> np.ndarray:
         """

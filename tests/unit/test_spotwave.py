@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 from freezegun import freeze_time
+from numpy.testing import assert_allclose
 from serial import Serial, SerialException
 
 from waveline import SpotWave
@@ -249,3 +250,30 @@ def test_get_ae_data(serial_mock):
     assert h.energy == 518280026 * ADC_TO_VOLTS ** 2 * 1e14 / 2e6
     assert h.trai == 1
     assert h.flags == 0
+
+
+def test_get_tr_data(serial_mock):
+    sw = SpotWave(serial_mock)
+
+    lines = [
+        b"TRAI=1 T=43686000 NS=13\n",
+        b"TRAI=2 T=43686983 NS=27\n",
+        b"0\n",
+    ]
+    data = [np.arange(samples, dtype=np.int16) for samples in (13, 27)]
+    binary_data = [arr.tobytes() for arr in data]
+
+    serial_mock.readline.side_effect = lines
+    serial_mock.read.side_effect = binary_data
+
+    tr_data = list(sw.get_tr_data())
+
+    assert tr_data[0].trai == 1
+    assert tr_data[0].time == 43686000 / 2e6
+    assert tr_data[0].samples == 13
+    assert_allclose(tr_data[0].data, data[0] * ADC_TO_VOLTS)
+
+    assert tr_data[1].trai == 2
+    assert tr_data[1].time == 43686983 / 2e6
+    assert tr_data[1].samples == 27
+    assert_allclose(tr_data[1].data, data[1] * ADC_TO_VOLTS)

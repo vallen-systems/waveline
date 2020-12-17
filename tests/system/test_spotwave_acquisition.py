@@ -38,12 +38,14 @@ def test_acq_only_status(sw):
         assert record.trai == 0
 
 
-def test_acq_continuous_ae_only(sw):
+@mark.parametrize("tr_enabled", (False, True))
+def test_acq_continuous(sw, tr_enabled):
     ddt_seconds = 0.01  # 10 ms
 
     sw.set_continuous_mode(True)
     sw.set_ddt(ddt_seconds * 1e6)
-    sw.set_tr_enabled(False)
+    sw.set_tr_enabled(tr_enabled)
+    sw.set_tr_decimation(1)
     sw.set_status_interval(0)
     sw.clear_buffer()
     sw.start_acquisition()
@@ -57,4 +59,19 @@ def test_acq_continuous_ae_only(sw):
         assert record.time == i * ddt_seconds
         assert record.type_ == "H"
         assert record.duration == ddt_seconds
-        assert record.trai == 0
+        if tr_enabled:
+            assert record.trai == i + 1
+        else:
+            assert record.trai == 0
+
+    tr_data = list(sw.get_tr_data())
+    if tr_enabled:
+        assert len(tr_data) == pytest.approx(9, abs=1)
+    else:
+        assert len(tr_data) == 0
+        return  # skip rest of test
+
+    for i, record in enumerate(tr_data, start=0):
+        assert record.trai == i + 1
+        assert record.time == i * ddt_seconds
+        assert record.samples == ddt_seconds * 2e6

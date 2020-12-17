@@ -112,7 +112,7 @@ class SpotWave:
         Initialize device.
 
         Args:
-            port: Either the serial port id (e.g. 'COM6') or a `serial.Serial` port instance.
+            port: Either the serial port id (e.g. "COM6") or a `serial.Serial` port instance.
                 Please us the method `discover` to get a list of ports with connected devices.
         Returns:
             Instance of `SpotWave`
@@ -388,10 +388,12 @@ class SpotWave:
 
     def start_acquisition(self):
         """Start acquisition."""
+        logger.info("Start acquisition")
         self._send_command("set_acq enabled 1")
 
     def stop_acquisition(self):
         """Stop acquisition."""
+        logger.info("Stop acquisition")
         self._send_command("set_acq enabled 0")
 
     def get_ae_data(self) -> Iterator[AERecord]:
@@ -440,6 +442,8 @@ class SpotWave:
                     trai=int(matches.group("TRAI")),
                     flags=int(matches.group("flags")),
                 )
+            elif record_type == "R":  # marker record start
+                ...  # TODO
             else:
                 logger.warning(f"Unknown AE data record: {line}")
 
@@ -481,6 +485,32 @@ class SpotWave:
                 samples=samples,
                 data=data_volts,
             )
+
+    def stream(self) -> Iterator[Union[AERecord, TRRecord]]:
+        """
+        High-level method to continuously acquire data.
+
+        Yields:
+            AE and TR data records
+
+        Example:
+            >>> with waveline.SpotWave("COM6") as sw:
+            >>>     # apply settings
+            >>>     sw.set_ddt(400)
+            >>>     for record in sw.stream():
+            >>>         # do something with the data depending on the type
+            >>>         if isinstance(record, waveline.spotwave.AERecord):
+            >>>             ...
+            >>>         if isinstance(record, waveline.spotwave.TRRecord):
+            >>>             ...
+        """
+        self.start_acquisition()
+        try:
+            while True:
+                yield from self.get_ae_data()
+                yield from self.get_tr_data()
+        finally:
+            self.stop_acquisition()
 
     def get_data(self, samples: int) -> np.ndarray:
         """

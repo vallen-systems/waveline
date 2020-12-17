@@ -4,6 +4,8 @@ import pytest
 from pytest import mark
 from spotwave_fixture import sw
 
+from waveline.spotwave import AERecord
+
 
 @mark.parametrize("samples", (
     10,
@@ -75,3 +77,20 @@ def test_acq_continuous(sw, tr_enabled):
         assert record.trai == i + 1
         assert record.time == i * ddt_seconds
         assert record.samples == ddt_seconds * 2e6
+
+
+@mark.parametrize("ddt_us", (1000, 2000, 10_000, 100_000))
+@mark.parametrize("decimation", (1, 2, 10))
+def test_acq_continuous_lost_tr(sw, ddt_us, decimation):
+    sw.set_continuous_mode(True)
+    sw.set_ddt(ddt_us)
+    sw.set_tr_enabled(True)
+    sw.set_tr_decimation(decimation)
+    sw.set_status_interval(0)
+    sw.clear_buffer()
+
+    for record in sw.stream():
+        if isinstance(record, AERecord):
+            assert record.trai != 0
+        if record.time > 1:  # stop stream after 1 s
+            break

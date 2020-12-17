@@ -177,7 +177,11 @@ def test_commands_without_response(serial_mock):
     sw.set_tr_postduration(0)
     assert_write(b"set_acq tr_post_dur 0\n")
 
-    sw.set_cct(-0.1)
+    sw.set_cct(0.1, sync=False)
+    assert_write(b"set_cct 0.1\n")
+    sw.set_cct(-0.1, sync=False)
+    assert_write(b"set_cct -0.1\n")
+    sw.set_cct(0.1, sync=True)
     assert_write(b"set_cct -0.1\n")
 
     sw.set_filter(highpass=100, lowpass=300, order=6)

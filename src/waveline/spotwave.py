@@ -107,6 +107,8 @@ class SpotWave:
 
         # stop acquisition if running
         self.stop_acquisition()
+        # get and save adc conversion factor
+        self._adc_to_volts = self.get_setup().adc_to_volts
 
     def _close(self):
         if not hasattr(self, "_ser"):
@@ -360,17 +362,15 @@ class SpotWave:
 
     def get_data(self, samples: int) -> np.ndarray:
         """
-        Read snapshot of transient data.
+        Read snapshot of transient data with maximum sampling rate (2 MHz).
 
         Args:
             samples: Number of samples to read
-        
+
         Returns:
-            Array with ADC values
+            Array with amplitudes in volts
         """
         samples = int(samples)
         self._send_command(f"get_data b {samples}")
-        return np.frombuffer(
-            self._ser.read(2 * samples),
-            dtype=np.int16,
-        )
+        adc_values = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
+        return np.multiply(adc_values, self._adc_to_volts, dtype=np.float32)

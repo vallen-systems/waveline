@@ -11,4 +11,6 @@ def sw():
             "No SpotWave devices found. Please connect a device to run the system tests"
         )
     with SpotWave(devices[0]) as sw:
+        sw.set_datetime()  # set current date/time
+        sw.clear_buffer()
         yield sw

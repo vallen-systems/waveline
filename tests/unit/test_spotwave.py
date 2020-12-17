@@ -10,11 +10,22 @@ from serial import Serial, SerialException
 from waveline import SpotWave
 from waveline.spotwave import Setup
 
-RESPONSE_GET_AE_DATA = b"""
-2
-S temp=27 T=2010240 A=21 R=502689 D=2000000 C=0 E=38849818 TRAI=0 flags=0
-H temp=27 T=3044759 A=3557 R=24 D=819 C=31 E=518280026 TRAI=1 flags=0
-""".lstrip()
+
+ADC_TO_VOLTS = 1.74e-6
+
+
+@pytest.fixture(autouse=True)
+def mock_spotwave_adc_factor():
+    """
+    Mock SpotWave._adc_to_volts method globally.
+
+    SpotWave.__init__ will call get_setup() to get adc_to_volts.
+    Return a constant value instead.
+    """
+    with patch("waveline.spotwave.SpotWave._get_adc_to_volts") as method:
+        method.return_value = ADC_TO_VOLTS
+        yield method
+
 
 RESPONSE_GET_TR_DATA = """
 TRAI=1 T=43686000 NS=768
@@ -201,3 +212,40 @@ def test_commands_without_response(serial_mock):
 
     sw.stop_acquisition()
     assert_write(b"set_acq enabled 0\n")
+
+
+def test_get_ae_data(serial_mock):
+    sw = SpotWave(serial_mock)
+
+    response = [
+        b"2\n",
+        b"S temp=27 T=2010240 A=21 R=502689 D=2000000 C=0 E=38849818 TRAI=0 flags=0\n",
+        b"H temp=27 T=3044759 A=3557 R=24 D=819 C=31 E=518280026 TRAI=1 flags=0\n",
+    ]
+
+    serial_mock.readline.side_effect = response
+    ae_data = list(sw.get_ae_data())
+
+    # status record
+    s = ae_data[0]
+    assert s.type_ == "S"
+    assert s.time == 2010240 / 2e6
+    assert s.amplitude == 21 * ADC_TO_VOLTS
+    assert s.rise_time == 502689 / 2e6
+    assert s.duration == 2000000 / 2e6
+    assert s.counts == 0
+    assert s.energy == 38849818 * ADC_TO_VOLTS ** 2 * 1e14 / 2e6
+    assert s.trai == 0
+    assert s.flags == 0
+
+    # hit record
+    h = ae_data[1]
+    assert h.type_ == "H"
+    assert h.time == 3044759 / 2e6
+    assert h.amplitude == 3557 * ADC_TO_VOLTS
+    assert h.rise_time == 24 / 2e6
+    assert h.duration == 819 / 2e6
+    assert h.counts == 31
+    assert h.energy == 518280026 * ADC_TO_VOLTS ** 2 * 1e14 / 2e6
+    assert h.trai == 1
+    assert h.flags == 0

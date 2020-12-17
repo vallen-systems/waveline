@@ -10,7 +10,7 @@ import re
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import Iterator, List, Optional, Union
 
 import numpy as np
 from serial import EIGHTBITS, Serial
@@ -26,6 +26,7 @@ class Status:
     temperature: int
     data_size: int
     datetime: datetime
+
 
 @dataclass
 class Setup:
@@ -44,6 +45,27 @@ class Setup:
     tr_pretrigger_samples: int
     tr_postduration_samples: int
     cct_seconds: float
+
+
+@dataclass
+class AERecord:
+    type_: str  #: Record type (hit or status data)
+    time: float  #: Time in seconds
+    amplitude: float  #: Peak amplitude in volts
+    rise_time: float  #: Rise time in seconds
+    duration: float  #: Duration in seconds
+    counts: int  #: Number of positive threshold crossings
+    energy: float  #: Energy (EN 1330-9) in eu (1e-14 V²s)
+    trai: int  #: Transient recorder index (key between `HitRecord` and `TRRecord`)
+    flags: int  #: Hit flags (TODO: list available flags)
+
+
+@dataclass
+class TRRecord:
+    trai: int  #: Transient recorder index (key between `HitRecord` and `TRRecord`)
+    time: float  #: Time in seconds
+    samples: int  #: Number of samples
+    data: np.ndarray  #: Array of transient data in volts
 
 
 def _as_int(string):
@@ -77,9 +99,9 @@ class SpotWave:
     The USB-connected device exposes a virtual serial port for communication.
     """
 
-    VENDOR_ID = 8849
-    PRODUCT_ID = 272
-    CLOCK = 2_000_000  # 2 MHz
+    VENDOR_ID = 8849  #: USB vendor id of Vallen Systeme GmbH
+    PRODUCT_ID = 272  #: USB product id of SpotWave device
+    CLOCK = 2_000_000  #: Internal clock in Hz = 2 MHz
 
     def __init__(self, port: Union[str, Serial]):
         """
@@ -108,7 +130,10 @@ class SpotWave:
         # stop acquisition if running
         self.stop_acquisition()
         # get and save adc conversion factor
-        self._adc_to_volts = self.get_setup().adc_to_volts
+        self._adc_to_volts = self._get_adc_to_volts()
+
+    def _get_adc_to_volts(self):
+        return self.get_setup().adc_to_volts
 
     def _close(self):
         if not hasattr(self, "_ser"):
@@ -147,6 +172,13 @@ class SpotWave:
             ports,
         )
         return [port.name for port in ports_spotwave]
+
+    def clear_buffer(self):
+        """Clear input and output buffer."""
+        with self._timeout_context(0.1):
+            self._ser.readlines()
+        self._ser.reset_input_buffer()
+        self._ser.reset_output_buffer()
 
     def _send_command(self, command: str):
         command_bytes = command.encode("utf-8") + b"\n"  # str -> bytes
@@ -354,10 +386,56 @@ class SpotWave:
         """Stop acquisition."""
         self._send_command("set_acq enabled 0")
 
-    def get_ae_data(self):
-        ...
+    def get_ae_data(self) -> Iterator[AERecord]:
+        """
+        Get AE data records.
 
-    def get_tr_data(self):
+        Yields:
+            AE data records (either status or hit data)
+        """
+        self._send_command("get_ae_data")
+        headerline = self._ser.readline()
+        number_lines = int(headerline)
+
+        for _ in range(number_lines):
+            line = self._ser.readline().decode()
+            logger.debug(f"Received AE data: {line}")
+
+            record_type = line[:1]
+            if record_type in ("H", "S"):  # hit or status data
+                matches = re.match(
+                    (
+                        r"(?P<type>H|S) .* "
+                        r"T=(?P<T>\d+) "
+                        r"A=(?P<A>\d+) "
+                        r"R=(?P<R>\d+) "
+                        r"D=(?P<D>\d+) "
+                        r"C=(?P<C>\d+) "
+                        r"E=(?P<E>\d+) "
+                        r"TRAI=(?P<TRAI>\d+) "
+                        r"flags=(?P<flags>\d+)"
+                    ),
+                    line,
+                )
+                if not matches:
+                    logger.error(f"Could not parse AE data: {line}")
+                    break
+
+                yield AERecord(
+                    type_=matches.group("type"),
+                    time=int(matches.group("T")) / self.CLOCK,
+                    amplitude=int(matches.group("A")) * self._adc_to_volts,
+                    rise_time=int(matches.group("R")) / self.CLOCK,
+                    duration=int(matches.group("D")) / self.CLOCK,
+                    counts=int(matches.group("C")),
+                    energy=int(matches.group("E")) * self._adc_to_volts ** 2 * 1e14 / self.CLOCK,
+                    trai=int(matches.group("TRAI")),
+                    flags=int(matches.group("flags")),
+                )
+            else:
+                logger.warning(f"Unknown AE data record: {line}")
+
+    def get_tr_data(self) -> Iterator[TRRecord]:
         ...
 
     def get_data(self, samples: int) -> np.ndarray:

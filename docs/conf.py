@@ -36,7 +36,6 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
-    "sphinx.ext.todo",
     "sphinx.ext.autosummary",
     "sphinx_autodoc_typehints",
 ]
@@ -48,8 +47,6 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://docs.scipy.org/doc/numpy/", None),
 }
-
-todo_include_todos = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

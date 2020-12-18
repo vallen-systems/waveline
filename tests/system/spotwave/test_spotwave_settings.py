@@ -41,13 +41,14 @@ def test_set_ddt(sw, set_, expect):
     "set_, expect",
     (
         (-1, 0),
-        (2000, 2000),
-        (3600000, 3600000),
+        (0.01, 0.01),
+        (2, 2),
+        (3600, 3600),
     ),
 )
 def test_set_status_interval(sw, set_, expect):
     sw.set_status_interval(set_)
-    assert sw.get_setup().status_interval_seconds == expect / 1e3
+    assert sw.get_setup().status_interval_seconds == expect
 
 
 @mark.parametrize(
@@ -115,6 +116,14 @@ def test_set_cct(sw, set_, expect):
     assert sw.get_setup().cct_seconds == expect
 
 
+def test_set_filter_bypass(sw):
+    sw.set_filter(highpass=None, lowpass=None, order=8)
+    setup = sw.get_setup()
+    assert setup.filter_highpass_hz == 0
+    assert setup.filter_lowpass_hz == 1_000_000
+    assert setup.filter_order == 0
+
+
 @mark.parametrize(
     "set_, expect",
     (
@@ -128,7 +137,7 @@ def test_set_cct(sw, set_, expect):
     ),
 )
 def test_set_filter(sw, set_, expect):
-    sw.set_filter(highpass=set_[0], lowpass=set_[1], order=set_[2])
+    sw.set_filter(highpass=set_[0] * 1e3, lowpass=set_[1] * 1e3, order=set_[2])
     setup = sw.get_setup()
     assert setup.filter_highpass_hz == expect[0] * 1e3
     assert setup.filter_lowpass_hz == expect[1] * 1e3

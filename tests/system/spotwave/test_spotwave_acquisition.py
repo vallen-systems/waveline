@@ -26,7 +26,7 @@ def test_acq_only_status(sw):
     sw.set_threshold(10_000_000)  # above range
     sw.set_continuous_mode(False)
     sw.set_tr_enabled(False)
-    sw.set_status_interval(status_interval_seconds * 1e3)
+    sw.set_status_interval(status_interval_seconds)
     sw.clear_buffer()
     sw.start_acquisition()
     sleep(0.1)

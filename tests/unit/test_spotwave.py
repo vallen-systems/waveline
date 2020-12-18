@@ -161,8 +161,8 @@ def test_commands_without_response(serial_mock):
     sw.set_ddt(400)
     assert_write(b"set_acq ddt 400\n")
 
-    sw.set_status_interval(2000)
-    assert_write(b"set_acq status_interval 2000\n")
+    sw.set_status_interval(2.2)
+    assert_write(b"set_acq status_interval 2200\n")
 
     sw.set_tr_enabled(True)
     assert_write(b"set_acq tr_enabled 1\n")
@@ -183,7 +183,7 @@ def test_commands_without_response(serial_mock):
     sw.set_cct(0.1, sync=True)
     assert_write(b"set_cct -0.1\n")
 
-    sw.set_filter(highpass=100, lowpass=300, order=6)
+    sw.set_filter(highpass=100_000, lowpass=300_000, order=6)
     assert_write(b"set_filter 100 300 6\n")
 
     sw.set_datetime(datetime(2020, 12, 16, 17, 55, 13))

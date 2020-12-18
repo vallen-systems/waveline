@@ -348,14 +348,14 @@ class SpotWave:
         """
         self._send_command(f"set_acq ddt {int(microseconds)}")
 
-    def set_status_interval(self, milliseconds: int):
+    def set_status_interval(self, seconds: int):
         """
         Set status interval.
 
         Args:
-            milliseconds: Status interval in ms
+            seconds: Status interval in s
         """
-        self._send_command(f"set_acq status_interval {int(milliseconds)}")
+        self._send_command(f"set_acq status_interval {int(seconds * 1e3)}")
 
     def set_tr_enabled(self, enabled: bool):
         """
@@ -409,16 +409,27 @@ class SpotWave:
             interval_seconds *= -1
         self._send_command(f"set_cct {interval_seconds}")
 
-    def set_filter(self, highpass: float, lowpass: float, order: int = 4):
+    def set_filter(
+        self,
+        highpass: Optional[float] = None,
+        lowpass: Optional[float] = None,
+        order: int = 4,
+    ):
         """
         Set IIR filter frequencies and order.
 
+        Default is bypass.
+
         Args:
-            highpass: Highpass frequency in kHz
-            lowpass: Lowpass frequency in kHz
+            highpass: Highpass frequency in Hz
+            lowpass: Lowpass frequency in Hz
             order: Filter order
         """
-        self._send_command(f"set_filter {int(highpass)} {int(lowpass)} {int(order)}")
+        if highpass is None:
+            highpass = 0
+        if lowpass is None:
+            lowpass = 0.5 * self.CLOCK  # nyquist
+        self._send_command(f"set_filter {int(highpass / 1e3)} {int(lowpass / 1e3)} {int(order)}")
 
     def set_datetime(self, timestamp: Optional[datetime] = None):
         """

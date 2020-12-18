@@ -15,7 +15,7 @@ Library to easily interface with Vallen Systeme WaveLine™ devices using the pu
 
 ## Documentation
 
-For full documentation, please visit http://pywaveline.rtfd.io.
+Please visit http://pywaveline.rtfd.io for the documentation.
 
 Check out the [examples](https://github.com/vallen-systems/pyWaveLine/tree/master/examples) for implementation details.
 

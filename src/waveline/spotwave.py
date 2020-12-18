@@ -4,7 +4,6 @@ Module for spotWave device.
 All device-related functions are exposed by the `SpotWave` class.
 """
 
-
 import logging
 import re
 from contextlib import contextmanager
@@ -51,7 +50,12 @@ class Setup:
 
 @dataclass
 class AERecord:
-    """AE data record, either status or hit data."""
+    """
+    AE data record, either status or hit data.
+
+    Todo:
+        - Documentation or data type with available hit flags
+    """
     type_: str  #: Record type (hit or status data)
     time: float  #: Time in seconds
     amplitude: float  #: Peak amplitude in volts
@@ -59,14 +63,14 @@ class AERecord:
     duration: float  #: Duration in seconds
     counts: int  #: Number of positive threshold crossings
     energy: float  #: Energy (EN 1330-9) in eu (1e-14 V²s)
-    trai: int  #: Transient recorder index (key between `HitRecord` and `TRRecord`)
-    flags: int  #: Hit flags (TODO: list available flags)
+    trai: int  #: Transient recorder index (key between `AERecord` and `TRRecord`)
+    flags: int  #: Hit flags
 
 
 @dataclass
 class TRRecord:
     """Transient data record."""
-    trai: int  #: Transient recorder index (key between `HitRecord` and `TRRecord`)
+    trai: int  #: Transient recorder index (key between `AERecord` and `TRRecord`)
     time: float  #: Time in seconds
     samples: int  #: Number of samples
     data: np.ndarray  #: Array of transient data in volts
@@ -100,7 +104,7 @@ class SpotWave:
     """
     Interface for spotWave devices.
 
-    The USB-connected device exposes a virtual serial port for communication.
+    The spotWave device is connected via USB and exposes a virtual serial port for communication.
     """
 
     VENDOR_ID = 8849  #: USB vendor id of Vallen Systeme GmbH
@@ -113,9 +117,25 @@ class SpotWave:
 
         Args:
             port: Either the serial port id (e.g. "COM6") or a `serial.Serial` port instance.
-                Use the method `discover` to get a list of ports with connected devices.
+                Use the method `discover` to get a list of ports with connected spotWave devices.
         Returns:
             Instance of `SpotWave`
+
+        Example:
+            There are two ways constructing and using the `ConditionWave` class:
+
+            1.  Without context manager and manually calling the `close` method afterwards:
+
+                >>> sw = waveline.SpotWave("COM6")
+                >>> print(sw.get_setup())
+                >>> ...
+                >>> sw.close()
+
+            2.  Using the context manager:
+
+                >>> with waveline.SpotWave("COM6") as sw:
+                >>>     print(sw.get_setup())
+                >>>     ...
         """
         if isinstance(port, str):
             self._ser = Serial(port=port)
@@ -128,31 +148,44 @@ class SpotWave:
         self._ser.bytesize = EIGHTBITS
         self._ser.timeout = 1  # seconds
         self._ser.exclusive = True
-        if not self._ser.is_open:
-            self._ser.open()
 
-        # stop acquisition if running
-        self.stop_acquisition()
-        # get and save adc conversion factor
-        self._adc_to_volts = self._get_adc_to_volts()
-
-    def _get_adc_to_volts(self):
-        return self.get_setup().adc_to_volts
-
-    def _close(self):
-        if not hasattr(self, "_ser"):
-            return
-        if self._ser.is_open:
-            self._ser.close()
+        self.connect()
+        self.stop_acquisition()  # stop acquisition if running
+        self._adc_to_volts = self._get_adc_to_volts()  # get and save adc conversion factor
 
     def __del__(self):
-        self._close()
+        self.close()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args, **kwargs):
-        self._close()
+        self.close()
+
+    def _get_adc_to_volts(self):
+        return self.get_setup().adc_to_volts
+
+    def connect(self):
+        """
+        Open serial connection to the device.
+
+        The `connect` method is automatically called in the constructor.
+        You only need to call the method to reopen the connection after calling `close`.
+        """
+        if not self.connected:
+            self._ser.open()
+
+    def close(self):
+        """Close serial connection to the device."""
+        if not hasattr(self, "_ser"):
+            return
+        if self.connected:
+            self._ser.close()
+
+    @property
+    def connected(self) -> bool:
+        """Check if the connection to the device is open."""
+        return self._ser.is_open
 
     @contextmanager
     def _timeout_context(self, timeout_seconds: float):
@@ -416,6 +449,9 @@ class SpotWave:
         """
         Get AE data records.
 
+        Todo:
+            - Implement parsing of record start marker
+
         Yields:
             AE data records (either status or hit data)
         """
@@ -459,7 +495,7 @@ class SpotWave:
                     flags=int(matches.group("flags")),
                 )
             elif record_type == "R":  # marker record start
-                ...  # TODO
+                ...
             else:
                 logger.warning(f"Unknown AE data record: {line}")
 

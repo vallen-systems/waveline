@@ -2,7 +2,6 @@ from datetime import datetime
 
 import pytest
 from pytest import mark
-from spotwave_fixture import sw
 
 from waveline.utils import decibel_to_volts
 

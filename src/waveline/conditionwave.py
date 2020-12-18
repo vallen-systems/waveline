@@ -123,6 +123,12 @@ class ConditionWave:
 
     - Control port: 5432
     - Streaming ports: 5433 for channel 1 and 5434 for channel 2
+
+    The interface is asynchronous and using `asyncio` for TCP/IP communication.
+    This is especially beneficial for this kind of streaming applications,
+    where most of the time the app is waiting for more data packets
+    (`read more <https://realpython.com/async-io-python/>`_).
+    Please refer to the examples for implementation details.
     """
 
     CHANNELS = (1, 2)  #: Valid channels
@@ -148,9 +154,31 @@ class ConditionWave:
 
         Args:
             address: IP address of device.
-                Use the method `discover` to get IP addresses of available devices.
+                Use the method `discover` to get IP addresses of available conditionWave devices.
+
         Returns:
             Instance of `ConditionWave`
+
+        Example:
+            There are two ways constructing and using the `ConditionWave` class:
+
+            1.  Without context manager, manually calling the `connect` and `close` method:
+
+                >>> async def main():
+                >>>     cw = waveline.ConditionWave("192.168.0.100")
+                >>>     await cw.connect()
+                >>>     print(await cw.get_info())
+                >>>     ...
+                >>>     await cw.close()
+                >>> asyncio.run(main())
+
+            2.  Using the async context manager:
+
+                >>> async def main():
+                >>>     async with waveline.ConditionWave("192.168.0.100") as cw:
+                >>>         print(await cw.get_info())
+                >>>         ...
+                >>> asyncio.run(main())
         """
         self._address = address
         self._reader = None

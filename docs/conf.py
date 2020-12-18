@@ -38,15 +38,19 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx_autodoc_typehints",
+    "sphinx.ext.todo",
 ]
 
 autosummary_generate = True
 autodoc_member_order = "bysource"
 
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
+    "python": ("https://docs.python.org/3/", None),
     "numpy": ("https://docs.scipy.org/doc/numpy/", None),
+    "serial": ("https://pyserial.readthedocs.io/en/stable/", None),
 }
+
+todo_include_todos = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

@@ -22,6 +22,7 @@ Library to easily interface with Vallen Systeme WaveLine™ devices using the pu
     :hidden:
 
     changelog
+    todo
 
 Indices and tables
 ------------------

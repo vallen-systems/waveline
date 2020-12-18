@@ -13,7 +13,7 @@ cd pyWaveline
 pip install -e .[dev]
 ```
 
-Run test suite:
+Run tests (system tests excluded):
 
 ```
 tox
@@ -24,4 +24,13 @@ The documentation is built with [sphinx](https://www.sphinx-doc.org):
 ```
 cd docs
 sphinx-build . _build
+```
+
+## Run system tests
+
+System level tests are only available, if the targeted device can be discovered.
+
+Run system tests with a spotWave device:
+```
+pytest tests/system/spotwave --duration-acq 1
 ```

@@ -2,7 +2,6 @@ from time import sleep
 
 import pytest
 from pytest import mark
-from spotwave_fixture import sw
 
 from waveline.spotwave import AERecord
 
@@ -55,7 +54,7 @@ def test_acq_continuous(sw, tr_enabled):
     sw.stop_acquisition()
 
     ae_data = list(sw.get_ae_data())
-    assert len(ae_data) == pytest.approx(9, abs=1)
+    assert len(ae_data) == pytest.approx(10, abs=1)
 
     for i, record in enumerate(ae_data, start=0):
         assert record.time == i * ddt_seconds
@@ -68,7 +67,7 @@ def test_acq_continuous(sw, tr_enabled):
 
     tr_data = list(sw.get_tr_data())
     if tr_enabled:
-        assert len(tr_data) == pytest.approx(9, abs=1)
+        assert len(tr_data) == pytest.approx(10, abs=1)
     else:
         assert len(tr_data) == 0
         return  # skip rest of test
@@ -81,7 +80,7 @@ def test_acq_continuous(sw, tr_enabled):
 
 @mark.parametrize("ddt_us", (1000, 2000, 10_000, 100_000))
 @mark.parametrize("decimation", (1, 2, 10))
-def test_acq_continuous_lost_tr(sw, ddt_us, decimation):
+def test_acq_continuous_tr_loss(sw, ddt_us, decimation, duration_acq):
     sw.set_continuous_mode(True)
     sw.set_ddt(ddt_us)
     sw.set_tr_enabled(True)
@@ -91,6 +90,6 @@ def test_acq_continuous_lost_tr(sw, ddt_us, decimation):
 
     for record in sw.stream():
         if isinstance(record, AERecord):
-            assert record.trai != 0
-        if record.time > 1:  # stop stream after 1 s
+            assert record.trai != 0, f"TR loss after {record.time} seconds"
+        if record.time > duration_acq:
             break

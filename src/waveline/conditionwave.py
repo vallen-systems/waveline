@@ -78,7 +78,8 @@ class _AcquisitionStatus:
 
     async def start(self):
         """Start async task."""
-        self._task = asyncio.create_task(self._read_acquisition_status())
+        loop = asyncio.get_event_loop()  # workaround for Python 3.6
+        self._task = loop.create_task(self._read_acquisition_status())
 
     async def stop(self):
         """Stop async task."""

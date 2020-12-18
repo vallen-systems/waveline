@@ -81,8 +81,8 @@ def test_acq_continuous(sw, tr_enabled):
         assert record.samples == ddt_seconds * 2e6
 
 
-@mark.parametrize("ddt_us", (1000, 2000, 10_000, 100_000))
-@mark.parametrize("decimation", (1, 2, 10))
+@mark.parametrize("ddt_us", (1000, 2500, 5000, 10_000, 25_000, 50_000, 100_000))
+@mark.parametrize("decimation", (1, 2, 4))
 def test_acq_continuous_tr_loss(sw, ddt_us, decimation, duration_acq):
     sw.set_continuous_mode(True)
     sw.set_ddt(ddt_us)

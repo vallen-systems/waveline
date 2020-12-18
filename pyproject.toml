@@ -80,6 +80,15 @@ commands =
     coverage combine
     coverage report
 
+[testenv:coveralls]
+passenv = GITHUB_*
+extras = tests
+deps = coveralls
+commands = 
+    coverage run --parallel -m pytest
+    coverage combine
+    coveralls
+
 [testenv:docs]
 extras = docs
 changedir = docs

@@ -3,6 +3,7 @@ from setuptools import setup, find_packages
 INSTALL_REQUIRES = [
     "numpy",
     "pyserial>=3",
+    "dataclasses>=0.6; python_version < '3.7'", 
 ]
 
 EXTRAS_REQUIRE = {
@@ -12,14 +13,16 @@ EXTRAS_REQUIRE = {
         "sphinx-rtd-theme",
     ],
     "tests": [
-        "pytest",
+        "pytest>=6",  # pyproject.toml support
+        "coverage>=5",  # pyproject.toml support
         "freezegun",
-        "coverage<5.0",
     ],
     "tools": [
-        "tox",
-        "pylint",
+        "black",
+        "isort",
         "mypy",
+        "pylint>=2.5",  # pyproject.toml support
+        "tox>=3.4",  # pyproject.toml support
     ],
 }
 

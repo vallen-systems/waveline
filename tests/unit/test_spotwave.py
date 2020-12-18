@@ -1,5 +1,4 @@
 from datetime import datetime
-from textwrap import dedent
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -10,7 +9,6 @@ from serial import Serial, SerialException
 
 from waveline import SpotWave
 from waveline.spotwave import Setup
-
 
 ADC_TO_VOLTS = 1.74e-6
 
@@ -28,19 +26,8 @@ def mock_spotwave_adc_factor():
         yield method
 
 
-RESPONSE_GET_TR_DATA = """
-TRAI=1 T=43686000 NS=768
-{tra1}
-TRAI=2 T=43686983 NS=692
-{tra2}
-""".format(
-    tra1="\n".join([str(x) for x in range(768)]),
-    tra2="\n".join([str(x) for x in range(692)]),
-).encode().lstrip()
-
-
-@pytest.fixture()
-def serial_mock():
+@pytest.fixture(name="serial_mock")
+def mock_serial_port():
     serial_mock = Mock(spec=Serial)
     serial_mock.is_open = False
     return serial_mock
@@ -48,7 +35,7 @@ def serial_mock():
 
 def test_init_serial(serial_mock):
     sw = SpotWave(serial_mock)
-    assert sw._ser == serial_mock
+    assert sw._ser == serial_mock  # pylint: disable=protected-access
     serial_mock.open.assert_called()
 
 
@@ -279,11 +266,14 @@ def test_get_tr_data(serial_mock):
     assert_allclose(tr_data[1].data, data[1] * ADC_TO_VOLTS)
 
 
-@pytest.mark.parametrize("samples", (
-    32,
-    128,
-    65536,
-))
+@pytest.mark.parametrize(
+    "samples",
+    (
+        32,
+        128,
+        65536,
+    ),
+)
 def test_get_data(serial_mock, samples):
     sw = SpotWave(serial_mock)
 

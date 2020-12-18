@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FilterSettings:
     """Filter settings."""
+
     highpass: Optional[float]  #: Highpass frequency in Hz
     lowpass: Optional[float]  #: Lowpass frequency in Hz
     order: int = 8  #: Filter order
@@ -30,6 +31,7 @@ class FilterSettings:
 @dataclass
 class ChannelSettings:
     """Channel settings."""
+
     range_volts: float  #: Input range in volts
     decimation_factor: int  #: Decimation factor
     filter_settings: FilterSettings  #: Filter settings
@@ -49,7 +51,7 @@ class _AcquisitionStatus:
         logger.debug("Start reading acquisition status")
         try:
             while True:
-                line = await self._reader.readuntil(b'\n')  # raises IncompleteReadError on EOF
+                line = await self._reader.readuntil(b"\n")  # raises IncompleteReadError on EOF
                 line = line.decode("utf-8").rstrip()
 
                 try:
@@ -141,11 +143,7 @@ class ConditionWave:
     DEFAULT_SETTINGS = ChannelSettings(
         range_volts=0.05,
         decimation_factor=1,
-        filter_settings=FilterSettings(
-            highpass=None,
-            lowpass=None,
-            order=8
-        ),
+        filter_settings=FilterSettings(highpass=None, lowpass=None, order=8),
     )  #: Default settings
 
     def __init__(self, address: str):
@@ -347,6 +345,7 @@ class ConditionWave:
             lowpass: Lowpass frequency in Hz
             order: IIR filter order
         """
+
         def value_or(value: Optional[float], default_value: float):
             if value is None:
                 return default_value

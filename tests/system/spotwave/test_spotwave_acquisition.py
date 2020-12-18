@@ -6,12 +6,15 @@ from pytest import mark
 from waveline.spotwave import AERecord
 
 
-@mark.parametrize("samples", (
-    10,
-    1024,
-    65536,
-    200_000,
-))
+@mark.parametrize(
+    "samples",
+    (
+        10,
+        1024,
+        65536,
+        200_000,
+    ),
+)
 def test_get_data(sw, samples):
     data = sw.get_data(samples)
     assert len(data) == samples

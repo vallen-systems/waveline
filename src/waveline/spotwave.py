@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Status:
     """Status information."""
+
     device_id: str  #: Unique device id
     firmware_version: str  #: Firmware version <major>.<minor> as hex codes
     temperature: int  #: Device temperature in °C
@@ -31,6 +32,7 @@ class Status:
 @dataclass
 class Setup:
     """Setup."""
+
     acq_enabled: bool  #: Flag if acquisition is enabled
     cont_enabled: bool  #: Flag if continuous mode is enabled
     log_enabled: bool  #: Flag if logging mode is enabled
@@ -56,6 +58,7 @@ class AERecord:
     Todo:
         - Documentation or data type with available hit flags
     """
+
     type_: str  #: Record type (hit or status data)
     time: float  #: Time in seconds
     amplitude: float  #: Peak amplitude in volts
@@ -70,6 +73,7 @@ class AERecord:
 @dataclass
 class TRRecord:
     """Transient data record."""
+
     trai: int  #: Transient recorder index (key between `AERecord` and `TRRecord`)
     time: float  #: Time in seconds
     samples: int  #: Number of samples
@@ -88,6 +92,7 @@ def _as_float(string):
 
 def _multiline_output_to_dict(lines: List[bytes]):
     """Helper function to parse output from get_info, get_status and get_setup."""
+
     def key_value_generator(lines: List[str]):
         for line in lines:
             try:
@@ -236,6 +241,7 @@ class SpotWave:
             raise RuntimeError("Could not get setup")
 
         setup_dict = _multiline_output_to_dict(lines)
+
         def get_filter_settings():
             """
             Parse special filter setting row.

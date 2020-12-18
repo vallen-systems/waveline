@@ -1,7 +1,7 @@
 """
 Module for conditionWave device.
 
-All functions are exposed by the `ConditionWave` class.
+All device-related functions are exposed by the `ConditionWave` class.
 """
 
 import asyncio
@@ -22,17 +22,17 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FilterSettings:
     """Filter settings."""
-    highpass: Optional[float]
-    lowpass: Optional[float]
-    order: int = 8
+    highpass: Optional[float]  #: Highpass frequency in Hz
+    lowpass: Optional[float]  #: Lowpass frequency in Hz
+    order: int = 8  #: Filter order
 
 
 @dataclass
 class ChannelSettings:
     """Channel settings."""
-    range_volts: float
-    decimation_factor: int
-    filter_settings: FilterSettings
+    range_volts: float  #: Input range in volts
+    decimation_factor: int  #: Decimation factor
+    filter_settings: FilterSettings  #: Filter settings
 
 
 class _AcquisitionStatus:
@@ -125,13 +125,13 @@ class ConditionWave:
     - Streaming ports: 5433 for channel 1 and 5434 for channel 2
     """
 
-    CHANNELS = (1, 2)
-    MAX_SAMPLERATE = 10_000_000
+    CHANNELS = (1, 2)  #: Valid channels
+    MAX_SAMPLERATE = 10_000_000  #: Maximum sampling rate in Hz
     RANGES = {
         0.05: 0,  # 50 mV
         5.0: 1,  # 5 V
-    }
-    PORT = 5432
+    }  #: Mapping of range in volts and range index
+    PORT = 5432  #: Control port number
     DEFAULT_SETTINGS = ChannelSettings(
         range_volts=0.05,
         decimation_factor=1,
@@ -140,7 +140,7 @@ class ConditionWave:
             lowpass=None,
             order=8
         ),
-    )
+    )  #: Default settings
 
     def __init__(self, address: str):
         """
@@ -148,7 +148,7 @@ class ConditionWave:
 
         Args:
             address: IP address of device.
-                Please us the method `discover` to discover available devices.
+                Use the method `discover` to get IP addresses of available devices.
         Returns:
             Instance of `ConditionWave`
         """
@@ -360,6 +360,17 @@ class ConditionWave:
 
         Yields:
             Tuple of datetime and numpy array (in volts)
+
+        Example:
+            >>> async with waveline.ConditionWave("192.168.0.100") as cw:
+            >>>     # apply settings
+            >>>     await cw.set_range(0.05)
+            >>>     await cw.set_filter(100e3, 500e3, 8)
+            >>>     # start daq and streaming
+            >>>     await cw.start_acquisition()
+            >>>     async for timestamp, block in cw.stream(channel=1, blocksize=65536):
+            >>>         # do something with the data
+            >>>         ...
         """
         if channel not in self.CHANNELS:
             raise ValueError(f"Channel must be in {self.CHANNELS}")
@@ -400,14 +411,14 @@ class ConditionWave:
 
     @_require_connected
     def get_temperature(self) -> Optional[int]:
-        """Get current (only during acquisition) device temperature."""
+        """Get current device temperature in °C (only during acquisition)."""
         if not self._daq_active or self._daq_status is None:
             return None
         return self._daq_status.get_temperature()
 
     @_require_connected
     def get_buffersize(self) -> int:
-        """Get buffer size during acquisition in bytes."""
+        """Get buffer size in bytes (only during acquisition)."""
         if not self._daq_active or self._daq_status is None:
             return 0
         return self._daq_status.get_buffersize()

@@ -1,7 +1,7 @@
 """
 Module for spotWave device.
 
-All functions are exposed by the `SpotWave` class.
+All device-related functions are exposed by the `SpotWave` class.
 """
 
 
@@ -22,31 +22,31 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Status:
     """Status information."""
-    device_id: str
-    firmware_version: str
-    temperature: int
-    data_size: int
-    datetime: datetime
+    device_id: str  #: Unique device id
+    firmware_version: str  #: Firmware version <major>.<minor> as hex codes
+    temperature: int  #: Device temperature in °C
+    data_size: int  #: Bytes in buffer
+    datetime: datetime  #: Device datetime
 
 
 @dataclass
 class Setup:
     """Setup."""
-    acq_enabled: bool
-    cont_enabled: bool
-    log_enabled: bool
-    adc_to_volts: float
-    threshold_volts: float
-    ddt_seconds: float
-    status_interval_seconds: float
-    filter_highpass_hz: float
-    filter_lowpass_hz: float
-    filter_order: int
-    tr_enabled: bool
-    tr_decimation: int
-    tr_pretrigger_samples: int
-    tr_postduration_samples: int
-    cct_seconds: float
+    acq_enabled: bool  #: Flag if acquisition is enabled
+    cont_enabled: bool  #: Flag if continuous mode is enabled
+    log_enabled: bool  #: Flag if logging mode is enabled
+    adc_to_volts: float  #: Conversion factor from ADC values to volts
+    threshold_volts: float  #: Threshold for hit-based acquisition in volts
+    ddt_seconds: float  #: Duration discrimination time (DDT) in seconds
+    status_interval_seconds: float  #: Status interval in seconds
+    filter_highpass_hz: float  #: Highpass frequency in Hz
+    filter_lowpass_hz: float  #: Lowpass frequency in Hz
+    filter_order: int  #: Filter order
+    tr_enabled: bool  #: Flag in transient data recording is enabled
+    tr_decimation: int  #: Decimation factor for transient data
+    tr_pretrigger_samples: int  #: Pre-trigger samples for transient data
+    tr_postduration_samples: int  #: Post-duration samples for transient data
+    cct_seconds: float  #: Coupling check transmitter (CCT) / pulser interval in seconds
 
 
 @dataclass
@@ -105,7 +105,7 @@ class SpotWave:
 
     VENDOR_ID = 8849  #: USB vendor id of Vallen Systeme GmbH
     PRODUCT_ID = 272  #: USB product id of SpotWave device
-    CLOCK = 2_000_000  #: Internal clock in Hz = 2 MHz
+    CLOCK = 2_000_000  #: Internal clock in Hz
 
     def __init__(self, port: Union[str, Serial]):
         """
@@ -113,7 +113,7 @@ class SpotWave:
 
         Args:
             port: Either the serial port id (e.g. "COM6") or a `serial.Serial` port instance.
-                Please us the method `discover` to get a list of ports with connected devices.
+                Use the method `discover` to get a list of ports with connected devices.
         Returns:
             Instance of `SpotWave`
         """
@@ -278,6 +278,22 @@ class SpotWave:
 
         Threshold will be ignored.
         The length of the records is determined by `ddt` with `set_ddt`.
+
+        Note:
+            The parameters for continuous mode with transient recording enabled (`set_tr_enabled`)
+            have to be chosen with care - mainly the decimation factor (`set_tr_decimation`) and
+            `ddt` (`set_ddt`). The internal buffer of the device can store up to ~200.000 samples.
+
+            If the buffer is full, data records are lost.
+            Small latencies in data polling can cause overflows and therefore data loss.
+            One record should not exceed half the buffer size (~100.000 samples).
+            25% of the buffer size (~50.000 samples) is a good starting point.
+            The number of samples in a record is determined by `ddt` and the decimation factor `d`:
+            :math:`n = ddt_{\\mu s} \\cdot f_s / d = ddt_{\\mu s} \\cdot 2 / d`
+            :math:`\\implies ddt_{\\mu s} \\approx 50.000 \\cdot d / 2`
+
+            On the other hand, if the number of samples is small, more hits are generated and the
+            CPU load increases.
 
         Args:
             enabled: Set to `True` to enable continuous mode

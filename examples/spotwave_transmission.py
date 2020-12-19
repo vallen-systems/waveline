@@ -11,6 +11,8 @@ The example requires matplotlib for plotting (install with `pip install matplotl
 """
 
 import logging
+from tkinter import TclError
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -42,4 +44,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (KeyboardInterrupt, TclError):
+        ...

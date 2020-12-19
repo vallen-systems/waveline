@@ -55,5 +55,5 @@ if __name__ == "__main__":
 
     try:
         asyncio.run(main(args.ip, args.samplerate, args.blocksize))
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("Graceful shutdown")
+    except KeyboardInterrupt:
+        ...

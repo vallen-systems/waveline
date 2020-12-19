@@ -9,7 +9,7 @@ with open(HERE / "README.md", encoding="utf-8") as f:
 INSTALL_REQUIRES = [
     "numpy",
     "pyserial>=3",
-    "dataclasses>=0.6; python_version < '3.7'", 
+    "dataclasses>=0.6; python_version<'3.7'", 
 ]
 
 EXTRAS_REQUIRE = {
@@ -19,9 +19,11 @@ EXTRAS_REQUIRE = {
         "sphinx-rtd-theme",
     ],
     "tests": [
-        "pytest>=6",  # pyproject.toml support
+        "asynctest",
         "coverage>=5",  # pyproject.toml support
         "freezegun",
+        "pytest>=6",  # pyproject.toml support
+        "pytest-asyncio",
     ],
     "tools": [
         "black",

@@ -429,7 +429,8 @@ class SpotWave:
             highpass = 0
         if lowpass is None:
             lowpass = 0.5 * self.CLOCK  # nyquist
-        self._send_command(f"set_filter {int(highpass / 1e3)} {int(lowpass / 1e3)} {int(order)}")
+        logger.info(f"Set filter to {highpass / 1e3}-{lowpass / 1e3} kHz (order: {order})...")
+        self._send_command(f"set_filter {highpass / 1e3} {lowpass / 1e3} {int(order)}")
 
     def set_datetime(self, timestamp: Optional[datetime] = None):
         """

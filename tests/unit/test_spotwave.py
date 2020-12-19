@@ -184,7 +184,7 @@ def test_commands_without_response(serial_mock):
     assert_write(b"set_cct -0.1\n")
 
     sw.set_filter(highpass=100_000, lowpass=300_000, order=6)
-    assert_write(b"set_filter 100 300 6\n")
+    assert_write(b"set_filter 100.0 300.0 6\n")
 
     sw.set_datetime(datetime(2020, 12, 16, 17, 55, 13))
     assert_write(b"set_datetime 2020-12-16 17:55:13\n")

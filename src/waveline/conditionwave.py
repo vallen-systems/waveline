@@ -38,7 +38,14 @@ class ChannelSettings:
 
 
 class _AcquisitionStatus:
-    """Helper class read and parse status data on control port during acquisition."""
+    """
+    Helper class read and parse status data on control port during acquisition.
+
+    Following messages are sent:
+    - temp=<temperature in °C>
+    - buffer_size=<buffer size in bytes>
+    - error=<error message>
+    """
 
     def __init__(self, stream_reader: asyncio.StreamReader):
         self._reader = stream_reader
@@ -62,11 +69,11 @@ class _AcquisitionStatus:
                 if key == "temp":
                     # logger.debug(f"Temperature = {value} °C")
                     with self._lock:
-                        self._temperature = value
+                        self._temperature = int(value)
                 elif key == "buffer_size":
                     # logger.debug(f"Buffer size = {value}")
                     with self._lock:
-                        self._buffersize = value
+                        self._buffersize = int(value)
                 elif key == "error":
                     logging.error(f"Error during acquisition: {value}")
                 else:
@@ -83,9 +90,13 @@ class _AcquisitionStatus:
 
     async def stop(self):
         """Stop async task."""
-        self._task.cancel()
-        await self._task
-        self._task = None
+        try:
+            self._task.cancel()
+            await self._task
+        except asyncio.CancelledError:
+            ...  # weird bug with Python 3.8 and Windows (Proactor event loop)
+        finally:
+            self._task = None
 
     def get_temperature(self):
         """Get system temperatur."""
@@ -269,21 +280,24 @@ class ConditionWave:
         """Close connection."""
         if not self.connected:
             return
-        try:
-            if self._daq_active:
-                await self.stop_acquisition()
 
-            logger.info(f"Close connection {self._address}:{self.PORT}...")
+        if self._daq_active:
+            await self.stop_acquisition()
+
+        logger.info(f"Close connection {self._address}:{self.PORT}...")
+        try:
             self._writer.close()
-            await self._writer.wait_closed()
-            self._connected = False
-        except:  # pylint: disable=bare-except
+            await self._writer.wait_closed()  # new in 3.7 -> might raise AttributeError
+        except AttributeError:
             pass
+        finally:
+            self._connected = False
 
     @_require_connected
-    async def _send_command(self, message):
-        logger.debug("Write message: %s", message)
-        self._writer.write(f"{message}\n".encode())  # type: ignore
+    async def _send_command(self, command):
+        command_bytes = command.encode("utf-8") + b"\n"  # str -> bytes
+        logger.debug("Send command: %a", command_bytes)
+        self._writer.write(command_bytes)
         await self._writer.drain()
 
     @_require_connected
@@ -354,10 +368,10 @@ class ConditionWave:
 
         if highpass is None and lowpass is None:
             logger.info("Set filter to bypass")
-            await self._send_command("set_filter 0")
+            await self._send_command("set_filter 0 0")
         else:
-            highpass_khz = value_or(highpass, 0) / 1e3
-            lowpass_khz = value_or(lowpass, self.MAX_SAMPLERATE) / 1e3
+            highpass_khz = value_or(highpass, 0) / 1e3  # 0 if None
+            lowpass_khz = value_or(lowpass, 0.5 * self.MAX_SAMPLERATE) / 1e3  # nyquist if None
 
             logger.info(f"Set filter to {highpass_khz}-{lowpass_khz} kHz (order: {order})...")
             await self._send_command(f"set_filter 0 {highpass_khz} {lowpass_khz} {order}")

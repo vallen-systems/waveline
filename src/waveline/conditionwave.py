@@ -392,13 +392,16 @@ class ConditionWave:
         self._daq_active = True
 
     @_require_connected
-    async def stream(self, channel: int, blocksize: int):
+    async def stream(self, channel: int, blocksize: int, *, start: Optional[datetime] = None):
         """
         Async generator to stream channel data.
 
         Args:
             channel: Channel number [0, 1]
             blocksize: Number of samples per block
+            start: Timestamp when acquisition was started with `start_acquisition`.
+                Useful to get equal timestamps for multi-channel acquisition.
+                If `None`, timestamp will be the time of the first acquired block.
 
         Yields:
             Tuple of datetime and numpy array (in volts)
@@ -429,7 +432,7 @@ class ConditionWave:
         blocksize_bits = int(blocksize * 2)  # 16 bit = 2 * 8 byte
         to_volts = float(self.input_range) / (2 ** 15)
 
-        timestamp = None
+        timestamp = start
         interval = timedelta(seconds=self.decimation * blocksize / self.MAX_SAMPLERATE)
 
         reader, writer = await asyncio.open_connection(self._address, port)

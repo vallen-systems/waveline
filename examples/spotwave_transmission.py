@@ -10,10 +10,13 @@ first sample of the snapshot acquired with `get_data`.
 The example requires matplotlib for plotting (install with `pip install matplotlib`).
 """
 
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 
 from waveline import SpotWave
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():

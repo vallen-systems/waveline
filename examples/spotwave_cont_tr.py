@@ -9,12 +9,15 @@ With less samples, more hits are generated and the CPU load increases.
 The record length is set by the duration discrimination time (DDT) with `set_ddt`.
 """
 
+import logging
 from dataclasses import asdict
 
 import numpy as np
 
 from waveline import SpotWave
 from waveline.spotwave import AERecord, TRRecord
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():

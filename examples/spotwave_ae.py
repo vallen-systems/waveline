@@ -14,13 +14,16 @@ Hit data (AERecord) and transient data (TRRecord) are returned from different fu
 merged by matching the transient recorder index (trai) field in both records.
 """
 
-from dataclasses import dataclass, asdict
+import logging
+from dataclasses import asdict, dataclass
 from typing import Dict
 
 import numpy as np
 
 from waveline import SpotWave
 from waveline.spotwave import AERecord, TRRecord
+
+logging.basicConfig(level=logging.INFO)
 
 
 @dataclass

@@ -7,8 +7,7 @@ import numpy as np
 
 from waveline import ConditionWave
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 async def main(ip: str, samplerate: int, blocksize: int):

@@ -7,9 +7,12 @@ The computational load on the client side is minimal compared to transient data 
 feature extraction on the raw data (2 MHz -> 4 MB/s).
 """
 
+import logging
 import math
 
 from waveline import SpotWave
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():

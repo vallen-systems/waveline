@@ -243,21 +243,6 @@ class ConditionWave:
         """Check if connected to device."""
         return self._connected
 
-    @property
-    def input_range(self) -> float:
-        """Input range in volts."""
-        return self._settings.range_volts
-
-    @property
-    def decimation(self) -> int:
-        """Decimation factor."""
-        return self._settings.decimation_factor
-
-    @property
-    def filter_settings(self) -> FilterSettings:
-        """Filter settings."""
-        return copy.deepcopy(self._settings.filter_settings)
-
     async def connect(self):
         """Connect to device."""
         if self.connected:

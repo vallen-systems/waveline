@@ -16,8 +16,8 @@ async def main():
     ip = ConditionWave.discover()[0]
 
     async with ConditionWave(ip) as cw:
-        await cw.set_decimation(10)  # 10 MHz / 10 = 1 MHz
-        await cw.set_range(5)  # 5 V
+        await cw.set_decimation(channel=0, factor=10)  # 10 MHz / 10 = 1 MHz
+        await cw.set_range(channel=0, range_volts=5)  # 5 V
 
         datetime_start = datetime.now()  # use start timestamp to synchronize timestamps of channels
         await cw.start_acquisition()

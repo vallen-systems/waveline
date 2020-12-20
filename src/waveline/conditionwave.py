@@ -5,14 +5,13 @@ All device-related functions are exposed by the `ConditionWave` class.
 """
 
 import asyncio
-import copy
 import logging
 import socket
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from functools import wraps
 from threading import Lock
-from typing import List, Optional
+from typing import AsyncIterator, List, Optional, Tuple
 
 import numpy as np
 
@@ -20,21 +19,11 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class FilterSettings:
-    """Filter settings."""
-
-    highpass: Optional[float]  #: Highpass frequency in Hz
-    lowpass: Optional[float]  #: Lowpass frequency in Hz
-    order: int = 8  #: Filter order
-
-
-@dataclass
-class ChannelSettings:
+class _ChannelSettings:
     """Channel settings."""
 
     range_volts: float  #: Input range in volts
-    decimation_factor: int  #: Decimation factor
-    filter_settings: FilterSettings  #: Filter settings
+    decimation: int  #: Decimation factor
 
 
 class _AcquisitionStatus:
@@ -129,6 +118,12 @@ def _require_connected(func):
     return sync_wrapper
 
 
+def _channel_str(channel: int) -> str:
+    if channel == 0:
+        return "all channels"
+    return f"channel {channel:d}"
+
+
 class ConditionWave:
     """
     Interface for conditionWave device.
@@ -145,18 +140,16 @@ class ConditionWave:
     Please refer to the examples for implementation details.
     """
 
-    CHANNELS = (1, 2)  #: Valid channels
+    CHANNELS = (1, 2)  #: Available channels
     MAX_SAMPLERATE = 10_000_000  #: Maximum sampling rate in Hz
-    RANGES = {
+    PORT = 5432  #: Control port number
+    RANGES = (0.05, 5.0)
+
+    _DEFAULT_SETTINGS = _ChannelSettings(range_volts=0.05, decimation=1)  #: Default settings
+    _RANGE_INDEX = {
         0.05: 0,  # 50 mV
         5.0: 1,  # 5 V
     }  #: Mapping of range in volts and range index
-    PORT = 5432  #: Control port number
-    DEFAULT_SETTINGS = ChannelSettings(
-        range_volts=0.05,
-        decimation_factor=1,
-        filter_settings=FilterSettings(highpass=None, lowpass=None, order=8),
-    )  #: Default settings
 
     def __init__(self, address: str):
         """
@@ -193,10 +186,12 @@ class ConditionWave:
         self._address = address
         self._reader = None
         self._writer = None
-        self._settings = copy.deepcopy(self.DEFAULT_SETTINGS)
         self._connected = False
         self._daq_active = False
         self._daq_status: Optional[_AcquisitionStatus] = None
+        self._channel_settings = {
+            channel: replace(self._DEFAULT_SETTINGS) for channel in self.CHANNELS  # return copy
+        }
 
     async def __aenter__(self):
         await self.connect()
@@ -252,14 +247,9 @@ class ConditionWave:
         self._reader, self._writer = await asyncio.open_connection(self._address, self.PORT)
         self._connected = True
 
-        logger.info("Set default/saved settings...")
-        await self.set_range(self.input_range)
-        await self.set_decimation(self.decimation)
-        await self.set_filter(
-            self._settings.filter_settings.highpass,
-            self._settings.filter_settings.lowpass,
-            self._settings.filter_settings.order,
-        )
+        logger.info("Set default settings...")
+        await self.set_range(0, self._DEFAULT_SETTINGS.range_volts)
+        await self.set_decimation(0, self._DEFAULT_SETTINGS.decimation)
 
     async def close(self):
         """Close connection."""
@@ -293,58 +283,76 @@ class ConditionWave:
         data = await self._reader.read(1000)  # type: ignore
         return data.decode()
 
+    def _check_channel_number(self, channel: int):
+        if channel not in (0, *self.CHANNELS):
+            raise ValueError(
+                f"Invalid channel number '{channel}'. "
+                f"Select a single channel from {self.CHANNELS} or 0 for all"
+            )
+
     @_require_connected
-    async def set_range(self, range_volts: float):
+    async def set_range(self, channel: int, range_volts: float):
         """
         Set input range.
 
         Args:
+            channel: Channel number (0 for all channels)
             range_volts: Input range in volts (0.05, 5)
         """
+        self._check_channel_number(channel)
         try:
-            range_index = self.RANGES[range_volts]
+            range_index = self._RANGE_INDEX[range_volts]
         except KeyError:
-            raise ValueError(
-                f"Invalid range. Possible values: {list(self.RANGES.keys())}"
-            ) from None
+            raise ValueError(f"Invalid range. Possible values: {self.RANGES}") from None
 
-        logger.info(f"Set range to {range_volts} V ({range_index})...")
-        await self._send_command(f"set_adc_range 0 {range_index:d}")
-        self._settings.range_volts = range_volts
+        logger.info(f"Set {_channel_str(channel)} range to {range_volts} V...")
+        await self._send_command(f"set_adc_range {channel:d} {range_index:d}")
+        if channel > 0:
+            self._channel_settings[channel].range_volts = range_volts
+        else:
+            self._channel_settings[1].range_volts = range_volts
+            self._channel_settings[2].range_volts = range_volts
 
     @_require_connected
-    async def set_decimation(self, factor: int):
+    async def set_decimation(self, channel: int, factor: int):
         """
         Set decimation factor.
 
         Args:
+            channel: Channel number (0 for all channels)
             factor: Decimation factor [1, 500]
         """
+        self._check_channel_number(channel)
         factor = int(factor)
         if not 1 <= factor <= 500:
             raise ValueError("Decimation factor must be in the range of [1, 500]")
 
-        logger.info(f"Set decimation factor to {factor}...")
-        await self._send_command(f"set_decimation 0 {factor:d}")
-        self._settings.decimation_factor = factor
+        logger.info(f"Set {_channel_str(channel)} decimation factor to {factor}...")
+        await self._send_command(f"set_decimation {channel:d} {factor:d}")
+        if channel > 0:
+            self._channel_settings[channel].decimation = factor
+        else:
+            self._channel_settings[1].decimation = factor
+            self._channel_settings[2].decimation = factor
 
     @_require_connected
     async def set_filter(
         self,
+        channel: int,
         highpass: Optional[float] = None,
         lowpass: Optional[float] = None,
         order: int = 8,
     ):
         """
-        Apply IIR filter settings.
-
-        Default is bypass.
+        Set IIR filter frequencies and order.
 
         Args:
-            highpass: Highpass frequency in Hz
-            lowpass: Lowpass frequency in Hz
-            order: IIR filter order
+            channel: Channel number (0 for all channels)
+            highpass: Highpass frequency in Hz (`None` to disable highpass filter)
+            lowpass: Lowpass frequency in Hz (`None` to disable lowpass filter)
+            order: Filter order
         """
+        self._check_channel_number(channel)
 
         def value_or(value: Optional[float], default_value: float):
             if value is None:
@@ -352,18 +360,14 @@ class ConditionWave:
             return value
 
         if highpass is None and lowpass is None:
-            logger.info("Set filter to bypass")
-            await self._send_command("set_filter 0 0")
+            logger.info(f"Set {_channel_str(channel)} filter to bypass")
+            await self._send_command(f"set_filter {channel:d} 0")
         else:
             highpass_khz = value_or(highpass, 0) / 1e3  # 0 if None
             lowpass_khz = value_or(lowpass, 0.5 * self.MAX_SAMPLERATE) / 1e3  # nyquist if None
 
             logger.info(f"Set filter to {highpass_khz}-{lowpass_khz} kHz (order: {order})...")
-            await self._send_command(f"set_filter 0 {highpass_khz} {lowpass_khz} {order}")
-
-        self._settings.filter_settings.highpass = highpass
-        self._settings.filter_settings.lowpass = lowpass
-        self._settings.filter_settings.order = order
+            await self._send_command(f"set_filter {channel:d} {highpass_khz} {lowpass_khz} {order}")
 
     @_require_connected
     async def start_acquisition(self):
@@ -377,12 +381,14 @@ class ConditionWave:
         self._daq_active = True
 
     @_require_connected
-    async def stream(self, channel: int, blocksize: int, *, start: Optional[datetime] = None):
+    async def stream(
+        self, channel: int, blocksize: int, *, start: Optional[datetime] = None
+    ) -> AsyncIterator[Tuple[datetime, np.ndarray]]:
         """
         Async generator to stream channel data.
 
         Args:
-            channel: Channel number [0, 1]
+            channel: Channel number [1, 2]
             blocksize: Number of samples per block
             start: Timestamp when acquisition was started with `start_acquisition`.
                 Useful to get equal timestamps for multi-channel acquisition.
@@ -407,18 +413,20 @@ class ConditionWave:
         if not self._daq_active:
             raise RuntimeError("Data acquisition not started")
 
+        settings = self._channel_settings[channel]
         logger.info(
             (
                 f"Start data acquisition on channel {channel} "
-                f"(blocksize: {blocksize}, range: {self.input_range} V)"
+                f"(blocksize: {blocksize}, range: {settings.range_volts} V)"
             )
         )
+
         port = int(self.PORT + channel)
         blocksize_bytes = int(blocksize * 2)  # 1 ADC value (16 bit) -> 2 * 8 byte
-        to_volts = float(self.input_range) / 30_000  # 90 % of available 2^15 bytes
+        to_volts = settings.range_volts / 30_000  # 90 % of available 2^15 bytes
 
         timestamp = start
-        interval = timedelta(seconds=self.decimation * blocksize / self.MAX_SAMPLERATE)
+        interval = timedelta(seconds=settings.decimation * blocksize / self.MAX_SAMPLERATE)
 
         reader, writer = await asyncio.open_connection(self._address, port)
         while True:

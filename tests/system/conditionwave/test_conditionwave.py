@@ -35,7 +35,7 @@ async def test_acq_decimation(cw, channel, decimation, duration_acq):
     samplerate = cw.MAX_SAMPLERATE / decimation
     block_count_total = int(duration_acq * samplerate / block_size)
 
-    await cw.set_decimation(decimation)
+    await cw.set_decimation(channel, decimation)
     await cw.start_acquisition()
 
     block_count = 0
@@ -56,7 +56,7 @@ async def test_acq_status(cw):
     assert cw.get_temperature() == None
     assert cw.get_buffersize() == 0
 
-    await cw.set_decimation(10)  # prevent buffer overflow, we don't read the data
+    await cw.set_decimation(0, 10)  # prevent buffer overflow, we don't read the data
     await cw.start_acquisition()
 
     async for _ in cw.stream(1, 10_000):

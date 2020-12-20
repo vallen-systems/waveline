@@ -13,9 +13,9 @@ logging.basicConfig(level=logging.INFO)
 async def main(ip: str, samplerate: int, blocksize: int):
     async with ConditionWave(ip) as cw:
         print(await cw.get_info())
-        await cw.set_range(0.05)
-        await cw.set_decimation(int(cw.MAX_SAMPLERATE / samplerate))
-        await cw.set_filter(100e3, 500e3, 8)
+        await cw.set_range(channel=0, range_volts=0.05)
+        await cw.set_decimation(channel=0, factor=int(cw.MAX_SAMPLERATE / samplerate))
+        await cw.set_filter(channel=0, highpass=100e3, lowpass=500e3, order=8)
         await cw.start_acquisition()
 
         with ThreadPoolExecutor(max_workers=1) as pool:

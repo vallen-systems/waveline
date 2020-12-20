@@ -418,11 +418,9 @@ class SpotWave:
         """
         Set IIR filter frequencies and order.
 
-        Default is bypass.
-
         Args:
-            highpass: Highpass frequency in Hz
-            lowpass: Lowpass frequency in Hz
+            highpass: Highpass frequency in Hz (`None` to disable highpass filter)
+            lowpass: Lowpass frequency in Hz (`None` to disable lowpass filter)
             order: Filter order
         """
         if highpass is None:

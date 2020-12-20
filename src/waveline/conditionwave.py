@@ -429,18 +429,20 @@ class ConditionWave:
             )
         )
         port = int(self.PORT + channel)
-        blocksize_bits = int(blocksize * 2)  # 16 bit = 2 * 8 byte
-        to_volts = float(self.input_range) / (2 ** 15)
+        blocksize_bytes = int(blocksize * 2)  # 1 ADC value (16 bit) -> 2 * 8 byte
+        to_volts = float(self.input_range) / 30_000  # 90 % of available 2^15 bytes
 
         timestamp = start
         interval = timedelta(seconds=self.decimation * blocksize / self.MAX_SAMPLERATE)
 
         reader, writer = await asyncio.open_connection(self._address, port)
         while True:
-            buffer = await reader.readexactly(blocksize_bits)
+            buffer = await reader.readexactly(blocksize_bytes)
             if timestamp is None:
                 timestamp = datetime.now()
-            yield timestamp, np.frombuffer(buffer, dtype=np.int16).astype(np.float32) * to_volts
+            data_adc = np.frombuffer(buffer, dtype=np.int16)
+            data_volts = np.multiply(data_adc, to_volts, dtype=np.float32)
+            yield timestamp, data_volts
             timestamp += interval
         writer.close()
 

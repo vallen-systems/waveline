@@ -8,7 +8,7 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/waveline)](https://pypi.org/project/waveline)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Library to easily interface with Vallen Systeme WaveLine™ devices using the public APIs:
+Python library to easily interface with Vallen Systeme WaveLine™ devices using the public APIs:
 
 - conditionWave
 - spotWave
@@ -60,7 +60,17 @@ sphinx-build . _build
 
 System level tests are only available, if the targeted device can be discovered.
 
+
 Run system tests with a spotWave device:
+
 ```
 pytest tests/system/spotwave --duration-acq 1
+```
+
+Measurement durations for long-term acquisition tests can be specified with the `--duration-acq` parameter (default: 1 second).
+
+Run system tests with a conditionWave device (a specific IP can be provided with the `--cwave-ip` argument, otherwise the first discovered device will be used):
+
+```
+pytest tests/system/conditionwave --duration-acq 1 --cwave-ip 192.168.0.100
 ```

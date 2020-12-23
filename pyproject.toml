@@ -74,19 +74,23 @@ commands =
     coverage run --parallel -m pytest
 
 [testenv:coverage-report]
-extras = tests
-deps = toml
+skip_install = true
+deps =
+    coverage>=5
+    toml
 commands =
-    coverage combine
+    - coverage combine
     coverage report
 
 [testenv:coveralls]
+skip_install = true
+deps =
+    coverage>=5
+    coveralls
+    toml
 passenv = GITHUB_*
-extras = tests
-deps = coveralls
 commands = 
-    coverage run --parallel -m pytest
-    coverage combine
+    - coverage combine
     coveralls
 
 [testenv:docs]

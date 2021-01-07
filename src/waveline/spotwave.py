@@ -77,7 +77,8 @@ class TRRecord:
     trai: int  #: Transient recorder index (key between `AERecord` and `TRRecord`)
     time: float  #: Time in seconds
     samples: int  #: Number of samples
-    data: np.ndarray  #: Array of transient data in volts
+    data: np.ndarray  #: Array of transient data in volts (or ADC values if `raw` is `True`)
+    raw: bool = False  #: ADC values instead of user values (volts)
 
 
 def _as_int(string):
@@ -519,9 +520,12 @@ class SpotWave:
 
         return records
 
-    def get_tr_data(self) -> List[TRRecord]:
+    def get_tr_data(self, raw: bool = False) -> List[TRRecord]:
         """
         Get transient data records.
+
+        Args:
+            raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
 
         Returns:
             List of transient data records
@@ -544,27 +548,32 @@ class SpotWave:
             trai = int(matches.group("TRAI"))
             time = int(matches.group("T"))
             samples = int(matches.group("NS"))
-            data_adc = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
-            data_volts = np.multiply(data_adc, self._adc_to_volts, dtype=np.float32)
+            data = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
+            if not raw:
+                data = np.multiply(data, self._adc_to_volts, dtype=np.float32)
 
-            if len(data_volts) != samples:
+            if len(data) != samples:
                 raise RuntimeError(
-                    f"TR data samples ({len(data_volts)}) do not match expected number ({samples})"
+                    f"TR data samples ({len(data)}) do not match expected number ({samples})"
                 )
 
             record = TRRecord(
                 trai=trai,
                 time=time / self.CLOCK,
                 samples=samples,
-                data=data_volts,
+                data=data,
+                raw=raw,
             )
             records.append(record)
 
         return records
 
-    def stream(self) -> Iterator[Union[AERecord, TRRecord]]:
+    def stream(self, raw: bool = False) -> Iterator[Union[AERecord, TRRecord]]:
         """
         High-level method to continuously acquire data.
+
+        Args:
+            raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
 
         Yields:
             AE and TR data records
@@ -584,21 +593,24 @@ class SpotWave:
         try:
             while True:
                 yield from self.get_ae_data()
-                yield from self.get_tr_data()
+                yield from self.get_tr_data(raw=raw)
         finally:
             self.stop_acquisition()
 
-    def get_data(self, samples: int) -> np.ndarray:
+    def get_data(self, samples: int, raw: bool = False) -> np.ndarray:
         """
         Read snapshot of transient data with maximum sampling rate (2 MHz).
 
         Args:
             samples: Number of samples to read
+            raw: Return ADC values if `True`, skip conversion to volts
 
         Returns:
-            Array with amplitudes in volts
+            Array with amplitudes in volts (or ADC values if `raw` is `True`)
         """
         samples = int(samples)
         self._send_command(f"get_data b {samples}")
         adc_values = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
+        if raw:
+            return adc_values
         return np.multiply(adc_values, self._adc_to_volts, dtype=np.float32)

@@ -239,7 +239,8 @@ def test_get_ae_data(serial_mock):
     assert h.flags == 0
 
 
-def test_get_tr_data(serial_mock):
+@pytest.mark.parametrize("raw", (False, True))
+def test_get_tr_data(serial_mock, raw):
     sw = SpotWave(serial_mock)
 
     lines = [
@@ -253,19 +254,28 @@ def test_get_tr_data(serial_mock):
     serial_mock.readline.side_effect = lines
     serial_mock.read.side_effect = binary_data
 
-    tr_data = sw.get_tr_data()
+    tr_data = sw.get_tr_data(raw=raw)
 
     assert tr_data[0].trai == 1
     assert tr_data[0].time == 43686000 / 2e6
     assert tr_data[0].samples == 13
-    assert_allclose(tr_data[0].data, data[0] * ADC_TO_VOLTS)
+    assert tr_data[0].raw == raw
+    if raw:
+        assert_allclose(tr_data[0].data, data[0])
+    else:
+        assert_allclose(tr_data[0].data, data[0] * ADC_TO_VOLTS)
 
     assert tr_data[1].trai == 2
     assert tr_data[1].time == 43686983 / 2e6
     assert tr_data[1].samples == 27
-    assert_allclose(tr_data[1].data, data[1] * ADC_TO_VOLTS)
+    assert tr_data[1].raw == raw
+    if raw:
+        assert_allclose(tr_data[1].data, data[1])
+    else:
+        assert_allclose(tr_data[1].data, data[1] * ADC_TO_VOLTS)
 
 
+@pytest.mark.parametrize("raw", (False, True))
 @pytest.mark.parametrize(
     "samples",
     (
@@ -274,13 +284,16 @@ def test_get_tr_data(serial_mock):
         65536,
     ),
 )
-def test_get_data(serial_mock, samples):
+def test_get_data(serial_mock, samples, raw):
     sw = SpotWave(serial_mock)
 
     mock_data = (2 ** 15 * np.random.randn(samples)).astype(np.int16)
     serial_mock.read.return_value = mock_data.tobytes()
 
-    data = sw.get_data(samples)
+    data = sw.get_data(samples, raw=raw)
     serial_mock.write.assert_called_with(f"get_data b {samples}\n".encode())
     serial_mock.read.assert_called_with(samples * 2)
-    assert_allclose(data, mock_data * ADC_TO_VOLTS)
+    if raw:
+        assert_allclose(data, mock_data)
+    else:
+        assert_allclose(data, mock_data * ADC_TO_VOLTS)

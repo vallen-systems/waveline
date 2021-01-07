@@ -127,7 +127,7 @@ class SpotWave:
             Instance of `SpotWave`
 
         Example:
-            There are two ways constructing and using the `ConditionWave` class:
+            There are two ways constructing and using the `SpotWave` class:
 
             1.  Without context manager and manually calling the `close` method afterwards:
 
@@ -461,20 +461,21 @@ class SpotWave:
         logger.info("Stop acquisition")
         self._send_command("set_acq enabled 0")
 
-    def get_ae_data(self) -> Iterator[AERecord]:
+    def get_ae_data(self) -> List[AERecord]:
         """
         Get AE data records.
 
         Todo:
             - Implement parsing of record start marker
 
-        Yields:
-            AE data records (either status or hit data)
+        Returns:
+            List of AE data records (either status or hit data)
         """
         self._send_command("get_ae_data")
         headerline = self._ser.readline()
         number_lines = int(headerline)
 
+        records = []
         for _ in range(number_lines):
             line = self._ser.readline().decode(errors="replace")
             logger.debug(f"Received AE data: {line}")
@@ -499,7 +500,7 @@ class SpotWave:
                     logger.error(f"Could not parse AE data: {line}")
                     break
 
-                yield AERecord(
+                record = AERecord(
                     type_=matches.group("type"),
                     time=int(matches.group("T")) / self.CLOCK,
                     amplitude=int(matches.group("A")) * self._adc_to_volts,
@@ -510,20 +511,24 @@ class SpotWave:
                     trai=int(matches.group("TRAI")),
                     flags=int(matches.group("flags")),
                 )
+                records.append(record)
             elif record_type == "R":  # marker record start
                 ...
             else:
                 logger.warning(f"Unknown AE data record: {line}")
 
-    def get_tr_data(self) -> Iterator[TRRecord]:
+        return records
+
+    def get_tr_data(self) -> List[TRRecord]:
         """
         Get transient data records.
 
-        Yields:
-            Transient data records
+        Returns:
+            List of transient data records
         """
         self._send_command("get_tr_data b")
 
+        records = []
         while True:
             headerline = self._ser.readline().decode(errors="replace")
 
@@ -547,12 +552,15 @@ class SpotWave:
                     f"TR data samples ({len(data_volts)}) do not match expected number ({samples})"
                 )
 
-            yield TRRecord(
+            record = TRRecord(
                 trai=trai,
                 time=time / self.CLOCK,
                 samples=samples,
                 data=data_volts,
             )
+            records.append(record)
+
+        return records
 
     def stream(self) -> Iterator[Union[AERecord, TRRecord]]:
         """

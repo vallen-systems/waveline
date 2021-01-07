@@ -212,7 +212,7 @@ def test_get_ae_data(serial_mock):
     ]
 
     serial_mock.readline.side_effect = response
-    ae_data = list(sw.get_ae_data())
+    ae_data = sw.get_ae_data()
 
     # status record
     s = ae_data[0]
@@ -253,7 +253,7 @@ def test_get_tr_data(serial_mock):
     serial_mock.readline.side_effect = lines
     serial_mock.read.side_effect = binary_data
 
-    tr_data = list(sw.get_tr_data())
+    tr_data = sw.get_tr_data()
 
     assert tr_data[0].trai == 1
     assert tr_data[0].time == 43686000 / 2e6

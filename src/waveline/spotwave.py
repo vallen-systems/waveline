@@ -147,7 +147,7 @@ class SpotWave:
             import os
             #very important!!! Serial uses "\\.\", which is WRONG
             if os.name == 'nt' and port.upper().startswith("COM"):
-                port=r"\\.\\"+port
+                port="\\.\\"+port
             self._ser = Serial(port=port)
         elif isinstance(port, Serial):
             self._ser = port

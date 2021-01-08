@@ -11,6 +11,7 @@ import numpy as np
 
 from waveline import SpotWave
 from waveline.spotwave import AERecord, TRRecord
+import threading, queue
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ def main(basename: str, seconds_per_file: float):
         return f"{basename}_{timestamp}.wav"
 
     port = SpotWave.discover()[0]
+    print(port)
 
     with SpotWave(port) as sw:
         sw.set_continuous_mode(True)
@@ -52,20 +54,34 @@ def main(basename: str, seconds_per_file: float):
         samplerate = sw.CLOCK / setup.tr_decimation
         chunks_per_file = int(seconds_per_file / setup.ddt_seconds)
 
-        chunks = 0
-        writer = WavWriter(get_filename(), samplerate)
-        for record in sw.stream(raw=True):  # return ADC values with enabled raw flag
-            if isinstance(record, TRRecord):
-                writer.write(record.data)
+        def async_write():
+            chunks = 0
+            writer = WavWriter(get_filename(), samplerate)
+            while trqueue:
+                try:
+                    tr = trqueue.get(timeout=0.1)
+                except:
+                    continue
+                writer.write(tr.data)
                 chunks += 1
                 if chunks >= chunks_per_file:
                     logger.info(f"{chunks_per_file} chunks acquired")
                     writer = WavWriter(get_filename(), samplerate)
                     chunks = 0
-            
-            elif isinstance(record, AERecord):
-                if record.trai == 0:
-                    logger.warning("Missing record(s)")
+
+            print('Write finished')
+
+        trqueue = queue.SimpleQueue()
+        threading.Thread(target=async_write).start()
+        try:
+            for record in sw.stream(raw=True):  # return ADC values with enabled raw flag
+                if isinstance(record, TRRecord):
+                    trqueue.put(record)
+                elif isinstance(record, AERecord):
+                    if record.trai == 0:
+                        logger.warning("Missing record(s)")
+        finally:
+            trqueue = None #flag to stop
 
 
 if __name__ == "__main__":

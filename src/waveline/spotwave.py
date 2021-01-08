@@ -83,12 +83,12 @@ class TRRecord:
 
 def _as_int(string):
     """Remove non-numeric characters and return as int."""
-    return int(re.sub(r"[^\-\d]", "", string))
+    return int(string.strip().partition(" ")[0])
 
 
 def _as_float(string):
     """Remove non-numeric characters and return as float."""
-    return float(re.sub(r"[^\-\d\.]", "", string))
+    return float(string.strip().partition(" ")[0])
 
 
 def _multiline_output_to_dict(lines: List[bytes]):
@@ -144,6 +144,10 @@ class SpotWave:
                 >>>     ...
         """
         if isinstance(port, str):
+            import os
+            #very important!!! Serial uses "\\.\", which is WRONG
+            if os.name == 'nt' and port.upper().startswith("COM"):
+                port=r"\\.\\"+port
             self._ser = Serial(port=port)
         elif isinstance(port, Serial):
             self._ser = port
@@ -243,34 +247,23 @@ class SpotWave:
 
         setup_dict = _multiline_output_to_dict(lines)
 
-        def get_filter_settings():
+        def get_filter_settings(string):
             """
             Parse special filter setting row.
 
             Example:
-                dig.filter: none
-                dig.filter:  38-350 kHz, order=4, stages=4
-                dig.filter:  10-max kHz, order=4, stages=2
+                none
+                38-350 kHz, order=4, stages=4
+                10-max kHz, order=4, stages=2
             """
-            match_filter = re.search(
-                (
-                    rb"dig\.filter:\s+"
-                    rb"(?P<none>none)?"
-                    rb"((?P<hipass>\d+)-(?P<lopass>\d+|max) kHz, order=(?P<order>\d))?"
-                ),
-                b"".join(lines),
-            )
-            if match_filter.group("none"):
+            match_filter = re.match(r"(?P<hp>.+)-\s*(?P<lp>\w*).*o(rder)?\W*(?P<o>\d)", string, flags=re.IGNORECASE)
+            if not match_filter:
                 return 0, self.CLOCK / 2, 0
-            match_hipass = match_filter.group("hipass")
-            match_lopass = match_filter.group("lopass")
+            lp = match_filter.group("lp")
+            lp = float(lp) * 1e3 if lp != "max" else self.CLOCK / 2
+            return float(match_filter.group("hp")) * 1e3, lp, int(match_filter.group("o"))
 
-            hipass_hz = float(match_hipass) * 1e3
-            lopass_hz = float(match_lopass) * 1e3 if match_lopass != b"max" else self.CLOCK / 2
-            order = int(match_filter.group("order"))
-            return hipass_hz, lopass_hz, order
-
-        filter_settings = get_filter_settings()
+        filter_settings = get_filter_settings(setup_dict["dig.filter"])
 
         return Setup(
             acq_enabled=_as_int(setup_dict["acq_enabled"]) == 1,

@@ -5,6 +5,7 @@ All device-related functions are exposed by the `SpotWave` class.
 """
 
 import logging
+import os
 import re
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -144,8 +145,6 @@ class SpotWave:
                 >>>     ...
         """
         if isinstance(port, str):
-            import os
-
             # very important!!! Serial uses "\\.\", which is WRONG
             if os.name == "nt" and port.upper().startswith("COM"):
                 port = "\\.\\" + port

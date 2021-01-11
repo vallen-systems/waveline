@@ -25,6 +25,7 @@ good-names = """
     i, j, k, n, m,
     e,
     ip,
+    lp, hp, bp,
     cw, sw,
 """
 

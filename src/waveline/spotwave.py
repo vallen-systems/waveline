@@ -6,7 +6,9 @@ All device-related functions are exposed by the `SpotWave` class.
 
 import logging
 import os
+import time
 import re
+import collections
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
@@ -18,6 +20,10 @@ from serial.tools import list_ports
 
 logger = logging.getLogger(__name__)
 
+#simple key = value, ignore other words
+_kv_pattern = re.compile(br"(\w+)\s*=\s*(\S+)")
+#accept words as keys w/o values?
+#_kv_pattern = re.compile(br"(\w+)(?:\s*=\s*(\S+))?")
 
 @dataclass
 class Status:
@@ -95,16 +101,9 @@ def _as_float(string):
 def _multiline_output_to_dict(lines: List[bytes]):
     """Helper function to parse output from get_info, get_status and get_setup."""
 
-    def key_value_generator(lines: List[str]):
-        for line in lines:
-            try:
-                key, value = line.split("=", maxsplit=1)
-                yield key.strip(), value.strip()
-            except ValueError:
-                ...
-
-    lines_decoded = [line.strip().decode(errors="replace") for line in lines]
-    return dict(key_value_generator(lines_decoded))
+    return collections.defaultdict(str, [
+        (lambda t: [t[0].strip(), t[1].strip() if len(t) > 1 else ""])
+        (line.decode().split("=", maxsplit=1)) for line in lines])
 
 
 class SpotWave:
@@ -117,6 +116,7 @@ class SpotWave:
     VENDOR_ID = 8849  #: USB vendor id of Vallen Systeme GmbH
     PRODUCT_ID = 272  #: USB product id of SpotWave device
     CLOCK = 2_000_000  #: Internal clock in Hz
+    #TICKS_TO_SEC = 1 / CLOCK #precision lost...?
 
     def __init__(self, port: Union[str, Serial]):
         """
@@ -162,6 +162,7 @@ class SpotWave:
         self.connect()
         self.stop_acquisition()  # stop acquisition if running
         self._adc_to_volts = self._get_adc_to_volts()  # get and save adc conversion factor
+        self._adc_to_eu = (self._adc_to_volts ** 2) * 1e14 / self.CLOCK
 
     def __del__(self):
         self.close()
@@ -220,10 +221,14 @@ class SpotWave:
         )
         return [port.name for port in ports_spotwave]
 
+    def readlines(self):
+        #read lines using short timeout
+        with self._timeout_context(0.1):
+            return self._ser.readlines()
+
     def clear_buffer(self):
         """Clear input and output buffer."""
-        with self._timeout_context(0.1):
-            self._ser.readlines()
+        self.readlines()
         self._ser.reset_input_buffer()
         self._ser.reset_output_buffer()
 
@@ -240,8 +245,7 @@ class SpotWave:
             Dataclass with setup information
         """
         self._send_command("get_setup")
-        with self._timeout_context(0.1):
-            lines = self._ser.readlines()
+        lines = self.readlines()
         if not lines:
             raise RuntimeError("Could not get setup")
 
@@ -293,8 +297,7 @@ class SpotWave:
             Dataclass with status information
         """
         self._send_command("get_status")
-        with self._timeout_context(0.1):
-            lines = self._ser.readlines()
+        lines = self.readlines()
         if not lines:
             raise RuntimeError("Could not get status")
 
@@ -473,42 +476,27 @@ class SpotWave:
 
         records = []
         for _ in range(number_lines):
-            line = self._ser.readline().decode(errors="replace")
+            line = self._ser.readline()
             logger.debug(f"Received AE data: {line}")
 
             record_type = line[:1]
-            if record_type in ("H", "S"):  # hit or status data
-                matches = re.match(
-                    (
-                        r"(?P<type>H|S) .* "
-                        r"T=(?P<T>\d+) "
-                        r"A=(?P<A>\d+) "
-                        r"R=(?P<R>\d+) "
-                        r"D=(?P<D>\d+) "
-                        r"C=(?P<C>\d+) "
-                        r"E=(?P<E>\d+) "
-                        r"TRAI=(?P<TRAI>\d+) "
-                        r"flags=(?P<flags>\d+)"
-                    ),
-                    line,
-                )
-                if not matches:
-                    logger.error(f"Could not parse AE data: {line}")
-                    break
+            #default to 0
+            matches = collections.defaultdict(int, _kv_pattern.findall(line))
 
+            if record_type in (b"H", b"S"):  # hit or status data
                 record = AERecord(
-                    type_=matches.group("type"),
-                    time=int(matches.group("T")) / self.CLOCK,
-                    amplitude=int(matches.group("A")) * self._adc_to_volts,
-                    rise_time=int(matches.group("R")) / self.CLOCK,
-                    duration=int(matches.group("D")) / self.CLOCK,
-                    counts=int(matches.group("C")),
-                    energy=int(matches.group("E")) * self._adc_to_volts ** 2 * 1e14 / self.CLOCK,
-                    trai=int(matches.group("TRAI")),
-                    flags=int(matches.group("flags")),
+                    type_=record_type.decode(),
+                    time=int(matches[b"T"]) / self.CLOCK,
+                    amplitude=int(matches[b"A"]) * self._adc_to_volts,
+                    rise_time=int(matches[b"R"]) / self.CLOCK,
+                    duration=int(matches[b"D"]) / self.CLOCK,
+                    counts=int(matches[b"C"]),
+                    energy=int(matches[b"E"]) * self._adc_to_eu,
+                    trai=int(matches[b"TRAI"]),
+                    flags=int(matches[b"flags"]),
                 )
                 records.append(record)
-            elif record_type == "R":  # marker record start
+            elif record_type == b"R":  # marker record start
                 ...
             else:
                 logger.warning(f"Unknown AE data record: {line}")
@@ -529,20 +517,17 @@ class SpotWave:
 
         records = []
         while True:
-            headerline = self._ser.readline().decode(errors="replace")
+            headerline = self._ser.readline()
 
-            # parse header
-            matches = re.match(
-                r"TRAI=(?P<TRAI>\d+) T=(?P<T>\d+) NS=(?P<NS>\d+).*",
-                headerline.upper(),
-            )
-            if not matches:  # last line is empty or 0
+            # parse header; default 0s
+            matches = collections.defaultdict(int, _kv_pattern.findall(headerline))
+            trai = int(matches[b"TRAI"])
+            if trai <= 0:  # last line when no TRAI
                 logger.debug(f"Last TR headerline {headerline}")
                 break
+            time = int(matches[b"T"])
+            samples = int(matches[b"NS"])
 
-            trai = int(matches.group("TRAI"))
-            time = int(matches.group("T"))
-            samples = int(matches.group("NS"))
             data = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
             if not raw:
                 data = np.multiply(data, self._adc_to_volts, dtype=np.float32)
@@ -587,8 +572,13 @@ class SpotWave:
         self.start_acquisition()
         try:
             while True:
+                t = time.monotonic()
                 yield from self.get_ae_data()
                 yield from self.get_tr_data(raw=raw)
+                t = time.monotonic() - t
+                #avoid brute load
+                if t < 0.005:
+                    time.sleep(0.01)
         finally:
             self.stop_acquisition()
 

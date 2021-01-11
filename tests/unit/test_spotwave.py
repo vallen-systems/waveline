@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
+import math
 from freezegun import freeze_time
 from numpy.testing import assert_allclose
 from serial import Serial, SerialException
@@ -57,7 +58,7 @@ def test_get_setup(serial_mock):
         b"log_enabled=0\n",
         b"adc2uv=1.74\n",
         b"cct=-0.5 s\n",
-        b"dig.filter:  38-350 kHz, order=4, stages=4\n",
+        b"dig.filter= 38-350 kHz, order=4, stages=4\n",
         b"cont=0\n",
         b"thr=3162.5 uV\n",
         b"ddt=250  us\n",
@@ -90,14 +91,14 @@ def test_get_setup(serial_mock):
     )
 
     # test special filter outputs
-    response[4] = b"dig.filter: none"
+    response[4] = b"dig.filter= none"
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
     assert setup.filter_highpass_hz == 0
     assert setup.filter_lowpass_hz == 1_000_000
     assert setup.filter_order == 0
 
-    response[4] = b"dig.filter:  10-max kHz, order=4, stages=2"
+    response[4] = b"dig.filter=  10-max kHz, O 4, stages=2"
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
     assert setup.filter_highpass_hz == 10_000
@@ -213,16 +214,17 @@ def test_get_ae_data(serial_mock):
 
     serial_mock.readline.side_effect = response
     ae_data = sw.get_ae_data()
+    ADC_TO_EU = ADC_TO_VOLTS ** 2 * 1e14 / 2e6
 
     # status record
     s = ae_data[0]
     assert s.type_ == "S"
     assert s.time == 2010240 / 2e6
     assert s.amplitude == 21 * ADC_TO_VOLTS
-    assert s.rise_time == 502689 / 2e6
+    assert math.isclose(s.rise_time, 502689 / 2e6)
     assert s.duration == 2000000 / 2e6
     assert s.counts == 0
-    assert s.energy == 38849818 * ADC_TO_VOLTS ** 2 * 1e14 / 2e6
+    assert math.isclose(s.energy, 38849818 * ADC_TO_EU)
     assert s.trai == 0
     assert s.flags == 0
 
@@ -231,10 +233,10 @@ def test_get_ae_data(serial_mock):
     assert h.type_ == "H"
     assert h.time == 3044759 / 2e6
     assert h.amplitude == 3557 * ADC_TO_VOLTS
-    assert h.rise_time == 24 / 2e6
+    assert math.isclose(h.rise_time, 24 / 2e6)
     assert h.duration == 819 / 2e6
     assert h.counts == 31
-    assert h.energy == 518280026 * ADC_TO_VOLTS ** 2 * 1e14 / 2e6
+    assert  math.isclose(h.energy, 518280026 * ADC_TO_EU)
     assert h.trai == 1
     assert h.flags == 0
 
@@ -246,7 +248,7 @@ def test_get_tr_data(serial_mock, raw):
     lines = [
         b"TRAI=1 T=43686000 NS=13\n",
         b"TRAI=2 T=43686983 NS=27\n",
-        b"0\n",
+        b"\n",
     ]
     data = [np.arange(samples, dtype=np.int16) for samples in (13, 27)]
     binary_data = [arr.tobytes() for arr in data]

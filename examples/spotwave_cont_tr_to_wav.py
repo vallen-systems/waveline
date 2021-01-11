@@ -43,6 +43,7 @@ def main(basename: str, seconds_per_file: float):
     print(port)
 
     with SpotWave(port) as sw:
+        sw.set_datetime()
         sw.set_continuous_mode(True)
         sw.set_cct(0)
         sw.set_status_interval(0)
@@ -56,22 +57,23 @@ def main(basename: str, seconds_per_file: float):
         chunks_per_file = int(seconds_per_file / setup.ddt_seconds)
 
         def async_write():
-            chunks = 0
-            writer = WavWriter(get_filename(), samplerate)
+            chunks = chunks_per_file #create on first data
             while trqueue:
                 try:
                     tr = trqueue.get(timeout=0.1)
                 except:
                     continue
-                writer.write(tr.data)
-                chunks += 1
                 if chunks >= chunks_per_file:
                     logger.info(f"{chunks_per_file} chunks acquired")
                     writer = WavWriter(get_filename(), samplerate)
                     chunks = 0
+                writer.write(tr.data)
+                chunks += 1
 
             print("Write finished")
 
+        last_t = 0
+        missed = 0
         trqueue = queue.SimpleQueue()
         threading.Thread(target=async_write).start()
         try:
@@ -79,8 +81,13 @@ def main(basename: str, seconds_per_file: float):
                 if isinstance(record, TRRecord):
                     trqueue.put(record)
                 elif isinstance(record, AERecord):
-                    if record.trai == 0:
-                        logger.warning("Missing record(s)")
+                    if record.trai == 0 or record.flags > 0:
+                        missed += 1
+
+                if missed > 0 and time.monotonic() - last_t > 1:
+                    logger.warning(f"Missed {missed} record(s)")
+                    missed = 0
+                    last_t = time.monotonic()
         finally:
             trqueue = None  # flag to stop
 

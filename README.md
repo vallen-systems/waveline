@@ -63,7 +63,7 @@ isort .
 Run linter:
 
 ```
-pylint
+pylint src/
 ```
 
 Run the test suite in the current environment:
@@ -72,7 +72,7 @@ Run the test suite in the current environment:
 pytest
 ```
 
-Run the test suite for all targeted (and installed) Python versions with tox:
+Run the CI pipeline (checks and tests) for all targeted (and installed) Python versions with tox:
 
 ```
 tox

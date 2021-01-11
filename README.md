@@ -33,25 +33,54 @@ Please note, that `waveline` requires Python 3.6 or newer. On Linux systems, `pi
 
 Feature requests, bug reports and fixes are always welcome!
 
+### Development setup
+
 After cloning the repository, you can easily install the development environment and tools 
 ([pylint](https://www.pylint.org), [mypy](http://mypy-lang.org), [pytest](https://pytest.org), [tox](https://tox.readthedocs.io))
-with:
+with. Using a [virtual environment](https://docs.python.org/3/library/venv.html) is strongly recommended.
 
-```
+```bash
 git clone https://github.com/vallen-systems/pyWaveLine.git
 cd pyWaveLine
+
+# create virtual environment in directory .venv
+python -m venv .venv
+# activate virtual environment
+source .venv/bin/activate  # linux
+.venv\Scripts\activate  # windows
+
+# install package (editable) and all development tools
 pip install -e .[dev]
 ```
 
-And run the test suite with tox:
+Run auto-formatter:
+
+```
+black .
+isort .
+```
+
+Run linter:
+
+```
+pylint
+```
+
+Run the test suite in the current environment:
+
+```
+pytest
+```
+
+Run the test suite for all targeted (and installed) Python versions with tox:
 
 ```
 tox
 ```
 
-The documentation is built with [sphinx](https://www.sphinx-doc.org):
+Build the documentation with [sphinx](https://www.sphinx-doc.org):
 
-```
+```bash
 cd docs
 sphinx-build . _build
 ```

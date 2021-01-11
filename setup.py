@@ -30,6 +30,7 @@ EXTRAS_REQUIRE = {
         "black",
         "isort",
         "mypy",
+        "pre-commit",
         "pylint>=2.5",  # pyproject.toml support
         "tox>=3.4",  # pyproject.toml support
     ],

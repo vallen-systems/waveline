@@ -7,6 +7,7 @@
 [![PyPI](https://img.shields.io/pypi/v/waveline)](https://pypi.org/project/waveline)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/waveline)](https://pypi.org/project/waveline)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
 Python library to easily interface with Vallen Systeme WaveLine™ devices using the public APIs:
 
@@ -51,19 +52,6 @@ source .venv/bin/activate  # linux
 
 # install package (editable) and all development tools
 pip install -e .[dev]
-```
-
-Run auto-formatter:
-
-```
-black .
-isort .
-```
-
-Run linter:
-
-```
-pylint src/
 ```
 
 Run the test suite in the current environment:

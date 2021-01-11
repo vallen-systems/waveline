@@ -27,12 +27,21 @@ _KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
 
 
 @dataclass
+class Info:
+    """Device information."""
+
+    device_id: str  #: Unique device identifier
+    firmware_version: str  #: Firmware version (major, minor)
+    range_decibel: int  #: Input range in dB(AE)
+
+
+@dataclass
 class Status:
     """Status information."""
 
-    device_id: str  #: Unique device id
-    firmware_version: str  #: Firmware version <major>.<minor> as hex codes
     temperature: int  #: Device temperature in °C
+    recording: bool  #: Flag if acquisition is active
+    logging: bool  #: Flag if logging is active
     data_size: int  #: Bytes in buffer
     datetime: datetime  #: Device datetime
 
@@ -244,6 +253,25 @@ class SpotWave:
         logger.debug("Send command: %a", command_bytes)
         self._ser.write(command_bytes)
 
+    def get_info(self) -> Info:
+        """
+        Get device information.
+
+        Returns:
+            Dataclass with device information
+        """
+        self._send_command("get_info")
+        lines = self.readlines()
+        if not lines:
+            raise RuntimeError("Could not get device information")
+
+        info_dict = _multiline_output_to_dict(lines)
+        return Info(
+            device_id=info_dict["dev_id"],
+            firmware_version=info_dict["fw_version"],
+            range_decibel=_as_int(info_dict["range"]),
+        )
+
     def get_setup(self) -> Setup:
         """
         Get setup.
@@ -310,10 +338,10 @@ class SpotWave:
 
         status_dict = _multiline_output_to_dict(lines)
         return Status(
-            device_id=status_dict["dev_id"],
-            firmware_version=status_dict["fw_version"],
             temperature=_as_int(status_dict["temp"]),
-            data_size=_as_int(status_dict["data size"]),
+            recording=_as_int(status_dict["recording"]) == 1,
+            logging=_as_int(status_dict["logging"]) == 1,
+            data_size=_as_int(status_dict["data_size"]),
             datetime=datetime.strptime(status_dict["date"], "%Y-%m-%d %H:%M:%S.%f"),
         )
 

@@ -111,35 +111,45 @@ def test_get_setup(serial_mock):
         sw.get_setup()
 
 
+def test_get_info(serial_mock):
+    sw = SpotWave(serial_mock)
+
+    response = [
+        b"dev_id=0019003A3438511539373231\n",
+        b"fw_version=00.21\n",
+        b"range=94 dB\n",
+    ]
+    serial_mock.readlines.return_value = response
+    info = sw.get_info()
+    serial_mock.write.assert_called_with(b"get_info\n")
+
+    assert info.device_id == "0019003A3438511539373231"
+    assert info.firmware_version == "00.21"
+    assert info.range_decibel == 94
+
+    # empty response
+    serial_mock.readlines.return_value = []
+    with pytest.raises(RuntimeError):
+        sw.get_info()
+
+
 def test_get_status(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"fw_version=00.1B\n",
-        b"dev_id=0019003A3438511539373231\n",
-        b"hw_rev=0\n",
-        b"chip_rev=V (0x2003)\n",
         b"temp=24\n",
         b"recording=0\n",
         b"logging=0\n",
-        b"data size=0\n",
+        b"data_size=0\n",
         b"date=2020-12-17 15:11:42.17\n",
-        b"shutdown time=2020-12-17 11:14:23.40\n",
-        b"adc2uv=1.72\n",
-        b"cct=0\n",
-        b"dig.filter:  20-500 kHz, order=4, stages=4\n",
-        b"taskMain       	74159		<1%\n",
-        b"IDLE           	188137815		51%\n",
-        b"taskADC        	177045212		48%\n",
-        b"Tmr Svc        	0		<1%\n",
     ]
     serial_mock.readlines.return_value = response
     status = sw.get_status()
     serial_mock.write.assert_called_with(b"get_status\n")
 
-    assert status.device_id == "0019003A3438511539373231"
-    assert status.firmware_version == "00.1B"
     assert status.temperature == 24
+    assert status.recording == False
+    assert status.logging == False
     assert status.data_size == 0
     assert status.datetime == datetime(2020, 12, 17, 15, 11, 42, 170_000)
 

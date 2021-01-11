@@ -532,7 +532,7 @@ class SpotWave:
             if trai <= 0:  # last line when no TRAI
                 logger.debug(f"Last TR headerline {headerline}")
                 break
-            time = int(matches[b"T"])
+            time_ = int(matches[b"T"])
             samples = int(matches[b"NS"])
 
             data = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
@@ -546,7 +546,7 @@ class SpotWave:
 
             record = TRRecord(
                 trai=trai,
-                time=time / self.CLOCK,
+                time=time_ / self.CLOCK,
                 samples=samples,
                 data=data,
                 raw=raw,

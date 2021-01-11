@@ -1,5 +1,6 @@
-from setuptools import setup, find_packages
 from pathlib import Path
+
+from setuptools import find_packages, setup
 
 HERE = Path(__file__).parent
 
@@ -9,7 +10,7 @@ with open(HERE / "README.md", encoding="utf-8") as f:
 INSTALL_REQUIRES = [
     "numpy",
     "pyserial>=3",
-    "dataclasses>=0.6; python_version<'3.7'", 
+    "dataclasses>=0.6; python_version<'3.7'",
 ]
 
 EXTRAS_REQUIRE = {

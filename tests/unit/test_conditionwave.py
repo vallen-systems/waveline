@@ -2,11 +2,10 @@ import asyncio
 from typing import NamedTuple
 from unittest.mock import call, patch
 
-from asynctest import CoroutineMock, Mock  # alternative to unittest.mock.AsyncMock in Python >=3.8
 import pytest
+from asynctest import CoroutineMock, Mock  # alternative to unittest.mock.AsyncMock in Python >=3.8
 
 from waveline import ConditionWave
-
 
 # all test coroutines will be treated as marked
 pytestmark = pytest.mark.asyncio
@@ -65,7 +64,7 @@ async def test_get_info(mock_objects):
         (0, 0.05, b"set_adc_range 0 0\n"),
         (1, 5, b"set_adc_range 1 1\n"),
         (2, 5, b"set_adc_range 2 1\n"),
-    )
+    ),
 )
 async def test_set_range(mock_objects, channel, value, command):
     cw, _, writer = mock_objects
@@ -92,7 +91,7 @@ async def test_set_range_invalid_value(mock_objects, value):
         (1, 4, b"set_decimation 1 4\n"),
         (2, 8, b"set_decimation 2 8\n"),
         (0, 100, b"set_decimation 0 100\n"),
-    )
+    ),
 )
 async def test_set_decimation(mock_objects, channel, value, command):
     cw, _, writer = mock_objects
@@ -119,7 +118,7 @@ async def test_set_decimation_invalid_value(mock_objects, value):
         (1, 0, 0, 0, b"set_filter 1 0.0 0.0 0\n"),
         (1, 10e3, 350e3, 8, b"set_filter 1 10.0 350.0 8\n"),
         (2, 10e3, None, 8, b"set_filter 2 10.0 5000.0 8\n"),
-    )
+    ),
 )
 async def test_set_filter(mock_objects, channel, highpass, lowpass, order, command):
     cw, _, writer = mock_objects

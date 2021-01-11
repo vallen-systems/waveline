@@ -12,7 +12,9 @@
 #
 import os
 import sys
+
 import pkg_resources
+
 sys.path.insert(0, os.path.abspath("../"))
 
 
@@ -72,6 +74,7 @@ add_function_parentheses = True
 # a list of builtin themes.
 # html_theme = "alabaster"
 import sphinx_rtd_theme
+
 html_theme = "sphinx_rtd_theme"
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 

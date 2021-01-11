@@ -145,9 +145,10 @@ class SpotWave:
         """
         if isinstance(port, str):
             import os
-            #very important!!! Serial uses "\\.\", which is WRONG
-            if os.name == 'nt' and port.upper().startswith("COM"):
-                port="\\.\\"+port
+
+            # very important!!! Serial uses "\\.\", which is WRONG
+            if os.name == "nt" and port.upper().startswith("COM"):
+                port = "\\.\\" + port
             self._ser = Serial(port=port)
         elif isinstance(port, Serial):
             self._ser = port
@@ -256,7 +257,9 @@ class SpotWave:
                 38-350 kHz, order=4, stages=4
                 10-max kHz, order=4, stages=2
             """
-            match_filter = re.match(r"(?P<hp>.+)-\s*(?P<lp>\w*).*o(rder)?\W*(?P<o>\d)", string, flags=re.IGNORECASE)
+            match_filter = re.match(
+                r"(?P<hp>.+)-\s*(?P<lp>\w*).*o(rder)?\W*(?P<o>\d)", string, flags=re.IGNORECASE
+            )
             if not match_filter:
                 return 0, self.CLOCK / 2, 0
             lp = match_filter.group("lp")

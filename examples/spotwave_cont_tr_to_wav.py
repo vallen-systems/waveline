@@ -3,6 +3,8 @@ Continuously stream transient data and save to wav files in chunks.
 """
 
 import logging
+import queue
+import threading
 import wave
 from dataclasses import asdict
 from datetime import datetime
@@ -11,7 +13,6 @@ import numpy as np
 
 from waveline import SpotWave
 from waveline.spotwave import AERecord, TRRecord
-import threading, queue
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ class WavWriter:
         logger.info(f"Create new wav file: {filename}")
         self._file = wave.open(filename, "wb")
         self._file.setparams((1, 2, samplerate, 0, "NONE", ""))
-    
+
     def __del__(self):
         self._file.close()
 
@@ -69,7 +70,7 @@ def main(basename: str, seconds_per_file: float):
                     writer = WavWriter(get_filename(), samplerate)
                     chunks = 0
 
-            print('Write finished')
+            print("Write finished")
 
         trqueue = queue.SimpleQueue()
         threading.Thread(target=async_write).start()
@@ -81,7 +82,7 @@ def main(basename: str, seconds_per_file: float):
                     if record.trai == 0:
                         logger.warning("Missing record(s)")
         finally:
-            trqueue = None #flag to stop
+            trqueue = None  # flag to stop
 
 
 if __name__ == "__main__":

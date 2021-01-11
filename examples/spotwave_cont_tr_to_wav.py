@@ -57,7 +57,7 @@ def main(basename: str, seconds_per_file: float):
         chunks_per_file = int(seconds_per_file / setup.ddt_seconds)
 
         def async_write():
-            chunks = chunks_per_file #create on first data
+            chunks = chunks_per_file  # create on first data
             while trqueue:
                 try:
                     tr = trqueue.get(timeout=0.1)

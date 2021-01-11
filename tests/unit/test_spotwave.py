@@ -1,9 +1,9 @@
+import math
 from datetime import datetime
 from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-import math
 from freezegun import freeze_time
 from numpy.testing import assert_allclose
 from serial import Serial, SerialException
@@ -236,7 +236,7 @@ def test_get_ae_data(serial_mock):
     assert math.isclose(h.rise_time, 24 / 2e6)
     assert h.duration == 819 / 2e6
     assert h.counts == 31
-    assert  math.isclose(h.energy, 518280026 * ADC_TO_EU)
+    assert math.isclose(h.energy, 518280026 * ADC_TO_EU)
     assert h.trai == 1
     assert h.flags == 0
 

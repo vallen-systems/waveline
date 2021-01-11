@@ -27,6 +27,14 @@ def mock_spotwave_adc_factor():
         yield method
 
 
+@pytest.fixture(autouse=True)
+def mock_spotwave_check_firmware_version():
+    """Mock SpotWave._check_firmware_version method globally."""
+    with patch("waveline.spotwave.SpotWave._check_firmware_version") as method:
+        method.return_value = None
+        yield method
+
+
 @pytest.fixture(name="serial_mock")
 def mock_serial_port():
     serial_mock = Mock(spec=Serial)

@@ -133,6 +133,7 @@ class SpotWave:
     PRODUCT_ID = 272  #: USB product id of SpotWave device
     CLOCK = 2_000_000  #: Internal clock in Hz
     # TICKS_TO_SEC = 1 / CLOCK  # precision lost...?
+    _MIN_FIRMWARE_VERSION = "00.21"
 
     def __init__(self, port: Union[str, Serial]):
         """
@@ -176,6 +177,7 @@ class SpotWave:
         self._ser.exclusive = True
 
         self.connect()
+        self._check_firmware_version()
         self.stop_acquisition()  # stop acquisition if running
         self._adc_to_volts = self._get_adc_to_volts()  # get and save adc conversion factor
         self._adc_to_eu = (self._adc_to_volts ** 2) * 1e14 / self.CLOCK
@@ -188,6 +190,16 @@ class SpotWave:
 
     def __exit__(self, *args, **kwargs):
         self.close()
+
+    def _check_firmware_version(self):
+        def get_version_tuple(version_string: str):
+            return tuple((int(hx, base=16) for hx in version_string.split(".")))
+
+        version = self.get_info().firmware_version
+        if get_version_tuple(version) < get_version_tuple(self._MIN_FIRMWARE_VERSION):
+            raise RuntimeError(
+                f"Firmware version {version} < {self._MIN_FIRMWARE_VERSION}. Upgrade required."
+            )
 
     def _get_adc_to_volts(self):
         return self.get_setup().adc_to_volts

@@ -45,6 +45,7 @@ def test_acq_only_status(sw):
 @mark.parametrize("tr_enabled", (False, True))
 def test_acq_continuous(sw, tr_enabled):
     ddt_seconds = 0.01  # 10 ms
+    acq_duration = 0.1
 
     sw.set_continuous_mode(True)
     sw.set_ddt(ddt_seconds * 1e6)
@@ -53,11 +54,11 @@ def test_acq_continuous(sw, tr_enabled):
     sw.set_status_interval(0)
     sw.clear_buffer()
     sw.start_acquisition()
-    sleep(0.1)
+    sleep(acq_duration)
     sw.stop_acquisition()
 
     ae_data = list(sw.get_ae_data())
-    assert len(ae_data) == pytest.approx(10, abs=1)
+    assert len(ae_data) == pytest.approx(acq_duration / ddt_seconds, abs=1)
 
     for i, record in enumerate(ae_data, start=0):
         assert record.time == i * ddt_seconds
@@ -70,7 +71,7 @@ def test_acq_continuous(sw, tr_enabled):
 
     tr_data = list(sw.get_tr_data())
     if tr_enabled:
-        assert len(tr_data) == pytest.approx(10, abs=1)
+        assert len(tr_data) == pytest.approx(acq_duration / ddt_seconds, abs=1)
     else:
         assert len(tr_data) == 0
         return  # skip rest of test

@@ -65,7 +65,7 @@ def test_get_setup(serial_mock):
         b"log_enabled=0\n",
         b"adc2uv=1.74\n",
         b"cct=-0.5 s\n",
-        b"dig.filter= 38-350 kHz, order=4, stages=4\n",
+        b"dig.filter= 38 - 350 kHz, O 4, stages=4\n",
         b"cont=0\n",
         b"thr=3162.5 uV\n",
         b"ddt=250  us\n",
@@ -105,7 +105,7 @@ def test_get_setup(serial_mock):
     assert setup.filter_lowpass_hz == 1_000_000
     assert setup.filter_order == 0
 
-    response[4] = b"dig.filter=  10-max kHz, O 4, stages=2"
+    response[4] = b"dig.filter=  10 - max kHz, O 4, stages=2"
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
     assert setup.filter_highpass_hz == 10_000

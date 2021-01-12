@@ -3,6 +3,10 @@ from datetime import datetime
 from pytest import mark
 
 
+def test_get_info(sw):
+    assert sw.get_info()  # valid, non-empty response
+
+
 def test_get_setup(sw):
     assert sw.get_setup()  # valid, non-empty response
 
@@ -66,9 +70,11 @@ def test_set_tr_enabled(sw, set_, expect):
 @mark.parametrize(
     "set_, expect",
     (
-        (0, 0),
+        (-1, 1),
+        (0, 1),
         (1, 1),
         (10, 10),
+        (11.1, 11),
         (1_000_000, 1_000_000),
     ),
 )

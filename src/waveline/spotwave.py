@@ -304,8 +304,8 @@ class SpotWave:
 
             Example:
                 none
-                38-350 kHz, order=4, stages=4
-                10-max kHz, order=4, stages=2
+                38 - 350 kHz, O 4, stages=4
+                10 - 1000 kHz, O 4, stages=2
             """
             match_filter = re.match(
                 r"(?P<hp>.+)-\s*(?P<lp>\w*).*o(rder)?\W*(?P<o>\d)", string, flags=re.IGNORECASE

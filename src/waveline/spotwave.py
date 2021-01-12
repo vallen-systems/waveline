@@ -114,8 +114,8 @@ def _multiline_output_to_dict(lines: List[bytes]):
     return collections.defaultdict(
         str,
         [
-            (lambda t: (t[0].strip(), t[1].strip() if len(t) > 1 else ""))(
-                line.decode().split("=", maxsplit=1)
+            (lambda k, v="": [k.strip(), v.strip()])(
+                *line.decode().split("=", maxsplit=1)
             )
             for line in lines
         ],
@@ -308,7 +308,7 @@ class SpotWave:
                 10 - 1000 kHz, O 4, stages=2
             """
             match_filter = re.match(
-                r"(?P<hp>.+)-\s*(?P<lp>\w*).*o(rder)?\W*(?P<o>\d)", string, flags=re.IGNORECASE
+                r"(?P<hp>\S+)\s*-\s*(?P<lp>\S*)\s+.*o(rder)?\D*(?P<o>\d)", string, flags=re.IGNORECASE
             )
             if not match_filter:
                 return 0, self.CLOCK / 2, 0

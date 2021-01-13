@@ -5,6 +5,7 @@ Continuously stream transient data and save to wav files in chunks.
 import logging
 import queue
 import threading
+import time
 import wave
 from dataclasses import asdict
 from datetime import datetime

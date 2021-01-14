@@ -86,6 +86,7 @@ def test_set_tr_decimation(sw, set_, expect):
 @mark.parametrize(
     "set_, expect",
     (
+        (-5, 0),
         (0, 0),
         (2000, 2000),
         (10000, 10000),  # TODO: limit to 2000 / decimation
@@ -122,31 +123,30 @@ def test_set_cct(sw, set_, expect):
     assert sw.get_setup().cct_seconds == expect
 
 
-def test_set_filter_bypass(sw):
-    sw.set_filter(highpass=None, lowpass=None, order=8)
-    setup = sw.get_setup()
-    assert setup.filter_highpass_hz == 0
-    assert setup.filter_lowpass_hz == 1_000_000
-    assert setup.filter_order == 0
-
-
 @mark.parametrize(
     "set_, expect",
     (
-        ((0, 0, 0), (0, 1000, 0)),
-        ((0, 0, 4), (0, 1000, 0)),
         ((50, 300, 8), (50, 300, 8)),
-        ((50, 1000, 8), (50, 1000, 8)),
-        ((50, 2000, 8), (50, 1000, 8)),  # crop lowpass freq to nyquist
-        ((50, 300, 3), (0, 1000, 0)),  # invalid order -> disable
-        ((400, 300, 8), (0, 1000, 0)),  # invalid filter freqs -> disable
+        ((50, None, 8), (50, None, 8)),  # highpass
+        ((50, 0, 8), (50, None, 8)),  # highpass
+        ((None, 300, 8), (None, 300, 8)),  # lowpass
+        ((0, 300, 8), (None, 300, 8)),  # lowpass
+        ((None, None, 8), (None, None, 0)),  # bypass
+        ((0, 0, 8), (None, None, 0)),  # bypass
+        ((50, 2000, 8), (50, None, 8)),  # lowpass freq > nyquist -> highpass
+        ((50, 300, 3), (None, None, 0)),  # invalid order -> disable
+        ((400, 300, 8), (None, None, 0)),  # invalid filter freqs -> disable
     ),
 )
 def test_set_filter(sw, set_, expect):
-    sw.set_filter(highpass=set_[0] * 1e3, lowpass=set_[1] * 1e3, order=set_[2])
+    sw.set_filter(
+        highpass=set_[0] * 1e3 if set_[0] else None,
+        lowpass=set_[1] * 1e3 if set_[1] else None,
+        order=set_[2],
+    )
     setup = sw.get_setup()
-    assert setup.filter_highpass_hz == expect[0] * 1e3
-    assert setup.filter_lowpass_hz == expect[1] * 1e3
+    assert setup.filter_highpass_hz == (expect[0] * 1e3 if expect[0] else None)
+    assert setup.filter_lowpass_hz == (expect[1] * 1e3 if expect[1] else None)
     assert setup.filter_order == expect[2]
 
 

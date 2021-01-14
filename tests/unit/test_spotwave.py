@@ -65,7 +65,7 @@ def test_get_setup(serial_mock):
         b"log_enabled=0\n",
         b"adc2uv=1.74\n",
         b"cct=-0.5 s\n",
-        b"dig.filter= 38 - 350 kHz, O 4, stages=4\n",
+        b"filter=10.5-350 kHz, order 4\n",
         b"cont=0\n",
         b"thr=3162.5 uV\n",
         b"ddt=250  us\n",
@@ -87,7 +87,7 @@ def test_get_setup(serial_mock):
         threshold_volts=3162.5e-6,
         ddt_seconds=250e-6,
         status_interval_seconds=1,
-        filter_highpass_hz=38e3,
+        filter_highpass_hz=10.5e3,
         filter_lowpass_hz=350e3,
         filter_order=4,
         tr_enabled=1,
@@ -98,19 +98,26 @@ def test_get_setup(serial_mock):
     )
 
     # test special filter outputs
-    response[4] = b"dig.filter= none"
+    response[4] = b"filter=none-350 kHz, order 4\n"
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
-    assert setup.filter_highpass_hz == 0
-    assert setup.filter_lowpass_hz == 1_000_000
-    assert setup.filter_order == 0
-
-    response[4] = b"dig.filter=  10 - max kHz, O 4, stages=2"
-    serial_mock.readlines.return_value = response
-    setup = sw.get_setup()
-    assert setup.filter_highpass_hz == 10_000
-    assert setup.filter_lowpass_hz == 1_000_000
+    assert setup.filter_highpass_hz == None
+    assert setup.filter_lowpass_hz == 350_000
     assert setup.filter_order == 4
+
+    response[4] = b"filter=10.5-none kHz, order 4\n"
+    serial_mock.readlines.return_value = response
+    setup = sw.get_setup()
+    assert setup.filter_highpass_hz == 10_500
+    assert setup.filter_lowpass_hz == None
+    assert setup.filter_order == 4
+
+    response[4] = b"filter=none-none kHz, order 0\n"
+    serial_mock.readlines.return_value = response
+    setup = sw.get_setup()
+    assert setup.filter_highpass_hz == None
+    assert setup.filter_lowpass_hz == None
+    assert setup.filter_order == 0
 
     # empty response
     serial_mock.readlines.return_value = []
@@ -145,18 +152,18 @@ def test_get_status(serial_mock):
 
     response = [
         b"temp=24\n",
-        b"recording=0\n",
-        b"logging=0\n",
+        b"acq_enabled=0\n",
+        b"log_enabled=0\n",
         b"data_size=0\n",
-        b"date=2020-12-17 15:11:42.17\n",
+        b"date=2020-12-17T15:11:42.17\n",
     ]
     serial_mock.readlines.return_value = response
     status = sw.get_status()
     serial_mock.write.assert_called_with(b"get_status\n")
 
     assert status.temperature == 24
-    assert status.recording == False
-    assert status.logging == False
+    assert status.acq_enabled == False
+    assert status.log_enabled == False
     assert status.data_size == 0
     assert status.datetime == datetime(2020, 12, 17, 15, 11, 42, 170_000)
 

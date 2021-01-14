@@ -40,8 +40,8 @@ class Status:
     """Status information."""
 
     temperature: int  #: Device temperature in °C
-    recording: bool  #: Flag if acquisition is active
-    logging: bool  #: Flag if logging is active
+    acq_enabled: bool  #: Flag if acquisition is active
+    log_enabled: bool  #: Flag if logging is active
     data_size: int  #: Bytes in buffer
     datetime: datetime  #: Device datetime
 
@@ -57,8 +57,8 @@ class Setup:
     threshold_volts: float  #: Threshold for hit-based acquisition in volts
     ddt_seconds: float  #: Duration discrimination time (DDT) in seconds
     status_interval_seconds: float  #: Status interval in seconds
-    filter_highpass_hz: float  #: Highpass frequency in Hz
-    filter_lowpass_hz: float  #: Lowpass frequency in Hz
+    filter_highpass_hz: Optional[float]  #: Highpass frequency in Hz
+    filter_lowpass_hz: Optional[float]  #: Lowpass frequency in Hz
     filter_order: int  #: Filter order
     tr_enabled: bool  #: Flag in transient data recording is enabled
     tr_decimation: int  #: Decimation factor for transient data
@@ -303,20 +303,29 @@ class SpotWave:
             Parse special filter setting row.
 
             Example:
-                none
-                38 - 350 kHz, O 4, stages=4
-                10 - 1000 kHz, O 4, stages=2
+                10.5-350 kHz, order 4
+                10.5-none kHz, order 4
+                none-350 kHz, order 4
+                none-none kHz, order 0
             """
-            match_filter = re.match(
-                r"(?P<hp>\S+)\s*-\s*(?P<lp>\S*)\s+.*o(rder)?\D*(?P<o>\d)", string, flags=re.IGNORECASE
+            match = re.match(
+                r"(?P<hp>\S+)\s*-\s*(?P<lp>\S+)\s+.*o(rder)?\D*(?P<order>\d)",
+                string,
+                flags=re.IGNORECASE,
             )
-            if not match_filter:
-                return 0, self.CLOCK / 2, 0
-            lp = match_filter.group("lp")
-            lp = float(lp) * 1e3 if lp != "max" else self.CLOCK / 2
-            return float(match_filter.group("hp")) * 1e3, lp, int(match_filter.group("o"))
+            if not match:
+                return None, None, 0
 
-        filter_settings = get_filter_settings(setup_dict["dig.filter"])
+            def khz_or_none(freq):
+                return None if freq == "none" else float(freq) * 1e3
+
+            return (
+                khz_or_none(match.group("hp")),
+                khz_or_none(match.group("lp")),
+                int(match.group("order")),
+            )
+
+        filter_settings = get_filter_settings(setup_dict["filter"])
 
         return Setup(
             acq_enabled=_as_int(setup_dict["acq_enabled"]) == 1,
@@ -351,10 +360,10 @@ class SpotWave:
         status_dict = _multiline_output_to_dict(lines)
         return Status(
             temperature=_as_int(status_dict["temp"]),
-            recording=_as_int(status_dict["recording"]) == 1,
-            logging=_as_int(status_dict["logging"]) == 1,
+            acq_enabled=_as_int(status_dict["acq_enabled"]) == 1,
+            log_enabled=_as_int(status_dict["log_enabled"]) == 1,
             data_size=_as_int(status_dict["data_size"]),
-            datetime=datetime.strptime(status_dict["date"], "%Y-%m-%d %H:%M:%S.%f"),
+            datetime=datetime.strptime(status_dict["date"], "%Y-%m-%dT%H:%M:%S.%f"),
         )
 
     def set_continuous_mode(self, enabled: bool):

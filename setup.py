@@ -25,6 +25,7 @@ EXTRAS_REQUIRE = {
         "freezegun",
         "pytest>=6",  # pyproject.toml support
         "pytest-asyncio",
+        "pytest-benchmark",
     ],
     "tools": [
         "black",

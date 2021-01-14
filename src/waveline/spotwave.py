@@ -111,15 +111,11 @@ def _as_float(string):
 def _multiline_output_to_dict(lines: List[bytes]):
     """Helper function to parse output from get_info, get_status and get_setup."""
 
-    return collections.defaultdict(
-        str,
-        [
-            (lambda k, v="": [k.strip(), v.strip()])(
-                *line.decode().split("=", maxsplit=1)
-            )
-            for line in lines
-        ],
-    )
+    def line_to_key_value(line: bytes):
+        k, _, v = line.decode().partition("=")  # faster than split
+        return k.strip(), v.strip()
+
+    return collections.defaultdict(str, [line_to_key_value(line) for line in lines])
 
 
 class SpotWave:

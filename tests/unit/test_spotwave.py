@@ -69,7 +69,8 @@ def test_get_setup(serial_mock):
         b"cont=0\n",
         b"thr=3162.5 uV\n",
         b"ddt=250  us\n",
-        b"status_interval=1000 ms\n",
+        b"dummy line without value",
+        b" status_interval = 1000 ms ",
         b"tr_enabled=1\n",
         b"tr_decimation=2\n",
         b"tr_pre_trig=100\n",
@@ -129,7 +130,7 @@ def test_get_info(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"dev_id=0019003A3438511539373231\n",
+        b"dev_id = 0019003A3438511539373231\n",
         b"fw_version=00.21\n",
         b"range=94 dB\n",
     ]
@@ -232,7 +233,7 @@ def test_get_ae_data(serial_mock):
 
     response = [
         b"2\n",
-        b"S temp=27 T=2010240 A=21 R=502689 D=2000000 C=0 E=38849818 TRAI=0 flags=0\n",
+        b"S temp=27 T = 2010240 A=21 R=502689 D=2000000 C=0 E=38849818 TRAI=0 flags=0\n",
         b"H temp=27 T=3044759 A=3557 R=24 D=819 C=31 E=518280026 TRAI=1 flags=0\n",
     ]
 
@@ -270,7 +271,7 @@ def test_get_tr_data(serial_mock, raw):
     sw = SpotWave(serial_mock)
 
     lines = [
-        b"TRAI=1 T=43686000 NS=13\n",
+        b"TRAI = 1 T=43686000 NS=13\n",
         b"TRAI=2 T=43686983 NS=27\n",
         b"\n",
     ]

@@ -20,10 +20,11 @@ from serial.tools import list_ports
 
 logger = logging.getLogger(__name__)
 
-# simple key = value, ignore other words
-_KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
-# accept words as keys w/o values?
-# _KV_PATTERN = re.compile(br"(\w+)(?:\s*=\s*(\S+))?")
+# key = value pattern for ae/tr data
+# fast(est) and simple, accept spaces around "="
+#_KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
+# accept words as keys w/o values; this seems next faster (incl. \S)?!
+_KV_PATTERN = re.compile(br"([^\s=]+)(?:\s*=\s*(\S+))?")
 
 
 @dataclass
@@ -99,23 +100,22 @@ class TRRecord:
 
 
 def _as_int(string):
-    """Remove non-numeric characters and return as int."""
+    """return first sequence as int."""
     return int(string.strip().partition(" ")[0])
 
 
 def _as_float(string):
-    """Remove non-numeric characters and return as float."""
+    """return first sequence as float."""
     return float(string.strip().partition(" ")[0])
 
 
 def _multiline_output_to_dict(lines: List[bytes]):
     """Helper function to parse output from get_info, get_status and get_setup."""
 
-    def line_to_key_value(line: bytes):
-        k, _, v = line.decode().partition("=")  # faster than split
-        return k.strip(), v.strip()
-
-    return collections.defaultdict(str, [line_to_key_value(line) for line in lines])
+    return collections.defaultdict(str, [
+        (k.strip(), v.strip()) for k,_,v in 
+        [line.decode().partition("=") for line in lines]
+    ])
 
 
 class SpotWave:
@@ -305,21 +305,16 @@ class SpotWave:
                 none-none kHz, order 0
             """
             match = re.match(
-                r"(?P<hp>\S+)\s*-\s*(?P<lp>\S+)\s+.*o(rder)?\D*(?P<order>\d)",
-                string,
-                flags=re.IGNORECASE,
-            )
+                r"\s*(?P<hp>\S+)\s*-\s*(?P<lp>\S+)\s+.*o(rder)?\D*(?P<order>\d)",
+                string, flags=re.IGNORECASE )
             if not match:
                 return None, None, 0
 
-            def khz_or_none(freq):
-                return None if freq == "none" else float(freq) * 1e3
+            def khz_or_none(k):
+                try:    return 1e3 * float(match.group(k))
+                except: return None
 
-            return (
-                khz_or_none(match.group("hp")),
-                khz_or_none(match.group("lp")),
-                int(match.group("order")),
-            )
+            return khz_or_none("hp"), khz_or_none("lp"), int(match.group("order"))
 
         filter_settings = get_filter_settings(setup_dict["filter"])
 

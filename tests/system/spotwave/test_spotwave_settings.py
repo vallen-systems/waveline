@@ -4,7 +4,11 @@ from pytest import mark
 
 
 def test_get_info(sw):
-    assert sw.get_info()  # valid, non-empty response
+     info = sw.get_info()
+     assert info  # valid, non-empty response
+     assert info.hardware_id
+     assert info.firmware_version
+     assert info.input_range_decibel
 
 
 def test_get_setup(sw):
@@ -159,7 +163,7 @@ def test_set_datetime(sw):
 @mark.parametrize(
     "set_, expect",
     (
-        (-1, -1),  # TODO: add lower limit?
+        (-1, 0),
         (0, 0),
         (100, 100),
         (1_000_000, 1_000_000),

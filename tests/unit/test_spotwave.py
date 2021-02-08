@@ -130,17 +130,17 @@ def test_get_info(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"dev_id = 0019003A3438511539373231\n",
+        b"hw_id = 0019003A3438511539373231\n",
         b"fw_version=00.21\n",
-        b"range=94 dB\n",
+        b"input_range=94 dBAE\n",
     ]
     serial_mock.readlines.return_value = response
     info = sw.get_info()
     serial_mock.write.assert_called_with(b"get_info\n")
 
-    assert info.device_id == "0019003A3438511539373231"
+    assert info.hardware_id == "0019003A3438511539373231"
     assert info.firmware_version == "00.21"
-    assert info.range_decibel == 94
+    assert info.input_range_decibel == 94
 
     # empty response
     serial_mock.readlines.return_value = []
@@ -152,11 +152,11 @@ def test_get_status(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"temp=24\n",
+        b"temp=24 \xc2\xb0C\n",
         b"acq_enabled=0\n",
         b"log_enabled=0\n",
-        b"data_size=0\n",
-        b"date=2020-12-17T15:11:42.17\n",
+        b"log_data_usage=13 %\n",
+        b"date=2020-12-17 15:11:42.17\n",
     ]
     serial_mock.readlines.return_value = response
     status = sw.get_status()
@@ -165,7 +165,7 @@ def test_get_status(serial_mock):
     assert status.temperature == 24
     assert status.acq_enabled == False
     assert status.log_enabled == False
-    assert status.data_size == 0
+    assert status.log_data_usage == 13
     assert status.datetime == datetime(2020, 12, 17, 15, 11, 42, 170_000)
 
     # empty response

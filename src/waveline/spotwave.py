@@ -31,9 +31,9 @@ _KV_PATTERN = re.compile(br"([^\s=]+)(?:\s*=\s*(\S+))?")
 class Info:
     """Device information."""
 
-    device_id: str  #: Unique device identifier
+    hardware_id: str  #: Unique device identifier
     firmware_version: str  #: Firmware version (major, minor)
-    range_decibel: int  #: Input range in dB(AE)
+    input_range_decibel: int  #: Input range in dBAE
 
 
 @dataclass
@@ -43,7 +43,7 @@ class Status:
     temperature: int  #: Device temperature in °C
     acq_enabled: bool  #: Flag if acquisition is active
     log_enabled: bool  #: Flag if logging is active
-    data_size: int  #: Bytes in buffer
+    log_data_usage: int  #: Log buffer usage in %
     datetime: datetime  #: Device datetime
 
 
@@ -275,9 +275,9 @@ class SpotWave:
 
         info_dict = _multiline_output_to_dict(lines)
         return Info(
-            device_id=info_dict["dev_id"],
+            hardware_id=info_dict["hw_id"],
             firmware_version=info_dict["fw_version"],
-            range_decibel=_as_int(info_dict["range"]),
+            input_range_decibel=_as_int(info_dict["input_range"]),
         )
 
     def get_setup(self) -> Setup:
@@ -353,8 +353,8 @@ class SpotWave:
             temperature=_as_int(status_dict["temp"]),
             acq_enabled=_as_int(status_dict["acq_enabled"]) == 1,
             log_enabled=_as_int(status_dict["log_enabled"]) == 1,
-            data_size=_as_int(status_dict["data_size"]),
-            datetime=datetime.strptime(status_dict["date"], "%Y-%m-%dT%H:%M:%S.%f"),
+            log_data_usage=_as_int(status_dict["log_data_usage"]),
+            datetime=datetime.strptime(status_dict["date"], "%Y-%m-%d %H:%M:%S.%f"),
         )
 
     def set_continuous_mode(self, enabled: bool):

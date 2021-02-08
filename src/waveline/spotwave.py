@@ -113,7 +113,7 @@ def _multiline_output_to_dict(lines: List[bytes]):
     """Helper function to parse output from get_info, get_status and get_setup."""
 
     return collections.defaultdict(str, [
-        (k.strip(), v.strip()) for k,_,v in 
+        (k.strip(), v.strip()) for k, _, v in
         [line.decode().partition("=") for line in lines]
     ])
 
@@ -311,8 +311,10 @@ class SpotWave:
                 return None, None, 0
 
             def khz_or_none(k):
-                try:    return 1e3 * float(match.group(k))
-                except: return None
+                try:
+                    return 1e3 * float(match.group(k))
+                except:  # pylint: disable=bare-except
+                    return None
 
             return khz_or_none("hp"), khz_or_none("lp"), int(match.group("order"))
 

@@ -284,6 +284,7 @@ def test_get_tr_data(serial_mock, raw):
     serial_mock.read.side_effect = binary_data
 
     tr_data = sw.get_tr_data(raw=raw)
+    serial_mock.write.assert_called_with(b"get_tr_data\n")
 
     assert tr_data[0].trai == 1
     assert tr_data[0].time == pytest.approx(43686000 / 2e6)
@@ -317,10 +318,11 @@ def test_get_data(serial_mock, samples, raw):
     sw = SpotWave(serial_mock)
 
     mock_data = (2 ** 15 * np.random.randn(samples)).astype(np.int16)
+    serial_mock.readline.return_value = f"NS={samples}\n".encode()
     serial_mock.read.return_value = mock_data.tobytes()
 
     data = sw.get_data(samples, raw=raw)
-    serial_mock.write.assert_called_with(f"get_data b {samples}\n".encode())
+    serial_mock.write.assert_called_with(f"get_data {samples}\n".encode())
     serial_mock.read.assert_called_with(samples * 2)
     if raw:
         assert_allclose(data, mock_data)

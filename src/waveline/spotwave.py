@@ -561,7 +561,7 @@ class SpotWave:
         Returns:
             List of transient data records
         """
-        self._send_command("get_tr_data b")
+        self._send_command("get_tr_data")
 
         records = []
         while True:
@@ -642,7 +642,8 @@ class SpotWave:
             Array with amplitudes in volts (or ADC values if `raw` is `True`)
         """
         samples = int(samples)
-        self._send_command(f"get_data b {samples}")
+        self._send_command(f"get_data {samples}")
+        _ = self._ser.readline()  # will return NS=<samples>
         adc_values = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
         if raw:
             return adc_values

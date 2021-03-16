@@ -519,16 +519,17 @@ class SpotWave:
             List of AE data records (either status or hit data)
         """
         self._send_command("get_ae_data")
-        headerline = self._ser.readline()
-        number_lines = int(headerline)
 
         records = []
-        for _ in range(number_lines):
+        while True:
             line = self._ser.readline()
+            if line == b"\n":  # last line is an empty new line
+                break
+
             logger.debug(f"Received AE data: {line}")
 
             record_type = line[:1]
-            # default to 0
+            # parse key-value pairs in line; default value: 0
             matches = collections.defaultdict(int, _KV_PATTERN.findall(line))
 
             if record_type in (b"H", b"S"):  # hit or status data
@@ -566,13 +567,12 @@ class SpotWave:
         records = []
         while True:
             headerline = self._ser.readline()
+            if headerline == b"\n":  # last line is an empty new line
+                break
 
-            # parse header; default 0s
+            # parse key-value pairs in line; default value: 0
             matches = collections.defaultdict(int, _KV_PATTERN.findall(headerline))
             trai = int(matches[b"TRAI"])
-            if trai <= 0:  # last line when no TRAI
-                logger.debug(f"Last TR headerline {headerline}")
-                break
             time_ = int(matches[b"T"])
             samples = int(matches[b"NS"])
 

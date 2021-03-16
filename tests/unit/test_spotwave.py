@@ -234,9 +234,9 @@ def test_get_ae_data(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"2\n",
         b"S temp=27 T = 2010240 A=21 R=502689 D=2000000 C=0 E=38849818 TRAI=0 flags=0\n",
         b"H temp=27 T=3044759 A=3557 R=24 D=819 C=31 E=518280026 TRAI=1 flags=0\n",
+        b"\n",
     ]
 
     serial_mock.readline.side_effect = response

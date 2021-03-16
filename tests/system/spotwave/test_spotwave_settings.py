@@ -4,11 +4,9 @@ from pytest import mark
 
 
 def test_get_info(sw):
-     info = sw.get_info()
-     assert info  # valid, non-empty response
-     assert info.hardware_id
-     assert info.firmware_version
-     assert info.input_range_decibel
+    info = sw.get_info()
+    assert info  # valid, non-empty response
+    assert info.firmware_version
 
 
 def test_get_setup(sw):

@@ -454,7 +454,7 @@ class SpotWave:
         """
         if sync and interval_seconds > 0:
             interval_seconds *= -1
-        self._send_command(f"set_cct {interval_seconds}")
+        self._send_command(f"set_cct interval {interval_seconds}")
 
     def set_filter(
         self,

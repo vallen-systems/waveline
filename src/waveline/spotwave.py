@@ -6,7 +6,6 @@ All device-related functions are exposed by the `SpotWave` class.
 
 import collections
 import logging
-import os
 import re
 import time
 from contextlib import contextmanager
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # key = value pattern for ae/tr data
 # fast(est) and simple, accept spaces around "="
-#_KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
+# _KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
 # accept words as keys w/o values; this seems next faster (incl. \S)?!
 _KV_PATTERN = re.compile(br"([^\s=]+)(?:\s*=\s*(\S+))?")
 
@@ -31,8 +30,9 @@ _KV_PATTERN = re.compile(br"([^\s=]+)(?:\s*=\s*(\S+))?")
 class Info:
     """Device information."""
 
-    hardware_id: str  #: Unique device identifier
     firmware_version: str  #: Firmware version (major, minor)
+    type_: str  #: Device type
+    model: str  #: Model identifier
     input_range_decibel: int  #: Input range in dBAE
 
 
@@ -41,8 +41,8 @@ class Status:
     """Status information."""
 
     temperature: int  #: Device temperature in °C
-    acq_enabled: bool  #: Flag if acquisition is active
-    log_enabled: bool  #: Flag if logging is active
+    recording: bool  #: Flag if acquisition is active
+    logging: bool  #: Flag if logging is active
     log_data_usage: int  #: Log buffer usage in %
     datetime: datetime  #: Device datetime
 
@@ -51,9 +51,9 @@ class Status:
 class Setup:
     """Setup."""
 
-    acq_enabled: bool  #: Flag if acquisition is enabled
+    recording: bool  #: Flag if acquisition is active
+    logging: bool  #: Flag if logging is active
     cont_enabled: bool  #: Flag if continuous mode is enabled
-    log_enabled: bool  #: Flag if logging mode is enabled
     adc_to_volts: float  #: Conversion factor from ADC values to volts
     threshold_volts: float  #: Threshold for hit-based acquisition in volts
     ddt_seconds: float  #: Duration discrimination time (DDT) in seconds
@@ -99,23 +99,22 @@ class TRRecord:
     raw: bool = False  #: ADC values instead of user values (volts)
 
 
-def _as_int(string):
-    """return first sequence as int."""
-    return int(string.strip().partition(" ")[0])
+def _as_int(string, default: int = 0):
+    """Return first sequence as int."""
+    return int(string.strip().partition(" ")[0] or default)
 
 
-def _as_float(string):
-    """return first sequence as float."""
-    return float(string.strip().partition(" ")[0])
+def _as_float(string, default: float = 0.0):
+    """Return first sequence as float."""
+    return float(string.strip().partition(" ")[0] or default)
 
 
 def _multiline_output_to_dict(lines: List[bytes]):
     """Helper function to parse output from get_info, get_status and get_setup."""
-
-    return collections.defaultdict(str, [
-        (k.strip(), v.strip()) for k, _, v in
-        [line.decode().partition("=") for line in lines]
-    ])
+    return collections.defaultdict(
+        str,
+        [(k.strip(), v.strip()) for k, _, v in [line.decode().partition("=") for line in lines]],
+    )
 
 
 class SpotWave:
@@ -158,9 +157,6 @@ class SpotWave:
                 >>>     ...
         """
         if isinstance(port, str):
-            # very important!!! Serial uses "\\.\", which is WRONG
-            if os.name == "nt" and port.upper().startswith("COM"):
-                port = "\\.\\" + port
             self._ser = Serial(port=port)
         elif isinstance(port, Serial):
             self._ser = port
@@ -275,8 +271,9 @@ class SpotWave:
 
         info_dict = _multiline_output_to_dict(lines)
         return Info(
-            hardware_id=info_dict["hw_id"],
             firmware_version=info_dict["fw_version"],
+            type_=info_dict["type"],
+            model=info_dict["model"],
             input_range_decibel=_as_int(info_dict["input_range"]),
         )
 
@@ -306,7 +303,9 @@ class SpotWave:
             """
             match = re.match(
                 r"\s*(?P<hp>\S+)\s*-\s*(?P<lp>\S+)\s+.*o(rder)?\D*(?P<order>\d)",
-                string, flags=re.IGNORECASE )
+                string,
+                flags=re.IGNORECASE,
+            )
             if not match:
                 return None, None, 0
 
@@ -321,9 +320,9 @@ class SpotWave:
         filter_settings = get_filter_settings(setup_dict["filter"])
 
         return Setup(
-            acq_enabled=_as_int(setup_dict["acq_enabled"]) == 1,
+            recording=_as_int(setup_dict["recording"]) == 1,
+            logging=_as_int(setup_dict["logging"]) == 1,
             cont_enabled=_as_int(setup_dict["cont"]) == 1,
-            log_enabled=_as_int(setup_dict["log_enabled"]) == 1,
             adc_to_volts=_as_float(setup_dict["adc2uv"]) / 1e6,
             threshold_volts=_as_float(setup_dict["thr"]) / 1e6,
             ddt_seconds=_as_float(setup_dict["ddt"]) / 1e6,
@@ -353,8 +352,8 @@ class SpotWave:
         status_dict = _multiline_output_to_dict(lines)
         return Status(
             temperature=_as_int(status_dict["temp"]),
-            acq_enabled=_as_int(status_dict["acq_enabled"]) == 1,
-            log_enabled=_as_int(status_dict["log_enabled"]) == 1,
+            recording=_as_int(status_dict["recording"]) == 1,
+            logging=_as_int(status_dict["logging"]) == 1,
             log_data_usage=_as_int(status_dict["log_data_usage"]),
             datetime=datetime.strptime(status_dict["date"], "%Y-%m-%d %H:%M:%S.%f"),
         )

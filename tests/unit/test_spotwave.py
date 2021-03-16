@@ -61,8 +61,8 @@ def test_get_setup(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"acq_enabled=1\n",
-        b"log_enabled=0\n",
+        b"recording=1\n",
+        b"logging=0\n",
         b"adc2uv=1.74\n",
         b"cct=-0.5 s\n",
         b"filter=10.5-350 kHz, order 4\n",
@@ -81,9 +81,9 @@ def test_get_setup(serial_mock):
     setup = sw.get_setup()
     serial_mock.write.assert_called_with(b"get_setup\n")
     assert setup == Setup(
-        acq_enabled=True,
+        recording=True,
+        logging=False,
         cont_enabled=False,
-        log_enabled=False,
         adc_to_volts=1.74e-6,
         threshold_volts=3162.5e-6,
         ddt_seconds=250e-6,
@@ -130,16 +130,18 @@ def test_get_info(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"hw_id = 0019003A3438511539373231\n",
         b"fw_version=00.21\n",
+        b"type=spotWave\n",
+        b"model=201\n",
         b"input_range=94 dBAE\n",
     ]
     serial_mock.readlines.return_value = response
     info = sw.get_info()
     serial_mock.write.assert_called_with(b"get_info\n")
 
-    assert info.hardware_id == "0019003A3438511539373231"
     assert info.firmware_version == "00.21"
+    assert info.type_ == "spotWave"
+    assert info.model == "201"
     assert info.input_range_decibel == 94
 
     # empty response
@@ -153,8 +155,8 @@ def test_get_status(serial_mock):
 
     response = [
         b"temp=24 \xc2\xb0C\n",
-        b"acq_enabled=0\n",
-        b"log_enabled=0\n",
+        b"recording=0\n",
+        b"logging=0\n",
         b"log_data_usage=13 %\n",
         b"date=2020-12-17 15:11:42.17\n",
     ]
@@ -163,8 +165,8 @@ def test_get_status(serial_mock):
     serial_mock.write.assert_called_with(b"get_status\n")
 
     assert status.temperature == 24
-    assert status.acq_enabled == False
-    assert status.log_enabled == False
+    assert status.recording == False
+    assert status.logging == False
     assert status.log_data_usage == 13
     assert status.datetime == datetime(2020, 12, 17, 15, 11, 42, 170_000)
 

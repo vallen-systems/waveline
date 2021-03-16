@@ -128,7 +128,7 @@ class SpotWave:
     PRODUCT_ID = 272  #: USB product id of SpotWave device
     CLOCK = 2_000_000  #: Internal clock in Hz
     # TICKS_TO_SEC = 1 / CLOCK  # precision lost...?
-    _MIN_FIRMWARE_VERSION = "00.21"
+    _MIN_FIRMWARE_VERSION = "00.25"
 
     def __init__(self, port: Union[str, Serial]):
         """

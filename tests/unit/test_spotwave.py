@@ -157,7 +157,7 @@ def test_get_status(serial_mock):
         b"temp=24 \xc2\xb0C\n",
         b"recording=0\n",
         b"logging=0\n",
-        b"log_data_usage=13 %\n",
+        b"log_data_usage=13 sets (0.12 %)\n",
         b"date=2020-12-17 15:11:42.17\n",
     ]
     serial_mock.readlines.return_value = response

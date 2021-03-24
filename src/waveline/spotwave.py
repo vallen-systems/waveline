@@ -10,7 +10,7 @@ import re
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Iterator, List, Optional, Union
 
 import numpy as np
@@ -43,7 +43,7 @@ class Status:
     temperature: int  #: Device temperature in °C
     recording: bool  #: Flag if acquisition is active
     logging: bool  #: Flag if logging is active
-    log_data_usage: int  #: Log buffer usage in %
+    log_data_usage: int  #: Log buffer usage in sets
     datetime: datetime  #: Device datetime
 
 
@@ -349,13 +349,20 @@ class SpotWave:
         if not lines:
             raise RuntimeError("Could not get status")
 
+        def parse_datetime(string) -> datetime:
+            """Parse datetime with any digit number of second fractions."""
+            dt, _, fsec = string.partition(".")
+            result = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+            result += timedelta(seconds=int(fsec) / 10 ** len(fsec))
+            return result
+
         status_dict = _multiline_output_to_dict(lines)
         return Status(
             temperature=_as_int(status_dict["temp"]),
             recording=_as_int(status_dict["recording"]) == 1,
             logging=_as_int(status_dict["logging"]) == 1,
             log_data_usage=_as_int(status_dict["log_data_usage"]),
-            datetime=datetime.strptime(status_dict["date"], "%Y-%m-%d %H:%M:%S.%f"),
+            datetime=parse_datetime(status_dict["date"]),
         )
 
     def set_continuous_mode(self, enabled: bool):

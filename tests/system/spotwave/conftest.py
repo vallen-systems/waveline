@@ -12,5 +12,6 @@ def sw():
         )
     with SpotWave(devices[0]) as sw:
         sw.set_datetime()  # set current date/time
+        sw.clear_data_log()
         sw.clear_buffer()
         yield sw

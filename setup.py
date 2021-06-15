@@ -18,6 +18,7 @@ EXTRAS_REQUIRE = {
         "sphinx>3.1",
         "sphinx-autodoc-typehints",
         "sphinx-rtd-theme",
+        "m2r2",  # include markdown files
     ],
     "tests": [
         "asynctest",

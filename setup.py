@@ -40,7 +40,7 @@ EXTRAS_REQUIRE["dev"] = EXTRAS_REQUIRE["docs"] + EXTRAS_REQUIRE["tests"] + EXTRA
 
 setup(
     name="waveline",
-    version="0.2.0",
+    version="0.3.0",
     description="Library to easily interface with Vallen Systeme WaveLine™ devices",
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",

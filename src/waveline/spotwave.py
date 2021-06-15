@@ -6,12 +6,11 @@ All device-related functions are exposed by the `SpotWave` class.
 
 import collections
 import logging
-import os
 import re
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Iterator, List, Optional, Union
 
 import numpy as np
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # key = value pattern for ae/tr data
 # fast(est) and simple, accept spaces around "="
-#_KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
+# _KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
 # accept words as keys w/o values; this seems next faster (incl. \S)?!
 _KV_PATTERN = re.compile(br"([^\s=]+)(?:\s*=\s*(\S+))?")
 
@@ -31,8 +30,9 @@ _KV_PATTERN = re.compile(br"([^\s=]+)(?:\s*=\s*(\S+))?")
 class Info:
     """Device information."""
 
-    hardware_id: str  #: Unique device identifier
     firmware_version: str  #: Firmware version (major, minor)
+    type_: str  #: Device type
+    model: str  #: Model identifier
     input_range_decibel: int  #: Input range in dBAE
 
 
@@ -41,9 +41,9 @@ class Status:
     """Status information."""
 
     temperature: int  #: Device temperature in °C
-    acq_enabled: bool  #: Flag if acquisition is active
-    log_enabled: bool  #: Flag if logging is active
-    log_data_usage: int  #: Log buffer usage in %
+    recording: bool  #: Flag if acquisition is active
+    logging: bool  #: Flag if logging is active
+    log_data_usage: int  #: Log buffer usage in sets
     datetime: datetime  #: Device datetime
 
 
@@ -51,9 +51,9 @@ class Status:
 class Setup:
     """Setup."""
 
-    acq_enabled: bool  #: Flag if acquisition is enabled
+    recording: bool  #: Flag if acquisition is active
+    logging: bool  #: Flag if logging is active
     cont_enabled: bool  #: Flag if continuous mode is enabled
-    log_enabled: bool  #: Flag if logging mode is enabled
     adc_to_volts: float  #: Conversion factor from ADC values to volts
     threshold_volts: float  #: Threshold for hit-based acquisition in volts
     ddt_seconds: float  #: Duration discrimination time (DDT) in seconds
@@ -99,23 +99,22 @@ class TRRecord:
     raw: bool = False  #: ADC values instead of user values (volts)
 
 
-def _as_int(string):
-    """return first sequence as int."""
-    return int(string.strip().partition(" ")[0])
+def _as_int(string, default: int = 0):
+    """Return first sequence as int."""
+    return int(string.strip().partition(" ")[0] or default)
 
 
-def _as_float(string):
-    """return first sequence as float."""
-    return float(string.strip().partition(" ")[0])
+def _as_float(string, default: float = 0.0):
+    """Return first sequence as float."""
+    return float(string.strip().partition(" ")[0] or default)
 
 
 def _multiline_output_to_dict(lines: List[bytes]):
     """Helper function to parse output from get_info, get_status and get_setup."""
-
-    return collections.defaultdict(str, [
-        (k.strip(), v.strip()) for k, _, v in
-        [line.decode().partition("=") for line in lines]
-    ])
+    return collections.defaultdict(
+        str,
+        [(k.strip(), v.strip()) for k, _, v in [line.decode().partition("=") for line in lines]],
+    )
 
 
 class SpotWave:
@@ -129,7 +128,7 @@ class SpotWave:
     PRODUCT_ID = 272  #: USB product id of SpotWave device
     CLOCK = 2_000_000  #: Internal clock in Hz
     # TICKS_TO_SEC = 1 / CLOCK  # precision lost...?
-    _MIN_FIRMWARE_VERSION = "00.21"
+    _MIN_FIRMWARE_VERSION = "00.25"
 
     def __init__(self, port: Union[str, Serial]):
         """
@@ -158,9 +157,6 @@ class SpotWave:
                 >>>     ...
         """
         if isinstance(port, str):
-            # very important!!! Serial uses "\\.\", which is WRONG
-            if os.name == "nt" and port.upper().startswith("COM"):
-                port = "\\.\\" + port
             self._ser = Serial(port=port)
         elif isinstance(port, Serial):
             self._ser = port
@@ -275,8 +271,9 @@ class SpotWave:
 
         info_dict = _multiline_output_to_dict(lines)
         return Info(
-            hardware_id=info_dict["hw_id"],
             firmware_version=info_dict["fw_version"],
+            type_=info_dict["type"],
+            model=info_dict["model"],
             input_range_decibel=_as_int(info_dict["input_range"]),
         )
 
@@ -306,7 +303,9 @@ class SpotWave:
             """
             match = re.match(
                 r"\s*(?P<hp>\S+)\s*-\s*(?P<lp>\S+)\s+.*o(rder)?\D*(?P<order>\d)",
-                string, flags=re.IGNORECASE )
+                string,
+                flags=re.IGNORECASE,
+            )
             if not match:
                 return None, None, 0
 
@@ -321,9 +320,9 @@ class SpotWave:
         filter_settings = get_filter_settings(setup_dict["filter"])
 
         return Setup(
-            acq_enabled=_as_int(setup_dict["acq_enabled"]) == 1,
+            recording=_as_int(setup_dict["recording"]) == 1,
+            logging=_as_int(setup_dict["logging"]) == 1,
             cont_enabled=_as_int(setup_dict["cont"]) == 1,
-            log_enabled=_as_int(setup_dict["log_enabled"]) == 1,
             adc_to_volts=_as_float(setup_dict["adc2uv"]) / 1e6,
             threshold_volts=_as_float(setup_dict["thr"]) / 1e6,
             ddt_seconds=_as_float(setup_dict["ddt"]) / 1e6,
@@ -350,13 +349,20 @@ class SpotWave:
         if not lines:
             raise RuntimeError("Could not get status")
 
+        def parse_datetime(string) -> datetime:
+            """Parse datetime with any digit number of second fractions."""
+            dt, _, fsec = string.partition(".")
+            result = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+            result += timedelta(seconds=int(fsec) / 10 ** len(fsec))
+            return result
+
         status_dict = _multiline_output_to_dict(lines)
         return Status(
             temperature=_as_int(status_dict["temp"]),
-            acq_enabled=_as_int(status_dict["acq_enabled"]) == 1,
-            log_enabled=_as_int(status_dict["log_enabled"]) == 1,
+            recording=_as_int(status_dict["recording"]) == 1,
+            logging=_as_int(status_dict["logging"]) == 1,
             log_data_usage=_as_int(status_dict["log_data_usage"]),
-            datetime=datetime.strptime(status_dict["date"], "%Y-%m-%d %H:%M:%S.%f"),
+            datetime=parse_datetime(status_dict["date"]),
         )
 
     def set_continuous_mode(self, enabled: bool):
@@ -455,7 +461,7 @@ class SpotWave:
         """
         if sync and interval_seconds > 0:
             interval_seconds *= -1
-        self._send_command(f"set_cct {interval_seconds}")
+        self._send_command(f"set_cct interval {interval_seconds}")
 
     def set_filter(
         self,
@@ -499,37 +505,36 @@ class SpotWave:
         """
         self._send_command(f"set_acq thr {microvolts}")
 
+    def set_logging_mode(self, enabled: bool):
+        """
+        Enable/disable data log mode.
+
+        Args:
+            enabled: Set to `True` to enable logging mode
+        """
+        self._send_command(f"set_data_log enabled {int(enabled)}")
+
     def start_acquisition(self):
         """Start acquisition."""
         logger.info("Start acquisition")
-        self._send_command("set_acq enabled 1")
+        self._send_command("start_acq")
 
     def stop_acquisition(self):
         """Stop acquisition."""
         logger.info("Stop acquisition")
-        self._send_command("set_acq enabled 0")
+        self._send_command("stop_acq")
 
-    def get_ae_data(self) -> List[AERecord]:
-        """
-        Get AE data records.
-
-        Todo:
-            - Implement parsing of record start marker
-
-        Returns:
-            List of AE data records (either status or hit data)
-        """
-        self._send_command("get_ae_data")
-        headerline = self._ser.readline()
-        number_lines = int(headerline)
-
+    def _read_ae_data(self) -> List[AERecord]:
         records = []
-        for _ in range(number_lines):
+        while True:
             line = self._ser.readline()
+            if line == b"\n":  # last line is an empty new line
+                break
+
             logger.debug(f"Received AE data: {line}")
 
             record_type = line[:1]
-            # default to 0
+            # parse key-value pairs in line; default value: 0
             matches = collections.defaultdict(int, _KV_PATTERN.findall(line))
 
             if record_type in (b"H", b"S"):  # hit or status data
@@ -552,6 +557,19 @@ class SpotWave:
 
         return records
 
+    def get_ae_data(self) -> List[AERecord]:
+        """
+        Get AE data records.
+
+        Todo:
+            - Implement parsing of record start marker
+
+        Returns:
+            List of AE data records (either status or hit data)
+        """
+        self._send_command("get_ae_data")
+        return self._read_ae_data()
+
     def get_tr_data(self, raw: bool = False) -> List[TRRecord]:
         """
         Get transient data records.
@@ -562,18 +580,17 @@ class SpotWave:
         Returns:
             List of transient data records
         """
-        self._send_command("get_tr_data b")
+        self._send_command("get_tr_data")
 
         records = []
         while True:
             headerline = self._ser.readline()
+            if headerline == b"\n":  # last line is an empty new line
+                break
 
-            # parse header; default 0s
+            # parse key-value pairs in line; default value: 0
             matches = collections.defaultdict(int, _KV_PATTERN.findall(headerline))
             trai = int(matches[b"TRAI"])
-            if trai <= 0:  # last line when no TRAI
-                logger.debug(f"Last TR headerline {headerline}")
-                break
             time_ = int(matches[b"T"])
             samples = int(matches[b"NS"])
 
@@ -643,8 +660,23 @@ class SpotWave:
             Array with amplitudes in volts (or ADC values if `raw` is `True`)
         """
         samples = int(samples)
-        self._send_command(f"get_data b {samples}")
+        self._send_command(f"get_data {samples}")
+        _ = self._ser.readline()  # will return NS=<samples>
         adc_values = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
         if raw:
             return adc_values
         return np.multiply(adc_values, self._adc_to_volts, dtype=np.float32)
+
+    def get_data_log(self) -> List[AERecord]:
+        """
+        Get logged AE data records data from internal memory
+
+        Returns:
+            List of AE data records (either status or hit data)
+        """
+        self._send_command("get_data_log")
+        return self._read_ae_data()
+
+    def clear_data_log(self):
+        """Clear logged data from internal memory."""
+        self._send_command("clear_data_log")

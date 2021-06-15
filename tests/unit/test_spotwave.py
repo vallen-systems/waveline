@@ -61,8 +61,8 @@ def test_get_setup(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"acq_enabled=1\n",
-        b"log_enabled=0\n",
+        b"recording=1\n",
+        b"logging=0\n",
         b"adc2uv=1.74\n",
         b"cct=-0.5 s\n",
         b"filter=10.5-350 kHz, order 4\n",
@@ -81,9 +81,9 @@ def test_get_setup(serial_mock):
     setup = sw.get_setup()
     serial_mock.write.assert_called_with(b"get_setup\n")
     assert setup == Setup(
-        acq_enabled=True,
+        recording=True,
+        logging=False,
         cont_enabled=False,
-        log_enabled=False,
         adc_to_volts=1.74e-6,
         threshold_volts=3162.5e-6,
         ddt_seconds=250e-6,
@@ -130,16 +130,18 @@ def test_get_info(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"hw_id = 0019003A3438511539373231\n",
         b"fw_version=00.21\n",
+        b"type=spotWave\n",
+        b"model=201\n",
         b"input_range=94 dBAE\n",
     ]
     serial_mock.readlines.return_value = response
     info = sw.get_info()
     serial_mock.write.assert_called_with(b"get_info\n")
 
-    assert info.hardware_id == "0019003A3438511539373231"
     assert info.firmware_version == "00.21"
+    assert info.type_ == "spotWave"
+    assert info.model == "201"
     assert info.input_range_decibel == 94
 
     # empty response
@@ -153,9 +155,9 @@ def test_get_status(serial_mock):
 
     response = [
         b"temp=24 \xc2\xb0C\n",
-        b"acq_enabled=0\n",
-        b"log_enabled=0\n",
-        b"log_data_usage=13 %\n",
+        b"recording=0\n",
+        b"logging=0\n",
+        b"log_data_usage=13 sets (0.12 %)\n",
         b"date=2020-12-17 15:11:42.17\n",
     ]
     serial_mock.readlines.return_value = response
@@ -163,8 +165,8 @@ def test_get_status(serial_mock):
     serial_mock.write.assert_called_with(b"get_status\n")
 
     assert status.temperature == 24
-    assert status.acq_enabled == False
-    assert status.log_enabled == False
+    assert status.recording == False
+    assert status.logging == False
     assert status.log_data_usage == 13
     assert status.datetime == datetime(2020, 12, 17, 15, 11, 42, 170_000)
 
@@ -183,6 +185,11 @@ def test_commands_without_response(serial_mock):
 
     sw.set_continuous_mode(True)
     assert_write(b"set_acq cont 1\n")
+
+    sw.set_logging_mode(True)
+    assert_write(b"set_data_log enabled 1\n")
+    sw.set_logging_mode(False)
+    assert_write(b"set_data_log enabled 0\n")
 
     sw.set_ddt(400)
     assert_write(b"set_acq ddt 400\n")
@@ -203,11 +210,11 @@ def test_commands_without_response(serial_mock):
     assert_write(b"set_acq tr_post_dur 0\n")
 
     sw.set_cct(0.1, sync=False)
-    assert_write(b"set_cct 0.1\n")
+    assert_write(b"set_cct interval 0.1\n")
     sw.set_cct(-0.1, sync=False)
-    assert_write(b"set_cct -0.1\n")
+    assert_write(b"set_cct interval -0.1\n")
     sw.set_cct(0.1, sync=True)
-    assert_write(b"set_cct -0.1\n")
+    assert_write(b"set_cct interval -0.1\n")
 
     sw.set_filter(highpass=100_000, lowpass=300_000, order=6)
     assert_write(b"set_filter 100.0 300.0 6\n")
@@ -222,19 +229,19 @@ def test_commands_without_response(serial_mock):
     assert_write(b"set_acq thr 100\n")
 
     sw.start_acquisition()
-    assert_write(b"set_acq enabled 1\n")
+    assert_write(b"start_acq\n")
 
     sw.stop_acquisition()
-    assert_write(b"set_acq enabled 0\n")
+    assert_write(b"stop_acq\n")
 
 
 def test_get_ae_data(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"2\n",
         b"S temp=27 T = 2010240 A=21 R=502689 D=2000000 C=0 E=38849818 TRAI=0 flags=0\n",
         b"H temp=27 T=3044759 A=3557 R=24 D=819 C=31 E=518280026 TRAI=1 flags=0\n",
+        b"\n",
     ]
 
     serial_mock.readline.side_effect = response
@@ -282,6 +289,7 @@ def test_get_tr_data(serial_mock, raw):
     serial_mock.read.side_effect = binary_data
 
     tr_data = sw.get_tr_data(raw=raw)
+    serial_mock.write.assert_called_with(b"get_tr_data\n")
 
     assert tr_data[0].trai == 1
     assert tr_data[0].time == pytest.approx(43686000 / 2e6)
@@ -315,10 +323,11 @@ def test_get_data(serial_mock, samples, raw):
     sw = SpotWave(serial_mock)
 
     mock_data = (2 ** 15 * np.random.randn(samples)).astype(np.int16)
+    serial_mock.readline.return_value = f"NS={samples}\n".encode()
     serial_mock.read.return_value = mock_data.tobytes()
 
     data = sw.get_data(samples, raw=raw)
-    serial_mock.write.assert_called_with(f"get_data b {samples}\n".encode())
+    serial_mock.write.assert_called_with(f"get_data {samples}\n".encode())
     serial_mock.read.assert_called_with(samples * 2)
     if raw:
         assert_allclose(data, mock_data)

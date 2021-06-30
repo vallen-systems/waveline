@@ -49,19 +49,3 @@ async def test_acq_decimation(cw, channel, decimation, duration_acq):
     await cw.stop_acquisition()
 
     assert time_elapsed == pytest.approx(duration_acq, rel=0.025)
-
-
-async def test_acq_status(cw):
-    assert cw.get_temperature() == None
-    assert cw.get_buffersize() == 0
-
-    await cw.set_decimation(0, 10)  # prevent buffer overflow, we don't read the data
-    await cw.start_acquisition()
-
-    async for _ in cw.stream(1, 10_000):
-        await asyncio.sleep(2.5)  #  wait for acq status, sent every 2 seconds
-        assert cw.get_temperature() != 0
-        assert cw.get_buffersize() > 0
-        break
-
-    await cw.stop_acquisition()

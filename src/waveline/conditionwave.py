@@ -10,7 +10,6 @@ import socket
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from functools import wraps
-from threading import Lock
 from typing import AsyncIterator, List, Optional, Tuple
 
 import numpy as np
@@ -24,78 +23,6 @@ class _ChannelSettings:
 
     range_volts: float  #: Input range in volts
     decimation: int  #: Decimation factor
-
-
-class _AcquisitionStatus:
-    """
-    Helper class read and parse status data on control port during acquisition.
-
-    Following messages are sent:
-    - temp=<temperature in °C>
-    - buffer_size=<buffer size in bytes>
-    - error=<error message>
-    """
-
-    def __init__(self, stream_reader: asyncio.StreamReader):
-        self._reader = stream_reader
-        self._task = None
-        self._lock = Lock()
-        self._temperature = 0
-        self._buffersize = 0
-
-    async def _read_acquisition_status(self):
-        logger.debug("Start reading acquisition status")
-        try:
-            while True:
-                line = await self._reader.readuntil(b"\n")  # raises IncompleteReadError on EOF
-                line = line.decode("utf-8").rstrip()
-
-                try:
-                    key, value = line.split("=")
-                except ValueError:
-                    logger.warning(f"Can not parse acqusition status '{line}'")
-
-                if key == "temp":
-                    # logger.debug(f"Temperature = {value} °C")
-                    with self._lock:
-                        self._temperature = int(value)
-                elif key == "buffer_size":
-                    # logger.debug(f"Buffer size = {value}")
-                    with self._lock:
-                        self._buffersize = int(value)
-                elif key == "error":
-                    logging.error(f"Error during acquisition: {value}")
-                else:
-                    raise logger.warning(f"Unknown status key '{key}'")
-        except asyncio.IncompleteReadError:
-            logger.warning("No more acquisition status to read, quit task")
-        except asyncio.CancelledError:
-            logger.debug("Stop reading acquisition status")
-
-    async def start(self):
-        """Start async task."""
-        loop = asyncio.get_event_loop()  # workaround for Python 3.6
-        self._task = loop.create_task(self._read_acquisition_status())
-
-    async def stop(self):
-        """Stop async task."""
-        try:
-            self._task.cancel()
-            await self._task
-        except asyncio.CancelledError:
-            ...  # weird bug with Python 3.8 and Windows (Proactor event loop)
-        finally:
-            self._task = None
-
-    def get_temperature(self):
-        """Get system temperatur."""
-        with self._lock:
-            return self._temperature
-
-    def get_buffersize(self):
-        """Get current buffer size."""
-        with self._lock:
-            return self._buffersize
 
 
 def _require_connected(func):
@@ -188,7 +115,6 @@ class ConditionWave:
         self._writer = None
         self._connected = False
         self._daq_active = False
-        self._daq_status: Optional[_AcquisitionStatus] = None
         self._channel_settings = {
             channel: replace(self._DEFAULT_SETTINGS) for channel in self.CHANNELS  # return copy
         }
@@ -376,8 +302,6 @@ class ConditionWave:
             return
         logger.info("Start data acquisition...")
         await self._send_command("start")
-        self._daq_status = _AcquisitionStatus(self._reader)
-        await self._daq_status.start()
         self._daq_active = True
 
     @_require_connected
@@ -446,22 +370,6 @@ class ConditionWave:
             return
         logger.info("Stop data acquisition...")
         await self._send_command("stop")
-        await self._daq_status.stop()
-        self._daq_active = False
-
-    @_require_connected
-    def get_temperature(self) -> Optional[int]:
-        """Get current device temperature in °C (only during acquisition)."""
-        if not self._daq_active or self._daq_status is None:
-            return None
-        return self._daq_status.get_temperature()
-
-    @_require_connected
-    def get_buffersize(self) -> int:
-        """Get buffer size in bytes (only during acquisition)."""
-        if not self._daq_active or self._daq_status is None:
-            return 0
-        return self._daq_status.get_buffersize()
 
     def __del__(self):
         if self._writer:

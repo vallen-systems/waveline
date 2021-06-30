@@ -138,18 +138,3 @@ async def test_start_stop_acquisition(mock_objects):
     writer.write.assert_called_with(b"start\n")
     await cw.stop_acquisition()
     writer.write.assert_called_with(b"stop\n")
-
-
-async def test_acquisition_status(mock_objects):
-    cw, reader, _ = mock_objects
-    reader.readuntil.side_effect = [
-        b"temp=20\n",
-        b"buffer_size=1024\n",
-        asyncio.CancelledError(),  # prevents raising StopIteration exception
-    ]
-
-    await cw.start_acquisition()
-    await asyncio.sleep(0.1)  # wait until launched acquisition status task reads values
-    assert cw.get_temperature() == 20
-    assert cw.get_buffersize() == 1024
-    await cw.stop_acquisition()

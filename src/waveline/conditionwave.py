@@ -14,7 +14,29 @@ from typing import AsyncIterator, List, Optional, Tuple
 
 import numpy as np
 
+from ._common import as_float, as_int, multiline_output_to_dict
+
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Info:
+    """Device information."""
+
+    firmware_version: str  #: Firmware version
+    fpga_version: str  #: FPGA version
+    channel_count: int  #: Number of channels
+    range_count: int  #: Number of selectable ranges
+    max_sample_rate: float  #: Max sampling rate
+    adc2uv: List[float]  #: Conversion factors from ADC to µV for both ranges
+
+
+@dataclass
+class Status:
+    """Status information."""
+
+    temperature: float  #: Device temperature in °C
+    buffer_size: int  #: Buffer size in bytes
 
 
 @dataclass
@@ -111,10 +133,10 @@ class ConditionWave:
                 >>> asyncio.run(main())
         """
         self._address = address
-        self._reader = None
-        self._writer = None
+        self._reader: Optional[asyncio.StreamReader] = None
+        self._writer: Optional[asyncio.StreamWriter] = None
         self._connected = False
-        self._daq_active = False
+        self._recording = False
         self._channel_settings = {
             channel: replace(self._DEFAULT_SETTINGS) for channel in self.CHANNELS  # return copy
         }
@@ -148,7 +170,7 @@ class ConditionWave:
             sock.settimeout(timeout)
             while True:
                 try:
-                    _, (ip, _) = sock.recvfrom(len(message))
+                    _, (ip, _) = sock.recvfrom(1024)
                     yield ip
                 except socket.timeout:
                     break
@@ -182,7 +204,7 @@ class ConditionWave:
         if not self.connected:
             return
 
-        if self._daq_active:
+        if self._recording:
             await self.stop_acquisition()
 
         logger.info(f"Close connection {self._address}:{self.PORT}...")
@@ -202,12 +224,55 @@ class ConditionWave:
         await self._writer.drain()
 
     @_require_connected
-    async def get_info(self) -> str:
+    async def _readline(self, timeout_seconds: Optional[float] = None) -> bytes:
+        return await asyncio.wait_for(
+            self._reader.readline(),  # type: ignore
+            timeout=timeout_seconds,
+        )
+
+    @_require_connected
+    async def _readlines(
+        self,
+        limit: Optional[int] = None,
+        timeout_seconds: Optional[float] = None,
+    ) -> List[bytes]:
+        lines = []
+        while True:
+            try:
+                line = await asyncio.wait_for(
+                    self._reader.readline(),  # type: ignore
+                    timeout=timeout_seconds,
+                )
+                lines.append(line)
+            except asyncio.TimeoutError:
+                break
+            if limit and len(lines) >= limit:
+                break
+        return lines
+
+    async def get_info(self) -> Info:
         """Get device information."""
-        logger.info("Get info...")
         await self._send_command("get_info")
-        data = await self._reader.read(1000)  # type: ignore
-        return data.decode()
+        lines = await self._readlines(timeout_seconds=0.1)
+        info_dict = multiline_output_to_dict(lines)
+        return Info(
+            firmware_version=info_dict["fw_version"],
+            fpga_version=info_dict["fpga_version"],
+            channel_count=as_int(info_dict["channel_count"], 0),
+            range_count=as_int(info_dict["range_count"], 0),
+            max_sample_rate=as_int(info_dict["max_sample_rate"], 0),
+            adc2uv=[float(v) for v in info_dict["adc2uv"].strip().split(" ")],
+        )
+
+    async def get_status(self) -> Status:
+        """Get status information."""
+        await self._send_command("get_status")
+        lines = await self._readlines(timeout_seconds=0.1)
+        status_dict = multiline_output_to_dict(lines)
+        return Status(
+            temperature=as_float(status_dict["temp"]),
+            buffer_size=as_int(status_dict["buffer_size"]),
+        )
 
     def _check_channel_number(self, channel: int):
         if channel not in (0, *self.CHANNELS):
@@ -216,7 +281,6 @@ class ConditionWave:
                 f"Select a single channel from {self.CHANNELS} or 0 for all"
             )
 
-    @_require_connected
     async def set_range(self, channel: int, range_volts: float):
         """
         Set input range.
@@ -239,7 +303,6 @@ class ConditionWave:
             self._channel_settings[1].range_volts = range_volts
             self._channel_settings[2].range_volts = range_volts
 
-    @_require_connected
     async def set_decimation(self, channel: int, factor: int):
         """
         Set decimation factor.
@@ -254,14 +317,13 @@ class ConditionWave:
             raise ValueError("Decimation factor must be in the range of [1, 500]")
 
         logger.info(f"Set {_channel_str(channel)} decimation factor to {factor}...")
-        await self._send_command(f"set_decimation {channel:d} {factor:d}")
+        await self._send_command(f"set_acq tr_decimation {factor:d} @{channel:d}")
         if channel > 0:
             self._channel_settings[channel].decimation = factor
         else:
             self._channel_settings[1].decimation = factor
             self._channel_settings[2].decimation = factor
 
-    @_require_connected
     async def set_filter(
         self,
         channel: int,
@@ -280,29 +342,20 @@ class ConditionWave:
         """
         self._check_channel_number(channel)
 
-        def value_or(value: Optional[float], default_value: float):
-            if value is None:
-                return default_value
-            return value
+        def khz_or_none(freq: Optional[float]):
+            return freq / 1e3 if freq is not None else "none"
 
-        if highpass is None and lowpass is None:
-            logger.info(f"Set {_channel_str(channel)} filter to bypass")
-            await self._send_command(f"set_filter {channel:d} 0")
-        else:
-            highpass_khz = value_or(highpass, 0) / 1e3  # 0 if None
-            lowpass_khz = value_or(lowpass, 0.5 * self.MAX_SAMPLERATE) / 1e3  # nyquist if None
+        await self._send_command(
+            f"set_filter {khz_or_none(highpass)} {khz_or_none(lowpass)} {order} @{channel:d}"
+        )
 
-            logger.info(f"Set filter to {highpass_khz}-{lowpass_khz} kHz (order: {order})...")
-            await self._send_command(f"set_filter {channel:d} {highpass_khz} {lowpass_khz} {order}")
-
-    @_require_connected
     async def start_acquisition(self):
         """Start data acquisition."""
-        if self._daq_active:
+        if self._recording:
             return
         logger.info("Start data acquisition...")
         await self._send_command("start")
-        self._daq_active = True
+        self._recording = True
 
     @_require_connected
     async def stream(
@@ -334,13 +387,11 @@ class ConditionWave:
         """
         if channel not in self.CHANNELS:
             raise ValueError(f"Channel must be in {self.CHANNELS}")
-        if not self._daq_active:
-            raise RuntimeError("Data acquisition not started")
 
         settings = self._channel_settings[channel]
         logger.info(
             (
-                f"Start data acquisition on channel {channel} "
+                f"Start streaming acquisition on channel {channel} "
                 f"(blocksize: {blocksize}, range: {settings.range_volts} V)"
             )
         )
@@ -363,10 +414,9 @@ class ConditionWave:
             timestamp += interval
         writer.close()
 
-    @_require_connected
     async def stop_acquisition(self):
         """Stop data acquisition."""
-        if not self._daq_active:
+        if not self._recording:
             return
         logger.info("Stop data acquisition...")
         await self._send_command("stop")

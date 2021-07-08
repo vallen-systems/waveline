@@ -17,6 +17,8 @@ import numpy as np
 from serial import EIGHTBITS, Serial
 from serial.tools import list_ports
 
+from ._common import as_float, as_int, multiline_output_to_dict
+
 logger = logging.getLogger(__name__)
 
 # key = value pattern for ae/tr data
@@ -97,24 +99,6 @@ class TRRecord:
     samples: int  #: Number of samples
     data: np.ndarray  #: Array of transient data in volts (or ADC values if `raw` is `True`)
     raw: bool = False  #: ADC values instead of user values (volts)
-
-
-def _as_int(string, default: int = 0):
-    """Return first sequence as int."""
-    return int(string.strip().partition(" ")[0] or default)
-
-
-def _as_float(string, default: float = 0.0):
-    """Return first sequence as float."""
-    return float(string.strip().partition(" ")[0] or default)
-
-
-def _multiline_output_to_dict(lines: List[bytes]):
-    """Helper function to parse output from get_info, get_status and get_setup."""
-    return collections.defaultdict(
-        str,
-        [(k.strip(), v.strip()) for k, _, v in [line.decode().partition("=") for line in lines]],
-    )
 
 
 class SpotWave:
@@ -269,12 +253,12 @@ class SpotWave:
         if not lines:
             raise RuntimeError("Could not get device information")
 
-        info_dict = _multiline_output_to_dict(lines)
+        info_dict = multiline_output_to_dict(lines)
         return Info(
             firmware_version=info_dict["fw_version"],
             type_=info_dict["type"],
             model=info_dict["model"],
-            input_range_decibel=_as_int(info_dict["input_range"]),
+            input_range_decibel=as_int(info_dict["input_range"]),
         )
 
     def get_setup(self) -> Setup:
@@ -289,7 +273,7 @@ class SpotWave:
         if not lines:
             raise RuntimeError("Could not get setup")
 
-        setup_dict = _multiline_output_to_dict(lines)
+        setup_dict = multiline_output_to_dict(lines)
 
         def get_filter_settings(string):
             """
@@ -320,21 +304,21 @@ class SpotWave:
         filter_settings = get_filter_settings(setup_dict["filter"])
 
         return Setup(
-            recording=_as_int(setup_dict["recording"]) == 1,
-            logging=_as_int(setup_dict["logging"]) == 1,
-            cont_enabled=_as_int(setup_dict["cont"]) == 1,
-            adc_to_volts=_as_float(setup_dict["adc2uv"]) / 1e6,
-            threshold_volts=_as_float(setup_dict["thr"]) / 1e6,
-            ddt_seconds=_as_float(setup_dict["ddt"]) / 1e6,
-            status_interval_seconds=_as_float(setup_dict["status_interval"]) / 1e3,
+            recording=as_int(setup_dict["recording"]) == 1,
+            logging=as_int(setup_dict["logging"]) == 1,
+            cont_enabled=as_int(setup_dict["cont"]) == 1,
+            adc_to_volts=as_float(setup_dict["adc2uv"]) / 1e6,
+            threshold_volts=as_float(setup_dict["thr"]) / 1e6,
+            ddt_seconds=as_float(setup_dict["ddt"]) / 1e6,
+            status_interval_seconds=as_float(setup_dict["status_interval"]) / 1e3,
             filter_highpass_hz=filter_settings[0],
             filter_lowpass_hz=filter_settings[1],
             filter_order=filter_settings[2],
-            tr_enabled=_as_int(setup_dict["tr_enabled"]) == 1,
-            tr_decimation=_as_int(setup_dict["tr_decimation"]),
-            tr_pretrigger_samples=_as_int(setup_dict["tr_pre_trig"]),
-            tr_postduration_samples=_as_int(setup_dict["tr_post_dur"]),
-            cct_seconds=_as_float(setup_dict["cct"]),
+            tr_enabled=as_int(setup_dict["tr_enabled"]) == 1,
+            tr_decimation=as_int(setup_dict["tr_decimation"]),
+            tr_pretrigger_samples=as_int(setup_dict["tr_pre_trig"]),
+            tr_postduration_samples=as_int(setup_dict["tr_post_dur"]),
+            cct_seconds=as_float(setup_dict["cct"]),
         )
 
     def get_status(self) -> Status:
@@ -356,12 +340,12 @@ class SpotWave:
             result += timedelta(seconds=int(fsec) / 10 ** len(fsec))
             return result
 
-        status_dict = _multiline_output_to_dict(lines)
+        status_dict = multiline_output_to_dict(lines)
         return Status(
-            temperature=_as_int(status_dict["temp"]),
-            recording=_as_int(status_dict["recording"]) == 1,
-            logging=_as_int(status_dict["logging"]) == 1,
-            log_data_usage=_as_int(status_dict["log_data_usage"]),
+            temperature=as_int(status_dict["temp"]),
+            recording=as_int(status_dict["recording"]) == 1,
+            logging=as_int(status_dict["logging"]) == 1,
+            log_data_usage=as_int(status_dict["log_data_usage"]),
             datetime=parse_datetime(status_dict["date"]),
         )
 
@@ -477,12 +461,13 @@ class SpotWave:
             lowpass: Lowpass frequency in Hz (`None` to disable lowpass filter)
             order: Filter order
         """
-        if highpass is None:
-            highpass = 0
-        if lowpass is None:
-            lowpass = 0.5 * self.CLOCK  # nyquist
-        logger.info(f"Set filter to {highpass / 1e3}-{lowpass / 1e3} kHz (order: {order})...")
-        self._send_command(f"set_filter {highpass / 1e3} {lowpass / 1e3} {int(order)}")
+
+        def khz_or_none(freq: Optional[float]):
+            return freq / 1e3 if freq is not None else "none"
+
+        self._send_command(
+            f"set_filter {khz_or_none(highpass)} {khz_or_none(lowpass)} {int(order)}"
+        )
 
     def set_datetime(self, timestamp: Optional[datetime] = None):
         """

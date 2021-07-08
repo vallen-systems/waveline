@@ -13,33 +13,30 @@ async def test_connected(cw):
 
 async def test_get_info(cw):
     info = await cw.get_info()
-    lines = info.strip().split("\n")
-    info_dict = dict([line.split("=", maxsplit=1) for line in lines])
-    keys_expected = [
-        "dev_id",
-        "fpga_id",
-        "channel_count",
-        "range_count",
-        "max_sample_rate",
-        "sw_version",
-        "fpga_version",
-    ]
-    assert set(info_dict.keys()) == set(keys_expected)
+    assert info.channel_count == 2
+    assert info.range_count == 2
+    assert info.max_sample_rate == 10_000_000
+
+
+async def test_get_status(cw):
+    await cw.get_status()
 
 
 @pytest.mark.parametrize("decimation", (1, 2, 5, 10, 50, 100))
 @pytest.mark.parametrize("channel", (1, 2))
 async def test_acq_decimation(cw, channel, decimation, duration_acq):
-    block_size = 10_000
     samplerate = cw.MAX_SAMPLERATE / decimation
-    block_count_total = int(duration_acq * samplerate / block_size)
+    block_size = 10_000
+    block_duration = block_size / samplerate
+    block_count_total = int(duration_acq / block_duration)
+    stream = cw.stream(channel, block_size)
 
     await cw.set_decimation(channel, decimation)
     await cw.start_acquisition()
 
     block_count = 0
     time_start = perf_counter()
-    async for _ in cw.stream(channel, block_size):
+    async for _ in stream:
         block_count += 1
         if block_count >= block_count_total:
             break

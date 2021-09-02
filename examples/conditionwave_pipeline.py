@@ -78,11 +78,11 @@ async def pipeline(ip: str, queue: asyncio.Queue):
         with ThreadPoolExecutor(max_workers=1) as pool:
             loop = asyncio.get_event_loop()
             # read streaming data in blocks
-            async for timestamp, y in cw.stream(1, BLOCKSIZE):
+            async for time, y in cw.stream(1, BLOCKSIZE):
                 # execute (longer) blocking operations in the thread pool -> don't block event loop
                 features = await loop.run_in_executor(pool, extract_features, y)
                 result = await loop.run_in_executor(pool, classify, features)
-                print(timestamp, features, result)
+                print(time, features, result)
                 # push output to queue
                 queue.put_nowait(Output(features=features, result=result))
 

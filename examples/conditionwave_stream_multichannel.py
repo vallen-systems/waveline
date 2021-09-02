@@ -8,8 +8,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 async def channel_acquisition(stream, channel: int):
-    async for timestamp, data in stream:
-        print(f"Channel {channel}, {timestamp}, {len(data)} samples")
+    async for time, data in stream:
+        print(f"Channel {channel}, {time}, {len(data)} samples")
 
 
 async def main():
@@ -19,20 +19,17 @@ async def main():
         await cw.set_decimation(channel=0, factor=10)  # 10 MHz / 10 = 1 MHz
         await cw.set_range(channel=0, range_volts=5)  # 5 V
 
-        datetime_start = datetime.now()  # use start timestamp to synchronize timestamps of channels
-        await cw.start_acquisition()
-
         # create channel acquisition streams (wrapping async generators)
         streams = [
             channel_acquisition(
-                cw.stream(channel, 1_000_000, start=datetime_start),
+                cw.stream(channel, 1_000_000),
                 channel,
             )
             for channel in (1, 2)
         ]
 
         try:
-            await asyncio.gather(*streams)
+            await asyncio.gather(*streams, cw.start_acquisition())
         finally:
             await cw.stop_acquisition()
 

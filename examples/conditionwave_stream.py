@@ -20,7 +20,7 @@ async def main(ip: str, samplerate: int, blocksize: int):
 
         with ThreadPoolExecutor(max_workers=1) as pool:
             loop = asyncio.get_event_loop()
-            async for timestamp, y in cw.stream(1, blocksize):
+            async for _, y in cw.stream(1, blocksize):
                 # execute (longer) blocking operations in the thread pool, e.g.:
                 # Y = await loop.run_in_executor(pool, lambda y: np.abs(np.fft.rfft(y)), y)
 

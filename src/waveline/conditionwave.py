@@ -8,7 +8,6 @@ import asyncio
 import logging
 import socket
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
 from functools import wraps
 from typing import AsyncIterator, List, Optional, Tuple
 
@@ -359,20 +358,21 @@ class ConditionWave:
 
     @_require_connected
     async def stream(
-        self, channel: int, blocksize: int, *, start: Optional[datetime] = None
-    ) -> AsyncIterator[Tuple[datetime, np.ndarray]]:
+        self, channel: int, blocksize: int, *, raw: bool = False
+    ) -> AsyncIterator[Tuple[float, np.ndarray]]:
         """
         Async generator to stream channel data.
 
         Args:
             channel: Channel number [1, 2]
             blocksize: Number of samples per block
-            start: Timestamp when acquisition was started with `start_acquisition`.
-                Useful to get equal timestamps for multi-channel acquisition.
-                If `None`, timestamp will be the time of the first acquired block.
+            raw: Return ADC values if `True`, skip conversion to volts
 
         Yields:
-            Tuple of datetime and numpy array (in volts)
+            Tuple of
+
+            - relative time in seconds (first block: t = 0)
+            - data as numpy array in volts (or ADC values if `raw` is `True`)
 
         Example:
             >>> async with waveline.ConditionWave("192.168.0.100") as cw:
@@ -381,7 +381,7 @@ class ConditionWave:
             >>>     await cw.set_filter(100e3, 500e3, 8)
             >>>     # start daq and streaming
             >>>     await cw.start_acquisition()
-            >>>     async for timestamp, block in cw.stream(channel=1, blocksize=65536):
+            >>>     async for time, block in cw.stream(channel=1, blocksize=65536):
             >>>         # do something with the data
             >>>         ...
         """
@@ -400,18 +400,18 @@ class ConditionWave:
         blocksize_bytes = int(blocksize * 2)  # 1 ADC value (16 bit) -> 2 * 8 byte
         to_volts = settings.range_volts / 30_000  # 90 % of available 2^15 bytes
 
-        timestamp = start
-        interval = timedelta(seconds=settings.decimation * blocksize / self.MAX_SAMPLERATE)
+        time = 0.0
+        interval = settings.decimation * blocksize / self.MAX_SAMPLERATE
 
         reader, writer = await asyncio.open_connection(self._address, port)
         while True:
             buffer = await reader.readexactly(blocksize_bytes)
-            if timestamp is None:
-                timestamp = datetime.now()
             data_adc = np.frombuffer(buffer, dtype=np.int16)
-            data_volts = np.multiply(data_adc, to_volts, dtype=np.float32)
-            yield timestamp, data_volts
-            timestamp += interval
+            yield (
+                time,
+                data_adc if raw else np.multiply(data_adc, to_volts, dtype=np.float32),
+            )
+            time += interval
         writer.close()
 
     async def stop_acquisition(self):

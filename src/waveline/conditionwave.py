@@ -13,10 +13,9 @@ from typing import AsyncIterator, List, Optional, Tuple
 
 import numpy as np
 
-from ._common import as_float, as_int, multiline_output_to_dict
+from ._common import as_float, as_int, multiline_output_to_dict, parse_filter_setup_line
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class Info:
@@ -27,7 +26,7 @@ class Info:
     channel_count: int  #: Number of channels
     range_count: int  #: Number of selectable ranges
     max_sample_rate: float  #: Max sampling rate
-    adc2uv: List[float]  #: Conversion factors from ADC to µV for both ranges
+    adc_to_volts: List[float]  #: Conversion factors from ADC values to V for both ranges
 
 
 @dataclass
@@ -36,6 +35,26 @@ class Status:
 
     temperature: float  #: Device temperature in °C
     buffer_size: int  #: Buffer size in bytes
+
+
+@dataclass
+class Setup:
+    """Setup."""
+
+    adc_range_volts: float  #: ADC input range in volts
+    adc_to_volts: float  #: Conversion factor from ADC values to volts
+    filter_highpass_hz: Optional[float]  #: Highpass frequency in Hz
+    filter_lowpass_hz: Optional[float]  #: Lowpass frequency in Hz
+    filter_order: int  #: Filter order
+    enabled: bool  #: Flag if channel is enabled
+    continuous_mode: bool  #: Flag if continuous mode is enabled
+    threshold_volts: float  #: Threshold for hit-based acquisition in volts
+    ddt_seconds: float  #: Duration discrimination time (DDT) in seconds
+    status_interval_seconds: float  #: Status interval in seconds
+    tr_enabled: bool  #: Flag in transient data recording is enabled
+    tr_decimation: int  #: Decimation factor for transient data
+    tr_pretrigger_samples: int  #: Pre-trigger samples for transient data
+    tr_postduration_samples: int  #: Post-duration samples for transient data
 
 
 @dataclass
@@ -196,7 +215,7 @@ class ConditionWave:
 
         logger.info("Set default settings...")
         await self.set_range(0, self._DEFAULT_SETTINGS.range_volts)
-        await self.set_decimation(0, self._DEFAULT_SETTINGS.decimation)
+        await self.set_tr_decimation(0, self._DEFAULT_SETTINGS.decimation)
 
     async def close(self):
         """Close connection."""
@@ -253,6 +272,9 @@ class ConditionWave:
         """Get device information."""
         await self._send_command("get_info")
         lines = await self._readlines(timeout_seconds=0.1)
+        if not lines:
+            raise RuntimeError("Could not get device information")
+
         info_dict = multiline_output_to_dict(lines)
         return Info(
             firmware_version=info_dict["fw_version"],
@@ -260,25 +282,56 @@ class ConditionWave:
             channel_count=as_int(info_dict["channel_count"], 0),
             range_count=as_int(info_dict["range_count"], 0),
             max_sample_rate=as_int(info_dict["max_sample_rate"], 0),
-            adc2uv=[float(v) for v in info_dict["adc2uv"].strip().split(" ")],
+            adc_to_volts=[float(v) / 1e6 for v in info_dict["adc2uv"].strip().split(" ")],
         )
 
     async def get_status(self) -> Status:
         """Get status information."""
         await self._send_command("get_status")
         lines = await self._readlines(timeout_seconds=0.1)
+        if not lines:
+            raise RuntimeError("Could not get status")
+
         status_dict = multiline_output_to_dict(lines)
         return Status(
             temperature=as_float(status_dict["temp"]),
             buffer_size=as_int(status_dict["buffer_size"]),
         )
 
-    def _check_channel_number(self, channel: int):
-        if channel not in (0, *self.CHANNELS):
+    def _check_channel_number(self, channel: int, *, allow_all: bool = True):
+        allowed_channels = (0, *self.CHANNELS) if allow_all else self.CHANNELS
+        if channel not in allowed_channels:
             raise ValueError(
                 f"Invalid channel number '{channel}'. "
-                f"Select a single channel from {self.CHANNELS} or 0 for all"
+                f"Select a channel from {allowed_channels} (0: all channels)"
             )
+
+    async def get_setup(self, channel: int) -> Setup:
+        """Get setup information."""
+        self._check_channel_number(channel, allow_all=False)
+        await self._send_command(f"get_setup @{channel:d}")
+        lines = await self._readlines(timeout_seconds=0.1)
+        if not lines:
+            raise RuntimeError("Could not get setup")
+
+        setup_dict = multiline_output_to_dict(lines)
+        filter_setup = parse_filter_setup_line(setup_dict["filter"])
+        return Setup(
+            adc_range_volts=self.RANGES[as_int(setup_dict["adc_range"])],
+            adc_to_volts=as_float(setup_dict["adc2uv"]) / 1e6,
+            filter_highpass_hz=filter_setup[0],
+            filter_lowpass_hz=filter_setup[1],
+            filter_order=filter_setup[2],
+            enabled=as_int(setup_dict["enabled"]) == 1,
+            continuous_mode=as_int(setup_dict["cont"]) == 1,
+            threshold_volts=as_float(setup_dict["thr"]) / 1e6,
+            ddt_seconds=as_float(setup_dict["ddt"]) / 1e6,
+            status_interval_seconds=as_float(setup_dict["status_interval"]) / 1e3,
+            tr_enabled=as_int(setup_dict["tr_enabled"]) == 1,
+            tr_decimation=as_int(setup_dict["tr_decimation"]),
+            tr_pretrigger_samples=as_int(setup_dict["tr_pre_trig"]),
+            tr_postduration_samples=as_int(setup_dict["tr_post_dur"]),
+        )
 
     async def set_range(self, channel: int, range_volts: float):
         """
@@ -295,26 +348,25 @@ class ConditionWave:
             raise ValueError(f"Invalid range. Possible values: {self.RANGES}") from None
 
         logger.info(f"Set {_channel_str(channel)} range to {range_volts} V...")
-        await self._send_command(f"set_adc_range {channel:d} {range_index:d}")
+        await self._send_command(f"set_adc_range {range_index:d} @{channel:d}")
         if channel > 0:
             self._channel_settings[channel].range_volts = range_volts
         else:
             self._channel_settings[1].range_volts = range_volts
             self._channel_settings[2].range_volts = range_volts
 
-    async def set_decimation(self, channel: int, factor: int):
+    async def set_tr_decimation(self, channel: int, factor: int):
         """
         Set decimation factor.
 
         Args:
             channel: Channel number (0 for all channels)
-            factor: Decimation factor [1, 500]
+            factor: Decimation factor
         """
         self._check_channel_number(channel)
         factor = int(factor)
-        if not 1 <= factor <= 500:
-            raise ValueError("Decimation factor must be in the range of [1, 500]")
-
+        # if not 1 <= factor <= 500:
+        #     raise ValueError("Decimation factor must be in the range of [1, 500]")
         logger.info(f"Set {_channel_str(channel)} decimation factor to {factor}...")
         await self._send_command(f"set_acq tr_decimation {factor:d} @{channel:d}")
         if channel > 0:
@@ -353,7 +405,7 @@ class ConditionWave:
         if self._recording:
             return
         logger.info("Start data acquisition...")
-        await self._send_command("start")
+        await self._send_command("start_acq")
         self._recording = True
 
     @_require_connected
@@ -385,8 +437,7 @@ class ConditionWave:
             >>>         # do something with the data
             >>>         ...
         """
-        if channel not in self.CHANNELS:
-            raise ValueError(f"Channel must be in {self.CHANNELS}")
+        self._check_channel_number(channel, allow_all=False)
 
         settings = self._channel_settings[channel]
         logger.info(
@@ -419,7 +470,7 @@ class ConditionWave:
         if not self._recording:
             return
         logger.info("Stop data acquisition...")
-        await self._send_command("stop")
+        await self._send_command("stop_acq")
 
     def __del__(self):
         if self._writer:

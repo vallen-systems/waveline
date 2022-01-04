@@ -7,23 +7,8 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 
-async def test_connected(cw):
-    assert cw.connected
-
-
-async def test_get_info(cw):
-    info = await cw.get_info()
-    assert info.channel_count == 2
-    assert info.range_count == 2
-    assert info.max_sample_rate == 10_000_000
-
-
-async def test_get_status(cw):
-    await cw.get_status()
-
-
 @pytest.mark.parametrize("decimation", (1, 2, 5, 10, 50, 100))
-@pytest.mark.parametrize("channel", (1, 2))
+@pytest.mark.parametrize("channel", (1,))
 async def test_acq_decimation(cw, channel, decimation, duration_acq):
     samplerate = cw.MAX_SAMPLERATE / decimation
     block_size = 10_000
@@ -31,7 +16,10 @@ async def test_acq_decimation(cw, channel, decimation, duration_acq):
     block_count_total = int(duration_acq / block_duration)
     stream = cw.stream(channel, block_size)
 
-    await cw.set_decimation(channel, decimation)
+    await cw._send_command("set_acq enabled 1")
+    await cw._send_command("set_acq tr_enabled 1")
+    await cw.set_tr_decimation(channel, decimation)
+    await cw.stop_acquisition()
     await cw.start_acquisition()
 
     block_count = 0

@@ -17,7 +17,7 @@ import numpy as np
 from serial import EIGHTBITS, Serial
 from serial.tools import list_ports
 
-from ._common import as_float, as_int, multiline_output_to_dict
+from ._common import as_float, as_int, multiline_output_to_dict, parse_filter_setup_line
 
 logger = logging.getLogger(__name__)
 
@@ -274,35 +274,7 @@ class SpotWave:
             raise RuntimeError("Could not get setup")
 
         setup_dict = multiline_output_to_dict(lines)
-
-        def get_filter_settings(string):
-            """
-            Parse special filter setting row.
-
-            Example:
-                10.5-350 kHz, order 4
-                10.5-none kHz, order 4
-                none-350 kHz, order 4
-                none-none kHz, order 0
-            """
-            match = re.match(
-                r"\s*(?P<hp>\S+)\s*-\s*(?P<lp>\S+)\s+.*o(rder)?\D*(?P<order>\d)",
-                string,
-                flags=re.IGNORECASE,
-            )
-            if not match:
-                return None, None, 0
-
-            def khz_or_none(k):
-                try:
-                    return 1e3 * float(match.group(k))
-                except:  # pylint: disable=bare-except
-                    return None
-
-            return khz_or_none("hp"), khz_or_none("lp"), int(match.group("order"))
-
-        filter_settings = get_filter_settings(setup_dict["filter"])
-
+        filter_settings = parse_filter_setup_line(setup_dict["filter"])
         return Setup(
             recording=as_int(setup_dict["recording"]) == 1,
             logging=as_int(setup_dict["logging"]) == 1,

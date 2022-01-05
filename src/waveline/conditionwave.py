@@ -455,15 +455,18 @@ class ConditionWave:
         interval = settings.decimation * blocksize / self.MAX_SAMPLERATE
 
         reader, writer = await asyncio.open_connection(self._address, port)
-        while True:
-            buffer = await reader.readexactly(blocksize_bytes)
-            data_adc = np.frombuffer(buffer, dtype=np.int16)
-            yield (
-                time,
-                data_adc if raw else np.multiply(data_adc, to_volts, dtype=np.float32),
-            )
-            time += interval
-        writer.close()
+        try:
+            while True:
+                buffer = await reader.readexactly(blocksize_bytes)
+                data_adc = np.frombuffer(buffer, dtype=np.int16)
+                yield (
+                    time,
+                    data_adc if raw else np.multiply(data_adc, to_volts, dtype=np.float32),
+                )
+                time += interval
+        finally:
+            writer.close()
+            await writer.wait_closed()
 
     async def stop_acquisition(self):
         """Stop data acquisition."""

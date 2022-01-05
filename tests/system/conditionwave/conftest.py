@@ -18,5 +18,6 @@ async def cw(cwave_ip):
 
     cw = ConditionWave(get_ip())
     await cw.connect()
+    await cw.stop_acquisition()
     yield cw
     await cw.close()

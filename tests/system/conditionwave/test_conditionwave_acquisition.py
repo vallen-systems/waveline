@@ -7,9 +7,33 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 
+@pytest.mark.parametrize("channel", (1, 2))
+async def test_acq_stream_pause(cw, channel):
+    stream = cw.stream(channel, block_size=1000)
+
+    async def consume_n_blocks(n: int):
+        block_count = 0
+        async for _ in stream:
+            block_count += 1
+            if block_count >= n:
+                break
+
+    await cw.start_acquisition()
+
+    await consume_n_blocks(10)
+
+    # stop acq should not close stream port
+    await cw.stop_acquisition()
+    await cw.start_acquisition()
+
+    await consume_n_blocks(10)
+
+    await cw.stop_acquisition()
+
+
 @pytest.mark.parametrize("decimation", (1, 2, 5, 10, 50, 100))
-@pytest.mark.parametrize("channel", (1,))
-async def test_acq_decimation(cw, channel, decimation, duration_acq):
+@pytest.mark.parametrize("channel", (1, 2))
+async def test_acq_stream_decimation(cw, channel, decimation, duration_acq):
     samplerate = cw.MAX_SAMPLERATE / decimation
     block_size = 10_000
     block_duration = block_size / samplerate
@@ -19,7 +43,6 @@ async def test_acq_decimation(cw, channel, decimation, duration_acq):
     await cw._send_command("set_acq enabled 1")
     await cw._send_command("set_acq tr_enabled 1")
     await cw.set_tr_decimation(channel, decimation)
-    await cw.stop_acquisition()
     await cw.start_acquisition()
 
     block_count = 0

@@ -471,6 +471,7 @@ class ConditionWave:
             return
         logger.info("Stop data acquisition...")
         await self._send_command("stop_acq")
+        self._recording = False
 
     def __del__(self):
         if self._writer:

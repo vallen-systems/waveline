@@ -16,8 +16,6 @@ async def cw(cwave_ip):
             )
         return devices[0]
 
-    cw = ConditionWave(get_ip())
-    await cw.connect()
-    await cw.stop_acquisition()
-    yield cw
-    await cw.close()
+    async with ConditionWave(get_ip()) as cw_:
+        await cw_.stop_acquisition()
+        yield cw_

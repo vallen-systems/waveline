@@ -27,6 +27,7 @@ EXTRAS_REQUIRE = {
         "pytest>=6",  # pyproject.toml support
         "pytest-asyncio",
         "pytest-benchmark",
+        "pytest-repeat",
     ],
     "tools": [
         "black",

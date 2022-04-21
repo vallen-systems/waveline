@@ -9,13 +9,14 @@ import logging
 import socket
 from dataclasses import dataclass, replace
 from functools import wraps
-from typing import AsyncIterator, List, Optional, Tuple
+from typing import AsyncIterator, List, Optional, Set, Tuple
 
 import numpy as np
 
 from ._common import as_float, as_int, multiline_output_to_dict, parse_filter_setup_line
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class Info:
@@ -158,6 +159,8 @@ class ConditionWave:
         self._channel_settings = {
             channel: replace(self._DEFAULT_SETTINGS) for channel in self.CHANNELS  # return copy
         }
+        # wait for stream connections before start acq
+        self._stream_connection_tasks: Set[asyncio.Task] = set()
 
     async def __aenter__(self):
         await self.connect()
@@ -404,12 +407,18 @@ class ConditionWave:
         """Start data acquisition."""
         if self._recording:
             return
+
+        if self._stream_connection_tasks:
+            logger.debug("Wait for stream connections")
+            await asyncio.wait(self._stream_connection_tasks)
+            self._stream_connection_tasks.clear()
+
         logger.info("Start data acquisition...")
         await self._send_command("start_acq")
         self._recording = True
 
     @_require_connected
-    async def stream(
+    def stream(
         self, channel: int, blocksize: int, *, raw: bool = False
     ) -> AsyncIterator[Tuple[float, np.ndarray]]:
         """
@@ -449,24 +458,48 @@ class ConditionWave:
 
         port = int(self.PORT + channel)
         blocksize_bytes = int(blocksize * 2)  # 1 ADC value (16 bit) -> 2 * 8 byte
-        to_volts = settings.range_volts / 30_000  # 90 % of available 2^15 bytes
-
-        time = 0.0
+        to_volts = settings.range_volts / 32_000
         interval = settings.decimation * blocksize / self.MAX_SAMPLERATE
 
-        reader, writer = await asyncio.open_connection(self._address, port)
-        try:
-            while True:
-                buffer = await reader.readexactly(blocksize_bytes)
-                data_adc = np.frombuffer(buffer, dtype=np.int16)
-                yield (
-                    time,
-                    data_adc if raw else np.multiply(data_adc, to_volts, dtype=np.float32),
-                )
-                time += interval
-        finally:
-            writer.close()
-            await writer.wait_closed()
+        connection_task = asyncio.create_task(
+            asyncio.open_connection(self._address, port),
+        )
+        self._stream_connection_tasks.add(connection_task)
+
+        class StreamGenerator:
+            """Generator returning stream data with defined block size."""
+
+            def __init__(self):
+                self._time = 0
+                self._connection_task = connection_task
+
+            def __aiter__(self):
+                return self
+
+            async def get_reader_writer(self):
+                if not self._connection_task.done():
+                    await asyncio.wait([self._connection_task])
+                return self._connection_task.result()
+
+            async def aclose(self):
+                _, writer = await self.get_reader_writer()
+                writer.close()
+                await writer.wait_closed()
+
+            async def __anext__(self):
+                reader, _ = await self.get_reader_writer()
+                try:
+                    buffer = await reader.readexactly(blocksize_bytes)
+                    self._time += interval
+                    data_adc = np.frombuffer(buffer, dtype=np.int16)
+                    return (
+                        self._time - interval,
+                        data_adc if raw else np.multiply(data_adc, to_volts, dtype=np.float32),
+                    )
+                except asyncio.IncompleteReadError:
+                    pass  # eof
+
+        return StreamGenerator()
 
     async def stop_acquisition(self):
         """Stop data acquisition."""

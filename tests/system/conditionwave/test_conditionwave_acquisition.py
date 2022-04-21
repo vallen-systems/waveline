@@ -6,10 +6,10 @@ import pytest
 # all test coroutines will be treated as marked
 pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.repeat(10)
 @pytest.mark.parametrize("channel", (1, 2))
 async def test_acq_stream_pause(cw, channel):
-    stream = cw.stream(channel, block_size=1000)
+    stream = cw.stream(channel, blocksize=1000)
 
     async def consume_n_blocks(n: int):
         block_count = 0
@@ -29,6 +29,7 @@ async def test_acq_stream_pause(cw, channel):
     await consume_n_blocks(10)
 
     await cw.stop_acquisition()
+    await stream.aclose()
 
 
 @pytest.mark.parametrize("decimation", (1, 2, 5, 10, 50, 100))
@@ -40,8 +41,6 @@ async def test_acq_stream_decimation(cw, channel, decimation, duration_acq):
     block_count_total = int(duration_acq / block_duration)
     stream = cw.stream(channel, block_size)
 
-    await cw._send_command("set_acq enabled 1")
-    await cw._send_command("set_acq tr_enabled 1")
     await cw.set_tr_decimation(channel, decimation)
     await cw.start_acquisition()
 
@@ -55,5 +54,7 @@ async def test_acq_stream_decimation(cw, channel, decimation, duration_acq):
     time_elapsed = time_stop - time_start
 
     await cw.stop_acquisition()
+    await stream.aclose()
 
-    assert time_elapsed == pytest.approx(duration_acq, rel=0.025)
+    assert time_elapsed == pytest.approx(duration_acq, rel=0.05)
+

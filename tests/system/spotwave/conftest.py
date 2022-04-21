@@ -10,8 +10,8 @@ def sw():
         raise RuntimeError(
             "No spotWave devices found. Please connect a device to run the system tests"
         )
-    with SpotWave(devices[0]) as sw:
-        sw.set_datetime()  # set current date/time
-        sw.clear_data_log()
-        sw.clear_buffer()
-        yield sw
+    with SpotWave(devices[0]) as sw_:
+        sw_.set_datetime()  # set current date/time
+        sw_.clear_data_log()
+        sw_.clear_buffer()
+        yield sw_

@@ -71,7 +71,7 @@ async def pipeline(ip: str, queue: asyncio.Queue):
     async with ConditionWave(ip) as cw:
         print(await cw.get_info())
         await cw.set_range(0, range_volts=RANGE)
-        await cw.set_decimation(0, factor=int(cw.MAX_SAMPLERATE / SAMPLERATE))
+        await cw.set_tr_decimation(0, factor=int(cw.MAX_SAMPLERATE / SAMPLERATE))
         await cw.set_filter(0, highpass=100e3, lowpass=500e3, order=8)
         await cw.start_acquisition()
 

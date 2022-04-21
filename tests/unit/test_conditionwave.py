@@ -47,7 +47,7 @@ async def test_default_settings(mock_objects):
     _, _, writer = mock_objects
 
     expected_calls = [
-        call(b"set_adc_range 0 0\n"),
+        call(b"set_adc_range 0 @0\n"),
         call(b"set_acq tr_decimation 1 @0\n"),
     ]
     writer.write.assert_has_calls(expected_calls, any_order=True)
@@ -117,7 +117,7 @@ async def test_get_setup(mock_objects):
     writer.write.assert_called_with(b"get_setup @1\n")
     reader.readline.assert_awaited()
 
-    assert setup.adc_range == 0
+    assert setup.adc_range_volts == 0.05
     assert setup.adc_to_volts == 1.5625e-6
     assert setup.filter_highpass_hz == None
     assert setup.filter_lowpass_hz == 300e3
@@ -136,9 +136,9 @@ async def test_get_setup(mock_objects):
 @pytest.mark.parametrize(
     "channel, value, command",
     (
-        (0, 0.05, b"set_adc_range 0 0\n"),
-        (1, 5, b"set_adc_range 1 1\n"),
-        (2, 5, b"set_adc_range 2 1\n"),
+        (0, 0.05, b"set_adc_range 0 @0\n"),
+        (1, 5, b"set_adc_range 1 @1\n"),
+        (2, 5, b"set_adc_range 1 @2\n"),
     ),
 )
 async def test_set_range(mock_objects, channel, value, command):
@@ -168,22 +168,22 @@ async def test_set_range_invalid_value(mock_objects, value):
         (0, 100, b"set_acq tr_decimation 100 @0\n"),
     ),
 )
-async def test_set_decimation(mock_objects, channel, value, command):
+async def test_set_tr_decimation(mock_objects, channel, value, command):
     cw, _, writer = mock_objects
-    await cw.set_decimation(channel, value)
+    await cw.set_tr_decimation(channel, value)
     writer.write.assert_called_with(command)
 
 
 @pytest.mark.parametrize("channel", (-1, 3))
-async def test_set_decimation_invalid_channel(mock_objects, channel):
+async def test_set_tr_decimation_invalid_channel(mock_objects, channel):
     with pytest.raises(ValueError):
-        await mock_objects.cw.set_decimation(channel, 1)
+        await mock_objects.cw.set_tr_decimation(channel, 1)
 
 
 @pytest.mark.parametrize("value", (-1, 0, 1000))
-async def test_set_decimation_invalid_value(mock_objects, value):
+async def test_set_tr_decimation_invalid_value(mock_objects, value):
     with pytest.raises(ValueError):
-        await mock_objects.cw.set_decimation(0, value)
+        await mock_objects.cw.set_tr_decimation(0, value)
 
 
 @pytest.mark.parametrize(
@@ -210,6 +210,6 @@ async def test_set_filter_invalid_channel(mock_objects, channel):
 async def test_start_stop_acquisition(mock_objects):
     cw, _, writer = mock_objects
     await cw.start_acquisition()
-    writer.write.assert_called_with(b"start\n")
+    writer.write.assert_called_with(b"start_acq\n")
     await cw.stop_acquisition()
-    writer.write.assert_called_with(b"stop\n")
+    writer.write.assert_called_with(b"stop_acq\n")

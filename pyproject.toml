@@ -68,15 +68,13 @@ commands = mypy src/
 
 [testenv]
 extras = tests
-deps = toml
 commands = 
     coverage run --parallel -m pytest --benchmark-skip
 
 [testenv:coverage-report]
 skip_install = true
 deps =
-    coverage>=5
-    toml
+    coverage[toml]>=5
 commands =
     - coverage combine
     coverage report
@@ -84,9 +82,8 @@ commands =
 [testenv:coveralls]
 skip_install = true
 deps =
-    coverage>=5
+    coverage[toml]>=5
     coveralls
-    toml
 passenv = GITHUB_*
 commands = 
     - coverage combine

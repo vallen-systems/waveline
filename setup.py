@@ -22,7 +22,7 @@ EXTRAS_REQUIRE = {
     ],
     "tests": [
         "asynctest",
-        "coverage>=5",  # pyproject.toml support
+        "coverage[toml]>=5",  # pyproject.toml support
         "freezegun",
         "pytest>=6",  # pyproject.toml support
         "pytest-asyncio",

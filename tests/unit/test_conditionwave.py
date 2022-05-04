@@ -165,7 +165,7 @@ async def test_set_range_invalid_value(mock_objects, value):
         (0, 1, b"set_acq tr_decimation 1 @0\n"),
         (1, 4, b"set_acq tr_decimation 4 @1\n"),
         (2, 8, b"set_acq tr_decimation 8 @2\n"),
-        (0, 100, b"set_acq tr_decimation 100 @0\n"),
+        (0, 1000, b"set_acq tr_decimation 1000 @0\n"),
     ),
 )
 async def test_set_tr_decimation(mock_objects, channel, value, command):
@@ -180,7 +180,7 @@ async def test_set_tr_decimation_invalid_channel(mock_objects, channel):
         await mock_objects.cw.set_tr_decimation(channel, 1)
 
 
-@pytest.mark.parametrize("value", (-1, 0, 1000))
+@pytest.mark.parametrize("value", (-1, 0, 1001))
 async def test_set_tr_decimation_invalid_value(mock_objects, value):
     with pytest.raises(ValueError):
         await mock_objects.cw.set_tr_decimation(0, value)

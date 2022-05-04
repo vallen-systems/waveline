@@ -368,8 +368,8 @@ class ConditionWave:
         """
         self._check_channel_number(channel)
         factor = int(factor)
-        # if not 1 <= factor <= 500:
-        #     raise ValueError("Decimation factor must be in the range of [1, 500]")
+        if not 1 <= factor <= 1000:
+            raise ValueError("Decimation factor must be in the range of [1, 1000]")
         logger.info(f"Set {_channel_str(channel)} decimation factor to {factor}...")
         await self._send_command(f"set_acq tr_decimation {factor:d} @{channel:d}")
         if channel > 0:

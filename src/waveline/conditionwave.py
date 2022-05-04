@@ -461,7 +461,7 @@ class ConditionWave:
         to_volts = settings.range_volts / 32_000
         interval = settings.decimation * blocksize / self.MAX_SAMPLERATE
 
-        connection_task = asyncio.create_task(
+        connection_task = asyncio.ensure_future(
             asyncio.open_connection(self._address, port),
         )
         self._stream_connection_tasks.add(connection_task)

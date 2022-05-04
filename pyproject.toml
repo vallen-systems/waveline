@@ -22,6 +22,9 @@ disable = [
 max-line-length = 100
 variable-rgx="[a-z_][a-z0-9_]{0,30}$"  # allow single character variables
 
+[tool.pylint.similarities]
+min-similarity-lines = 10
+
 [tool.mypy]
 ignore_missing_imports = true
 
@@ -67,7 +70,7 @@ commands = mypy src/
 extras = tests
 deps = toml
 commands = 
-    coverage run --parallel -m pytest
+    coverage run --parallel -m pytest --benchmark-skip
 
 [testenv:coverage-report]
 skip_install = true

@@ -271,6 +271,7 @@ class ConditionWave:
                 break
         return lines
 
+    @_require_connected
     async def get_info(self) -> Info:
         """Get device information."""
         await self._send_command("get_info")
@@ -288,6 +289,7 @@ class ConditionWave:
             adc_to_volts=[float(v) / 1e6 for v in info_dict["adc2uv"].strip().split(" ")],
         )
 
+    @_require_connected
     async def get_status(self) -> Status:
         """Get status information."""
         await self._send_command("get_status")
@@ -309,6 +311,7 @@ class ConditionWave:
                 f"Select a channel from {allowed_channels} (0: all channels)"
             )
 
+    @_require_connected
     async def get_setup(self, channel: int) -> Setup:
         """Get setup information."""
         self._check_channel_number(channel, allow_all=False)
@@ -336,6 +339,7 @@ class ConditionWave:
             tr_postduration_samples=as_int(setup_dict["tr_post_dur"]),
         )
 
+    @_require_connected
     async def set_range(self, channel: int, range_volts: float):
         """
         Set input range.
@@ -358,9 +362,61 @@ class ConditionWave:
             self._channel_settings[1].range_volts = range_volts
             self._channel_settings[2].range_volts = range_volts
 
+    @_require_connected
+    async def set_continuous_mode(self, channel: int, enabled: bool):
+        """
+        Enable/disable continuous mode.
+
+        Threshold will be ignored in continous mode.
+        The length of the records is determined by `ddt` with `set_ddt`.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            enabled: Set to `True` to enable continuous mode
+        """
+        self._check_channel_number(channel)
+        await self._send_command(f"set_acq cont {int(enabled)} @{channel:d}")
+
+    @_require_connected
+    async def set_ddt(self, channel: int, microseconds: int):
+        """
+        Set duration discrimination time (DDT).
+
+        Args:
+            channel: Channel number (0 for all channels)
+            microseconds: DDT in µs
+        """
+        await self._send_command(f"set_acq ddt {int(microseconds)} @{channel:d}")
+
+    @_require_connected
+    async def set_status_interval(self, channel: int, seconds: int):
+        """
+        Set status interval.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            seconds: Status interval in s
+        """
+        await self._send_command(f"set_acq status_interval {int(seconds * 1e3)} @{channel:d}")
+
+    @_require_connected
+    async def set_tr_enabled(self, channel: int, enabled: bool):
+        """
+        Enable/disable recording of transient data.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            enabled: Set to `True` to enable transient data
+        """
+        self._check_channel_number(channel)
+        await self._send_command(f"set_acq tr_enabled {int(enabled)} @{channel:d}")
+
+    @_require_connected
     async def set_tr_decimation(self, channel: int, factor: int):
         """
-        Set decimation factor.
+        Set decimation factor of transient data and streaming data.
+
+        The sampling rate will be 10 MHz / `factor`.
 
         Args:
             channel: Channel number (0 for all channels)
@@ -370,7 +426,6 @@ class ConditionWave:
         factor = int(factor)
         if not 1 <= factor <= 1000:
             raise ValueError("Decimation factor must be in the range of [1, 1000]")
-        logger.info(f"Set {_channel_str(channel)} decimation factor to {factor}...")
         await self._send_command(f"set_acq tr_decimation {factor:d} @{channel:d}")
         if channel > 0:
             self._channel_settings[channel].decimation = factor
@@ -378,6 +433,31 @@ class ConditionWave:
             self._channel_settings[1].decimation = factor
             self._channel_settings[2].decimation = factor
 
+    @_require_connected
+    async def set_tr_pretrigger(self, channel: int, samples: int):
+        """
+        Set pre-trigger samples for transient data.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            samples: Pre-trigger samples
+        """
+        self._check_channel_number(channel)
+        await self._send_command(f"set_acq tr_pre_trig {int(samples)} @{channel:d}")
+
+    @_require_connected
+    async def set_tr_postduration(self, channel: int, samples: int):
+        """
+        Set post-duration samples for transient data.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            samples: Post-duration samples
+        """
+        self._check_channel_number(channel)
+        await self._send_command(f"set_acq tr_post_dur {int(samples)} @{channel:d}")
+
+    @_require_connected
     async def set_filter(
         self,
         channel: int,
@@ -403,6 +483,18 @@ class ConditionWave:
             f"set_filter {khz_or_none(highpass)} {khz_or_none(lowpass)} {order} @{channel:d}"
         )
 
+    @_require_connected
+    async def set_threshold(self, channel: int, microvolts: float):
+        """
+        Set threshold for hit-based acquisition.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            microvolts: Threshold in µV
+        """
+        await self._send_command(f"set_acq thr {microvolts} @{channel:d}")
+
+    @_require_connected
     async def start_acquisition(self):
         """Start data acquisition."""
         if self._recording:
@@ -501,6 +593,7 @@ class ConditionWave:
 
         return StreamGenerator()
 
+    @_require_connected
     async def stop_acquisition(self):
         """Stop data acquisition."""
         if not self._recording:

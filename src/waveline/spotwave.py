@@ -325,7 +325,7 @@ class SpotWave:
         """
         Enable/disable continuous mode.
 
-        Threshold will be ignored.
+        Threshold will be ignored in continous mode.
         The length of the records is determined by `ddt` with `set_ddt`.
 
         Note:

@@ -160,6 +160,59 @@ async def test_set_range_invalid_value(mock_objects, value):
 
 
 @pytest.mark.parametrize(
+    "channel, enabled, command",
+    (
+        (0, True, b"set_acq cont 1 @0\n"),
+        (2, False, b"set_acq cont 0 @2\n"),
+    ),
+)
+async def test_set_continuous_mode(mock_objects, channel, enabled, command):
+    cw, _, writer = mock_objects
+    await cw.set_continuous_mode(channel, enabled)
+    writer.write.assert_called_with(command)
+
+
+@pytest.mark.parametrize(
+    "channel, microseconds, command",
+    (
+        (0, 0, b"set_acq ddt 0 @0\n"),
+        (1, 200, b"set_acq ddt 200 @1\n"),
+    ),
+)
+async def test_set_ddt(mock_objects, channel, microseconds, command):
+    cw, _, writer = mock_objects
+    await cw.set_ddt(channel, microseconds)
+    writer.write.assert_called_with(command)
+
+
+@pytest.mark.parametrize(
+    "channel, seconds, command",
+    (
+        (0, 0, b"set_acq status_interval 0 @0\n"),
+        (1, 0.01, b"set_acq status_interval 10 @1\n"),
+        (2, 10, b"set_acq status_interval 10000 @2\n"),
+    ),
+)
+async def test_set_status_interval(mock_objects, channel, seconds, command):
+    cw, _, writer = mock_objects
+    await cw.set_status_interval(channel, seconds)
+    writer.write.assert_called_with(command)
+
+
+@pytest.mark.parametrize(
+    "channel, enabled, command",
+    (
+        (0, True, b"set_acq tr_enabled 1 @0\n"),
+        (1, False, b"set_acq tr_enabled 0 @1\n"),
+    ),
+)
+async def test_set_tr_enabled(mock_objects, channel, enabled, command):
+    cw, _, writer = mock_objects
+    await cw.set_tr_enabled(channel, enabled)
+    writer.write.assert_called_with(command)
+
+
+@pytest.mark.parametrize(
     "channel, value, command",
     (
         (0, 1, b"set_acq tr_decimation 1 @0\n"),
@@ -198,6 +251,45 @@ async def test_set_tr_decimation_invalid_value(mock_objects, value):
 async def test_set_filter(mock_objects, channel, highpass, lowpass, order, command):
     cw, _, writer = mock_objects
     await cw.set_filter(channel, highpass, lowpass, order)
+    writer.write.assert_called_with(command)
+
+
+@pytest.mark.parametrize(
+    "channel, samples, command",
+    (
+        (0, 0, b"set_acq tr_pre_trig 0 @0\n"),
+        (1, 200, b"set_acq tr_pre_trig 200 @1\n"),
+    ),
+)
+async def test_set_tr_pretrigger(mock_objects, channel, samples, command):
+    cw, _, writer = mock_objects
+    await cw.set_tr_pretrigger(channel, samples)
+    writer.write.assert_called_with(command)
+
+
+@pytest.mark.parametrize(
+    "channel, samples, command",
+    (
+        (0, 0, b"set_acq tr_post_dur 0 @0\n"),
+        (2, 1000, b"set_acq tr_post_dur 1000 @2\n"),
+    ),
+)
+async def test_set_tr_postduration(mock_objects, channel, samples, command):
+    cw, _, writer = mock_objects
+    await cw.set_tr_postduration(channel, samples)
+    writer.write.assert_called_with(command)
+
+
+@pytest.mark.parametrize(
+    "channel, threshold, command",
+    (
+        (0, 0, b"set_acq thr 0 @0\n"),
+        (2, 0.1, b"set_acq thr 0.1 @2\n"),
+    ),
+)
+async def test_set_threshold(mock_objects, channel, threshold, command):
+    cw, _, writer = mock_objects
+    await cw.set_threshold(channel, threshold)
     writer.write.assert_called_with(command)
 
 

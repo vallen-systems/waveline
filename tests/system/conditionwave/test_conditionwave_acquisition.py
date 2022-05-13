@@ -13,10 +13,13 @@ async def test_acq_stream_pause(cw, channel):
 
     async def consume_n_blocks(n: int):
         block_count = 0
-        async for _ in stream:
-            block_count += 1
-            if block_count >= n:
-                break
+        try:
+            async for _ in stream:
+                block_count += 1
+                if block_count >= n:
+                    break
+        except ConnectionAbortedError:
+            ...
 
     await cw.start_acquisition()
 

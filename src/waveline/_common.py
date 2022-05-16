@@ -2,6 +2,13 @@ import re
 from typing import List
 
 
+# key = value pattern for ae/tr data
+# fast(est) and simple, accept spaces around "="
+# _KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
+# accept words as keys w/o values; this seems next faster (incl. \S)?!
+KV_PATTERN = re.compile(br"([^\s=]+)(?:\s*=\s*(\S+))?")
+
+
 def as_int(string, default: int = 0):
     """Return first sequence as int."""
     return int(string.strip().partition(" ")[0] or default)

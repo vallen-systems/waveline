@@ -6,7 +6,6 @@ All device-related functions are exposed by the `SpotWave` class.
 
 import collections
 import logging
-import re
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -17,15 +16,10 @@ import numpy as np
 from serial import EIGHTBITS, Serial
 from serial.tools import list_ports
 
-from ._common import as_float, as_int, multiline_output_to_dict, parse_filter_setup_line
+from ._common import as_float, as_int, multiline_output_to_dict, parse_filter_setup_line, KV_PATTERN
+from .datatypes import AERecord, TRRecord
 
 logger = logging.getLogger(__name__)
-
-# key = value pattern for ae/tr data
-# fast(est) and simple, accept spaces around "="
-# _KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
-# accept words as keys w/o values; this seems next faster (incl. \S)?!
-_KV_PATTERN = re.compile(br"([^\s=]+)(?:\s*=\s*(\S+))?")
 
 
 @dataclass
@@ -68,37 +62,6 @@ class Setup:
     tr_pretrigger_samples: int  #: Pre-trigger samples for transient data
     tr_postduration_samples: int  #: Post-duration samples for transient data
     cct_seconds: float  #: Coupling check transmitter (CCT) / pulser interval in seconds
-
-
-@dataclass
-class AERecord:
-    """
-    AE data record, either status or hit data.
-
-    Todo:
-        - Documentation or data type with available hit flags
-    """
-
-    type_: str  #: Record type (hit or status data)
-    time: float  #: Time in seconds
-    amplitude: float  #: Peak amplitude in volts
-    rise_time: float  #: Rise time in seconds
-    duration: float  #: Duration in seconds
-    counts: int  #: Number of positive threshold crossings
-    energy: float  #: Energy (EN 1330-9) in eu (1e-14 V²s)
-    trai: int  #: Transient recorder index (key between `AERecord` and `TRRecord`)
-    flags: int  #: Hit flags
-
-
-@dataclass
-class TRRecord:
-    """Transient data record."""
-
-    trai: int  #: Transient recorder index (key between `AERecord` and `TRRecord`)
-    time: float  #: Time in seconds
-    samples: int  #: Number of samples
-    data: np.ndarray  #: Array of transient data in volts (or ADC values if `raw` is `True`)
-    raw: bool = False  #: ADC values instead of user values (volts)
 
 
 class SpotWave:
@@ -492,11 +455,12 @@ class SpotWave:
 
             record_type = line[:1]
             # parse key-value pairs in line; default value: 0
-            matches = collections.defaultdict(int, _KV_PATTERN.findall(line))
+            matches = collections.defaultdict(int, KV_PATTERN.findall(line))
 
             if record_type in (b"H", b"S"):  # hit or status data
                 record = AERecord(
                     type_=record_type.decode(),
+                    chan=1,
                     time=int(matches[b"T"]) / self.CLOCK,
                     amplitude=int(matches[b"A"]) * self._adc_to_volts,
                     rise_time=int(matches[b"R"]) / self.CLOCK,
@@ -546,7 +510,7 @@ class SpotWave:
                 break
 
             # parse key-value pairs in line; default value: 0
-            matches = collections.defaultdict(int, _KV_PATTERN.findall(headerline))
+            matches = collections.defaultdict(int, KV_PATTERN.findall(headerline))
             trai = int(matches[b"TRAI"])
             time_ = int(matches[b"T"])
             samples = int(matches[b"NS"])
@@ -561,6 +525,7 @@ class SpotWave:
                 )
 
             record = TRRecord(
+                chan=1,
                 trai=trai,
                 time=time_ / self.CLOCK,
                 samples=samples,
@@ -587,9 +552,9 @@ class SpotWave:
             >>>     sw.set_ddt(400)
             >>>     for record in sw.stream():
             >>>         # do something with the data depending on the type
-            >>>         if isinstance(record, waveline.spotwave.AERecord):
+            >>>         if isinstance(record, waveline.AERecord):
             >>>             ...
-            >>>         if isinstance(record, waveline.spotwave.TRRecord):
+            >>>         if isinstance(record, waveline.TRRecord):
             >>>             ...
         """
         self.start_acquisition()

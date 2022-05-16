@@ -4,22 +4,22 @@ import pytest
 import re
 
 multiline_output = [
-        b"acq_enabled=1",
-        b"log_enabled=0",
-        b"adc2uv=1.74",
-        b"cct=-0.5 s",
-        b"filter=10.5-350 kHz, order 4",
-        b"cont=0",
-        b"thr=3162.5 uV",
-        b"ddt=250  us",
-        b"status_interval=1000 ms",
-        b"tr_enabled=1",
-        b"dummy empty line",
-        b"tr_decimation=2",
-        b"tr_pre_trig=100",
-        b"tr_post_dur=100",
-        b"tr_max_samples=2097152",
-    ]
+    b"acq_enabled=1",
+    b"log_enabled=0",
+    b"adc2uv=1.74",
+    b"cct=-0.5 s",
+    b"filter=10.5-350 kHz, order 4",
+    b"cont=0",
+    b"thr=3162.5 uV",
+    b"ddt=250  us",
+    b"status_interval=1000 ms",
+    b"tr_enabled=1",
+    b"dummy empty line",
+    b"tr_decimation=2",
+    b"tr_pre_trig=100",
+    b"tr_post_dur=100",
+    b"tr_max_samples=2097152",
+]
 
 
 def multiline_output_to_dict_orig(lines):

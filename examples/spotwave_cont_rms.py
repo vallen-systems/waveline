@@ -29,7 +29,7 @@ def main():
         sw.set_status_interval(0)  # disable status data
         sw.set_tr_enabled(False)  # disable transient data
 
-        for record in sw.stream():
+        for record in sw.acquire():
             # compute RMS from energy (in eu = 1e-14 V²s) and duration (in seconds)
             rms_volts = math.sqrt(record.energy / 1e14 / record.duration)
             print(f"RMS: {1e6 * rms_volts:0.2f} µV")

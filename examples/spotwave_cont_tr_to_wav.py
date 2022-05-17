@@ -78,7 +78,7 @@ def main(basename: str, seconds_per_file: float):
         trqueue = queue.SimpleQueue()
         threading.Thread(target=async_write).start()
         try:
-            for record in sw.stream(raw=True):  # return ADC values with enabled raw flag
+            for record in sw.acquire(raw=True):  # return ADC values with enabled raw flag
                 if isinstance(record, TRRecord):
                     trqueue.put(record)
                 elif isinstance(record, AERecord):

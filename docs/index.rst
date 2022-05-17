@@ -10,6 +10,8 @@ Library to easily interface with Vallen Systeme WaveLine™ devices using the pu
 
     waveline.conditionwave
     waveline.spotwave
+    waveline.datatypes
+    waveline.utils
 
 .. toctree::
     :caption: Examples

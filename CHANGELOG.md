@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [conditionWave] all commands of new firmware (hit-based acquisition, pulsing, ...)
 - [conditionWave] example for hit-based acquisition
+- Add Python 3.9 and 3.10 to CI pipeline
 
 ### Changed
 

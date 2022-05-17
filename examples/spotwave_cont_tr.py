@@ -39,7 +39,7 @@ def main():
             print(f"- {key}: {value}")
         print()
 
-        for record in sw.stream():
+        for record in sw.acquire():
             if isinstance(record, TRRecord):
                 y = record.data
                 y_max = np.max(y)

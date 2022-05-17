@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Iterator, List, Optional, Union
+from warnings import warn
 
 import numpy as np
 from serial import EIGHTBITS, Serial
@@ -536,7 +537,7 @@ class SpotWave:
 
         return records
 
-    def stream(self, raw: bool = False) -> Iterator[Union[AERecord, TRRecord]]:
+    def acquire(self, raw: bool = False) -> Iterator[Union[AERecord, TRRecord]]:
         """
         High-level method to continuously acquire data.
 
@@ -569,6 +570,22 @@ class SpotWave:
                     time.sleep(0.01)
         finally:
             self.stop_acquisition()
+
+    def stream(self, *args, **kwargs):
+        """
+        Alias for `SpotWave.acquire` method.
+
+        Deprecated: Please us the `acquire` method instead.
+        """
+        warn(
+            (
+                "This method is deprecated and will be removed in the future. "
+                "Please use the acquire method instead."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.acquire(*args, **kwargs)
 
     def get_data(self, samples: int, raw: bool = False) -> np.ndarray:
         """

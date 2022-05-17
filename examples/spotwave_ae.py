@@ -28,17 +28,17 @@ logging.basicConfig(level=logging.INFO)
 
 @dataclass
 class HitRecord(AERecord):
-    # all fields from AERecord + fields for transient data
+    """All fields from AERecord + fields for transient data."""
     samples: int
     data: np.ndarray
 
 
-def merge_ae_tr_records(stream):
+def merge_ae_tr_records(generator):
     """Helper function to merge matching AERecords and TRRecords (same trai)."""
     dict_ae: Dict[int, AERecord] = {}
     dict_tr: Dict[int, TRRecord] = {}
 
-    for record in stream:
+    for record in generator:
         if isinstance(record, AERecord):
             if record.trai == 0:  # status data or hit without transient data -> return directly
                 yield record
@@ -65,6 +65,8 @@ def main():
     port = SpotWave.discover()[0]
 
     with SpotWave(port) as sw:
+        print(sw.get_info())
+
         sw.set_continuous_mode(False)  # -> hit-based
         sw.set_cct(0)  # disable pulser
         sw.set_ddt(10_000)  # 10.000 µs
@@ -75,7 +77,9 @@ def main():
         sw.set_tr_postduration(0)  # 0 post-duration samples
         sw.set_filter(100e3, 450e3, 4)  # 100-450 kHz bandpass
 
-        for record in merge_ae_tr_records(sw.stream()):
+        print(sw.get_setup())
+
+        for record in merge_ae_tr_records(sw.acquire()):
             print(record)
 
 

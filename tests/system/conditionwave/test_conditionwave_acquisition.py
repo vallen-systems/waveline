@@ -61,3 +61,114 @@ async def test_acq_stream_decimation(cw, channel, decimation, duration_acq):
 
     assert time_elapsed == pytest.approx(duration_acq, rel=0.05)
 
+
+@pytest.mark.parametrize("status_interval_seconds", (0, 0.1, 0.2))
+@pytest.mark.parametrize("channel", (1, 2))
+async def test_acq_only_status(cw, channel, status_interval_seconds):
+    await cw.set_channel(0, False)  # disable all channels
+    await cw.set_channel(channel, True)  # enable selected channel
+    await cw.set_threshold(0, 10_000_000)  # above range
+    await cw.set_continuous_mode(0, False)
+    await cw.set_status_interval(0, status_interval_seconds)
+    await cw.start_acquisition()
+    await asyncio.sleep(1)
+    await cw.stop_acquisition()
+
+    ae_data = await cw.get_ae_data()
+    if status_interval_seconds == 0:
+        assert len(ae_data) == 0
+    else:
+        assert len(ae_data) == pytest.approx(1 / status_interval_seconds, abs=1)
+
+    for i, record in enumerate(ae_data, start=1):
+        assert record.channel == channel
+        assert record.time == pytest.approx(i * status_interval_seconds, rel=0.05)
+        assert record.type_ == "S"
+        assert record.duration == pytest.approx(status_interval_seconds, rel=0.05)
+        assert record.trai == 0
+
+
+@pytest.mark.parametrize("channel", (1, 2))
+async def test_acq_continuous_mode(cw, channel):
+    ddt = 10_000  # 10 ms
+    decimation = 1000  # prevent buffer overflows
+    acq_duration = 1.0
+    expected_hit_count = 100
+    expected_samples = (ddt / 1e6) * (10e6 / decimation)
+
+    await cw.set_channel(0, False)  # disable all channels
+    await cw.set_channel(channel, True)  # enable selected channel
+    await cw.set_status_interval(0, 1000)  # disable status data
+    await cw.set_continuous_mode(0, True)
+    await cw.set_ddt(0, ddt)
+    await cw.set_tr_enabled(0, True)
+    await cw.set_tr_decimation(0, decimation)
+
+    await cw.start_acquisition()
+    await asyncio.sleep(acq_duration)
+    await cw.stop_acquisition()
+    await asyncio.sleep(0.1)
+
+    ae_data = await cw.get_ae_data()
+    tr_data = await cw.get_tr_data()
+
+    assert len(ae_data) == len(tr_data)
+    assert len(ae_data) == pytest.approx(expected_hit_count, abs=2)
+    for record in ae_data:
+        assert record.trai != 0
+    for record in tr_data:
+        assert record.trai != 0
+        assert record.samples == expected_samples
+
+
+@pytest.mark.parametrize("count", (2, 4))
+@pytest.mark.parametrize("interval", (0.1, 0.5))
+@pytest.mark.parametrize("channel", (1, 2))
+async def test_pulsing(cw, channel, interval, count):
+    await cw.set_channel(0, False)  # disable all channels
+    await cw.set_channel(channel, True)  # enable selected channel
+    await cw.set_status_interval(0, 1000)  # disable status data
+    await cw.set_continuous_mode(0, False)
+    await cw.set_ddt(0, 1000)
+    await cw.set_threshold(0, 10_000)
+    await cw.set_tr_enabled(0, True)
+    await cw.set_tr_decimation(0, 100)
+
+    await cw.start_acquisition()
+    await cw.start_pulsing(channel, interval, count)
+    await asyncio.sleep(count * interval + 0.1)
+    await cw.stop_acquisition()
+
+    ae_data = await cw.get_ae_data()
+    tr_data = await cw.get_tr_data()
+
+    assert len(ae_data) == count
+    assert len(tr_data) == count
+
+
+@pytest.mark.parametrize("interval", (0.1, 0.5))
+@pytest.mark.parametrize("channel", (1, 2))
+async def test_stop_infinite_pulsing(cw, channel, interval):
+    acq_time = 1.0
+    expected_pulse_count = (acq_time - 2 * 0.02) / interval
+
+    await cw.set_channel(0, False)  # disable all channels
+    await cw.set_channel(channel, True)  # enable selected channel
+    await cw.set_status_interval(0, 1000)  # disable status data
+    await cw.set_continuous_mode(0, False)
+    await cw.set_ddt(0, 1000)
+    await cw.set_threshold(0, 10_000)
+    await cw.set_tr_enabled(0, False)
+
+    await cw.start_acquisition()
+    await cw.start_pulsing(channel, interval, 0)
+    await asyncio.sleep(acq_time)
+    await cw.stop_pulsing()
+    await asyncio.sleep(acq_time)  # now no new hits should be generated
+    await cw.stop_acquisition()
+
+    ae_data = await cw.get_ae_data()
+    tr_data = await cw.get_tr_data()
+
+    assert len(ae_data) == pytest.approx(expected_pulse_count, abs=1)
+    assert len(tr_data) == 0

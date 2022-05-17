@@ -10,7 +10,9 @@ from serial import Serial, SerialException
 from waveline import SpotWave
 from waveline.spotwave import Setup
 
+CLOCK = 2e6
 ADC_TO_VOLTS = 1.74e-6
+ADC_TO_EU = ADC_TO_VOLTS ** 2 * 1e14 / CLOCK
 
 
 @pytest.fixture(autouse=True)
@@ -246,16 +248,15 @@ def test_get_ae_data(serial_mock):
 
     serial_mock.readline.side_effect = response
     ae_data = sw.get_ae_data()
-    ADC_TO_EU = ADC_TO_VOLTS ** 2 * 1e14 / 2e6
 
     # status record
     s = ae_data[0]
     assert s.type_ == "S"
-    assert s.chan == 1
-    assert s.time == pytest.approx(2010240 / 2e6)
+    assert s.channel == 1
+    assert s.time == pytest.approx(2010240 / CLOCK)
     assert s.amplitude == pytest.approx(21 * ADC_TO_VOLTS)
-    assert s.rise_time == pytest.approx(502689 / 2e6)
-    assert s.duration == pytest.approx(2000000 / 2e6)
+    assert s.rise_time == pytest.approx(502689 / CLOCK)
+    assert s.duration == pytest.approx(2000000 / CLOCK)
     assert s.counts == 0
     assert s.energy == pytest.approx(38849818 * ADC_TO_EU)
     assert s.trai == 0
@@ -264,11 +265,11 @@ def test_get_ae_data(serial_mock):
     # hit record
     h = ae_data[1]
     assert h.type_ == "H"
-    assert h.chan == 1
-    assert h.time == pytest.approx(3044759 / 2e6)
+    assert h.channel == 1
+    assert h.time == pytest.approx(3044759 / CLOCK)
     assert h.amplitude == pytest.approx(3557 * ADC_TO_VOLTS)
-    assert h.rise_time == pytest.approx(24 / 2e6)
-    assert h.duration == pytest.approx(819 / 2e6)
+    assert h.rise_time == pytest.approx(24 / CLOCK)
+    assert h.duration == pytest.approx(819 / CLOCK)
     assert h.counts == 31
     assert h.energy == pytest.approx(518280026 * ADC_TO_EU)
     assert h.trai == 1
@@ -293,9 +294,9 @@ def test_get_tr_data(serial_mock, raw):
     tr_data = sw.get_tr_data(raw=raw)
     serial_mock.write.assert_called_with(b"get_tr_data\n")
 
-    assert tr_data[0].chan == 1
+    assert tr_data[0].channel == 1
     assert tr_data[0].trai == 1
-    assert tr_data[0].time == pytest.approx(43686000 / 2e6)
+    assert tr_data[0].time == pytest.approx(43686000 / CLOCK)
     assert tr_data[0].samples == 13
     assert tr_data[0].raw == raw
     if raw:
@@ -303,9 +304,9 @@ def test_get_tr_data(serial_mock, raw):
     else:
         assert_allclose(tr_data[0].data, data[0] * ADC_TO_VOLTS)
 
-    assert tr_data[1].chan == 1
+    assert tr_data[1].channel == 1
     assert tr_data[1].trai == 2
-    assert tr_data[1].time == pytest.approx(43686983 / 2e6)
+    assert tr_data[1].time == pytest.approx(43686983 / CLOCK)
     assert tr_data[1].samples == 27
     assert tr_data[1].raw == raw
     if raw:

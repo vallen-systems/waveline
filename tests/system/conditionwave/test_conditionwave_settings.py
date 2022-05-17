@@ -34,6 +34,39 @@ class TestChannelSettings:
         with pytest.raises(ValueError):
             await cw.set_range(channel, range_volts)
 
+    @mark.parametrize("enabled", [False, True])
+    async def test_set_channel(self, cw, channel, enabled):
+        await cw.set_channel(channel, enabled)
+        assert (await cw.get_setup(channel)).enabled == enabled
+
+    @mark.parametrize("enabled", [False, True])
+    async def test_set_continuous_mode(self, cw, channel, enabled):
+        await cw.set_continuous_mode(channel, enabled)
+        assert (await cw.get_setup(channel)).continuous_mode == enabled
+
+    @mark.parametrize("ddt_microseconds", [400, 10_000])
+    async def test_set_ddt(self, cw, channel, ddt_microseconds):
+        await cw.set_ddt(channel, ddt_microseconds)
+        assert (await cw.get_setup(channel)).ddt_seconds == ddt_microseconds / 1e6
+
+    @mark.parametrize(
+        "set_, expect",
+        (
+            (0, 0),
+            (-1, 0),
+            (1, 1),
+            (100, 100),
+        ),
+    )
+    async def test_set_status_interval(self, cw, channel, set_, expect):
+        await cw.set_status_interval(channel, set_)
+        assert (await cw.get_setup(channel)).status_interval_seconds == expect
+
+    @mark.parametrize("enabled", [False, True])
+    async def test_set_tr_enabled(self, cw, channel, enabled):
+        await cw.set_tr_enabled(channel, enabled)
+        assert (await cw.get_setup(channel)).tr_enabled == enabled
+
     @mark.parametrize(
         "set_, expect",
         (
@@ -42,12 +75,35 @@ class TestChannelSettings:
             (1, 1),
             (10, 10),
             (11.1, 11),
-            (1_000_000, 1_000_000),  # TODO: limit to 500?
         ),
     )
     async def test_set_tr_decimation(self, cw, channel, set_, expect):
         await cw.set_tr_decimation(channel, set_)
         assert (await cw.get_setup(channel)).tr_decimation == expect
+
+    @mark.parametrize(
+        "set_, expect",
+        (
+            (0, 0),
+            (-1, 0),
+            (100, 100),
+        ),
+    )
+    async def test_set_tr_pretrigger(self, cw, channel, set_, expect):
+        await cw.set_tr_pretrigger(channel, set_)
+        assert (await cw.get_setup(channel)).tr_pretrigger_samples == expect
+
+    @mark.parametrize(
+        "set_, expect",
+        (
+            (0, 0),
+            (-1, 0),
+            (100, 100),
+        ),
+    )
+    async def test_set_tr_postduration(self, cw, channel, set_, expect):
+        await cw.set_tr_postduration(channel, set_)
+        assert (await cw.get_setup(channel)).tr_postduration_samples == expect
 
     @mark.parametrize(
         "set_, expect",
@@ -59,9 +115,8 @@ class TestChannelSettings:
             ((0, 300, 8), (None, 300, 8)),  # lowpass
             ((None, None, 8), (None, None, 0)),  # bypass
             ((0, 0, 8), (None, None, 0)),  # bypass
-            ((50, 10_000, 8), (50, None, 8)),  # lowpass freq > nyquist -> highpass
-            # ((50, 300, 3), (None, None, 0)),  # invalid order -> disable
-            ((400, 300, 8), (None, None, 0)),  # invalid filter freqs -> disable
+            ((50, 10_000, 8), (50, None, 8)),  # lowpass > nyquist -> highpass
+            ((400, 300, 8), (400, None, 8)),  # highpass > lowpass -> highpass
         ),
     )
     async def test_set_filter(self, cw, channel, set_, expect):

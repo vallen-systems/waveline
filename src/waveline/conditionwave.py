@@ -7,13 +7,16 @@ All device-related functions are exposed by the `ConditionWave` class.
 import asyncio
 import logging
 import socket
+import time
 from dataclasses import dataclass, replace
 from functools import wraps
-from typing import AsyncIterator, List, Optional, Set, Tuple
+from typing import AsyncIterator, List, Optional, Set, Tuple, Union
+from warnings import warn
 
 import numpy as np
 
-from ._common import as_float, as_int, multiline_output_to_dict, parse_filter_setup_line
+from ._common import KV_PATTERN, as_float, as_int, multiline_output_to_dict, parse_filter_setup_line
+from .datatypes import AERecord, TRRecord
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +65,7 @@ class Setup:
 class _ChannelSettings:
     """Channel settings."""
 
-    range_volts: float  #: Input range in volts
+    range_index: int  #: Input range in volts
     decimation: int  #: Decimation factor
 
 
@@ -113,11 +116,12 @@ class ConditionWave:
     PORT = 5432  #: Control port number
     RANGES = (0.05, 5.0)
 
-    _DEFAULT_SETTINGS = _ChannelSettings(range_volts=0.05, decimation=1)  #: Default settings
+    _DEFAULT_SETTINGS = _ChannelSettings(range_index=0, decimation=1)  #: Default settings
     _RANGE_INDEX = {
         0.05: 0,  # 50 mV
         5.0: 1,  # 5 V
     }  #: Mapping of range in volts and range index
+    _MIN_FIRMWARE_VERSION = "2.2"
 
     def __init__(self, address: str):
         """
@@ -161,6 +165,12 @@ class ConditionWave:
         }
         # wait for stream connections before start acq
         self._stream_connection_tasks: Set[asyncio.Task] = set()
+        self._adc_to_volts = [1.5625e-06, 0.00015625]  # defaults, update after connect
+        self._adc_to_eu = self._compute_adc_to_eu(self._adc_to_volts)
+
+    def __del__(self):
+        if self._writer:
+            self._writer.close()
 
     async def __aenter__(self):
         await self.connect()
@@ -202,6 +212,23 @@ class ConditionWave:
 
         return sorted(ip_addresses)
 
+    async def _check_firmware_version(self):
+        def get_version_tuple(version_string: str):
+            return tuple((int(part) for part in version_string.split(".")))
+
+        version = (await self.get_info()).firmware_version
+        logger.debug(f"Detected firmware version: {version}")
+        if get_version_tuple(version) < get_version_tuple(self._MIN_FIRMWARE_VERSION):
+            raise RuntimeError(
+                f"Firmware version {version} < {self._MIN_FIRMWARE_VERSION}. Upgrade required."
+            )
+
+    def _compute_adc_to_eu(self, adc_to_volts: List[float]):
+        return [factor**2 * 1e14 / self.MAX_SAMPLERATE for factor in adc_to_volts]
+
+    async def _get_adc_to_volts(self):
+        return (await self.get_info()).adc_to_volts
+
     @property
     def connected(self) -> bool:
         """Check if connected to device."""
@@ -215,9 +242,13 @@ class ConditionWave:
         logger.info(f"Open connection {self._address}:{self.PORT}...")
         self._reader, self._writer = await asyncio.open_connection(self._address, self.PORT)
         self._connected = True
+        await self._check_firmware_version()
+        self._adc_to_volts = await self._get_adc_to_volts()
+        self._adc_to_eu = self._compute_adc_to_eu(self._adc_to_volts)
+        logger.debug(f"ADC to volt factors: {self._adc_to_volts}")
 
         logger.info("Set default settings...")
-        await self.set_range(0, self._DEFAULT_SETTINGS.range_volts)
+        await self.set_range(0, self.RANGES[self._DEFAULT_SETTINGS.range_index])
         await self.set_tr_decimation(0, self._DEFAULT_SETTINGS.decimation)
 
     async def close(self):
@@ -357,10 +388,21 @@ class ConditionWave:
         logger.info(f"Set {_channel_str(channel)} range to {range_volts} V...")
         await self._send_command(f"set_adc_range {range_index:d} @{channel:d}")
         if channel > 0:
-            self._channel_settings[channel].range_volts = range_volts
+            self._channel_settings[channel].range_index = range_index
         else:
-            self._channel_settings[1].range_volts = range_volts
-            self._channel_settings[2].range_volts = range_volts
+            self._channel_settings[1].range_index = range_index
+            self._channel_settings[2].range_index = range_index
+
+    async def set_channel(self, channel: int, enabled: bool):
+        """
+        Enable/disable channel.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            enabled: Set to `True` to enable channel
+        """
+        self._check_channel_number(channel)
+        await self._send_command(f"set_acq enabled {int(enabled)} @{channel:d}")
 
     @_require_connected
     async def set_continuous_mode(self, channel: int, enabled: bool):
@@ -510,6 +552,185 @@ class ConditionWave:
         self._recording = True
 
     @_require_connected
+    async def stop_acquisition(self):
+        """Stop data acquisition."""
+        if not self._recording:
+            return
+        logger.info("Stop data acquisition...")
+        await self._send_command("stop_acq")
+        self._recording = False
+
+    @_require_connected
+    async def start_pulsing(
+        self,
+        channel: int,
+        interval: float = 1,
+        count: int = 4,
+        cycles: int = 1,
+    ):
+        """
+        Start pulsing.
+
+        The number of pulses should be even, because pulses are generated by a square-wave signal
+        (between LOW and HIGH) and the pulse signal should end LOW.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            interval: Interval between pulses in seconds
+            count: Number of pulses per channel (should be even), 0 for infinite pulses
+            cycles: Number of pulse cycles (automatically pulse through each channel in cycles).
+                Only useful if all channels are chosen.
+        """
+        if count % 2 != 0:
+            warn("Number of pulse counts should be even")
+        logger.info(
+            f"Start pulsing on {_channel_str(channel)} ("
+            f"interval: {interval} s, "
+            f"count: {count}, "
+            f"cycles: {cycles})..."
+        )
+        await self._send_command(f"start_pulsing {interval} {count} {cycles} @{channel}")
+
+    @_require_connected
+    async def stop_pulsing(self):
+        """
+        Start pulsing.
+
+        Args:
+
+        """
+        logger.info("Stop pulsing")
+        await self._send_command("stop_pulsing")
+
+    @_require_connected
+    async def get_ae_data(self) -> List[AERecord]:
+        """
+        Get AE data records.
+
+        Returns:
+            List of AE data records (either status or hit data)
+        """
+        await self._send_command("get_ae_data")
+        records = []
+        while True:
+            line = await self._readline(timeout_seconds=0.1)
+            if line == b"\n":  # last line is an empty new line
+                break
+
+            logger.debug(f"Received AE data: {line}")
+
+            record_type = line[:1]
+            matches = dict(KV_PATTERN.findall(line))  # parse key-value pairs in line
+            channel = int(matches[b"Ch"])
+            range_index = self._channel_settings[channel].range_index
+            adc_to_volts = self._adc_to_volts[range_index]
+            adc_to_eu = self._adc_to_eu[range_index]
+
+            if record_type in (b"H", b"S"):  # hit or status data
+                record = AERecord(
+                    type_=record_type.decode(),
+                    channel=channel,
+                    time=int(matches[b"T"]) / self.MAX_SAMPLERATE,
+                    amplitude=int(matches.get(b"A", 0)) * adc_to_volts,
+                    rise_time=int(matches.get(b"R", 0)) / self.MAX_SAMPLERATE,
+                    duration=int(matches.get(b"D", 0)) / self.MAX_SAMPLERATE,
+                    counts=int(matches.get(b"C", 0)),
+                    energy=int(matches.get(b"E", 0)) * adc_to_eu,
+                    trai=int(matches.get(b"TRAI", 0)),
+                    flags=int(matches.get(b"flags", 0)),
+                )
+                records.append(record)
+            elif record_type == b"R":  # marker record start
+                ...
+            else:
+                logger.warning(f"Unknown AE data record: {line}")
+        return records
+
+    @_require_connected
+    async def get_tr_data(self, raw: bool = False) -> List[TRRecord]:
+        """
+        Get transient data records.
+
+        Args:
+            raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
+
+        Returns:
+            List of transient data records
+        """
+        await self._send_command("get_tr_data")
+        records = []
+        while True:
+            headerline = await self._readline(timeout_seconds=0.1)
+            if headerline == b"\n":  # last line is an empty new line
+                break
+
+            logger.debug(f"Received TR data: {headerline}")
+
+            matches = dict(KV_PATTERN.findall(headerline))  # parse key-value pairs in line
+            channel = int(matches[b"Ch"])
+            samples = int(matches[b"NS"])
+            range_index = self._channel_settings[channel].range_index
+            adc_to_volts = self._adc_to_volts[range_index]
+
+            data = np.frombuffer(
+                await self._reader.readexactly(2 * samples),  # type: ignore
+                dtype=np.int16,
+            )
+            assert len(data) == samples
+
+            if not raw:
+                data = np.multiply(data, adc_to_volts, dtype=np.float32)
+
+            record = TRRecord(
+                channel=channel,
+                trai=int(matches[b"TRAI"]),
+                time=int(matches[b"T"]) / self.MAX_SAMPLERATE,
+                samples=samples,
+                data=data,
+                raw=raw,
+            )
+            records.append(record)
+        return records
+
+    async def acquire(self, raw: bool = False) -> AsyncIterator[Union[AERecord, TRRecord]]:
+        """
+        High-level method to continuously acquire data.
+
+        Args:
+            raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
+
+        Yields:
+            AE and TR data records
+
+        Example:
+            >>> async with waveline.ConditionWave("192.254.100.100") as cw:
+            >>>     # apply settings
+            >>>     await cw.set_channel(channel=1, enabled=True)
+            >>>     await cw.set_channel(channel=2, enabled=False)
+            >>>     await cw.set_range(channel=1, range_volts=0.05)
+            >>>     async for record in cw.acquire():
+            >>>         # do something with the data depending on the type
+            >>>         if isinstance(record, waveline.AERecord):
+            >>>             ...
+            >>>         if isinstance(record, waveline.TRRecord):
+            >>>             ...
+        """
+        await self.start_acquisition()
+        try:
+            while True:
+                t = time.monotonic()
+                for ae_record in await self.get_ae_data():
+                    yield ae_record
+                for tr_record in await self.get_tr_data(raw=raw):
+                    yield tr_record
+                t = time.monotonic() - t
+                # avoid brute load
+                if t < 0.005:
+                    await asyncio.sleep(0.01)
+        finally:
+            await self.stop_acquisition()
+
+    @_require_connected
     def stream(
         self, channel: int, blocksize: int, *, raw: bool = False
     ) -> AsyncIterator[Tuple[float, np.ndarray]]:
@@ -544,13 +765,13 @@ class ConditionWave:
         logger.info(
             (
                 f"Start streaming acquisition on channel {channel} "
-                f"(blocksize: {blocksize}, range: {settings.range_volts} V)"
+                f"(blocksize: {blocksize}, range: {self.RANGES[settings.range_index]} V)"
             )
         )
 
         port = int(self.PORT + channel)
         blocksize_bytes = int(blocksize * 2)  # 1 ADC value (16 bit) -> 2 * 8 byte
-        to_volts = settings.range_volts / 32_000
+        to_volts = self._adc_to_volts[settings.range_index]
         interval = settings.decimation * blocksize / self.MAX_SAMPLERATE
 
         connection_task = asyncio.ensure_future(
@@ -592,16 +813,3 @@ class ConditionWave:
                     pass  # eof
 
         return StreamGenerator()
-
-    @_require_connected
-    async def stop_acquisition(self):
-        """Stop data acquisition."""
-        if not self._recording:
-            return
-        logger.info("Stop data acquisition...")
-        await self._send_command("stop_acq")
-        self._recording = False
-
-    def __del__(self):
-        if self._writer:
-            self._writer.close()

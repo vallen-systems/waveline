@@ -7,9 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- [conditionWave] all commands of new firmware (hit-based acquisition, pulsing, ...)
+- [conditionWave] example for hit-based acquisition
+
 ### Changed
 
 - [spotWave] Rename `stream` method to `acquire`. `stream` method is still an alias but deprecated and will be removed in the future
+
+### Fixed
+
+- [conditionWave] wait for all stream connection before `start_acquisition`
 
 ## [0.3.0] - 2021-06-15
 

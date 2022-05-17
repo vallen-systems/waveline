@@ -17,7 +17,7 @@ class AERecord:
     """
 
     type_: str  #: Record type (hit or status data)
-    chan: int  #: Channel number
+    channel: int  #: Channel number
     time: float  #: Time in seconds
     amplitude: float  #: Peak amplitude in volts
     rise_time: float  #: Rise time in seconds
@@ -32,7 +32,7 @@ class AERecord:
 class TRRecord:
     """Transient data record."""
 
-    chan: int  #: Channel number
+    channel: int  #: Channel number
     trai: int  #: Transient recorder index (key between `AERecord` and `TRRecord`)
     time: float  #: Time in seconds
     samples: int  #: Number of samples

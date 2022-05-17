@@ -1,7 +1,7 @@
+import re
 from collections import defaultdict
 
 import pytest
-import re
 
 multiline_output = [
     b"acq_enabled=1",

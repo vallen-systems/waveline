@@ -17,7 +17,7 @@ import numpy as np
 from serial import EIGHTBITS, Serial
 from serial.tools import list_ports
 
-from ._common import as_float, as_int, multiline_output_to_dict, parse_filter_setup_line, KV_PATTERN
+from ._common import KV_PATTERN, as_float, as_int, multiline_output_to_dict, parse_filter_setup_line
 from .datatypes import AERecord, TRRecord
 
 logger = logging.getLogger(__name__)
@@ -120,7 +120,7 @@ class SpotWave:
         self._check_firmware_version()
         self.stop_acquisition()  # stop acquisition if running
         self._adc_to_volts = self._get_adc_to_volts()  # get and save adc conversion factor
-        self._adc_to_eu = (self._adc_to_volts ** 2) * 1e14 / self.CLOCK
+        self._adc_to_eu = (self._adc_to_volts**2) * 1e14 / self.CLOCK
 
     def __del__(self):
         self.close()
@@ -136,6 +136,7 @@ class SpotWave:
             return tuple((int(hx, base=16) for hx in version_string.split(".")))
 
         version = self.get_info().firmware_version
+        logger.debug(f"Detected firmware version: {version}")
         if get_version_tuple(version) < get_version_tuple(self._MIN_FIRMWARE_VERSION):
             raise RuntimeError(
                 f"Firmware version {version} < {self._MIN_FIRMWARE_VERSION}. Upgrade required."
@@ -461,7 +462,7 @@ class SpotWave:
             if record_type in (b"H", b"S"):  # hit or status data
                 record = AERecord(
                     type_=record_type.decode(),
-                    chan=1,
+                    channel=1,
                     time=int(matches[b"T"]) / self.CLOCK,
                     amplitude=int(matches[b"A"]) * self._adc_to_volts,
                     rise_time=int(matches[b"R"]) / self.CLOCK,
@@ -510,25 +511,22 @@ class SpotWave:
             if headerline == b"\n":  # last line is an empty new line
                 break
 
+            logger.debug(f"Received TR data: {headerline}")
+
             # parse key-value pairs in line; default value: 0
             matches = collections.defaultdict(int, KV_PATTERN.findall(headerline))
-            trai = int(matches[b"TRAI"])
-            time_ = int(matches[b"T"])
             samples = int(matches[b"NS"])
 
             data = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
+            assert len(data) == samples
+
             if not raw:
                 data = np.multiply(data, self._adc_to_volts, dtype=np.float32)
 
-            if len(data) != samples:
-                raise RuntimeError(
-                    f"TR data samples ({len(data)}) do not match expected number ({samples})"
-                )
-
             record = TRRecord(
-                chan=1,
-                trai=trai,
-                time=time_ / self.CLOCK,
+                channel=1,
+                trai=int(matches[b"TRAI"]),
+                time=int(matches[b"T"]) / self.CLOCK,
                 samples=samples,
                 data=data,
                 raw=raw,

@@ -20,14 +20,12 @@ def test_get_data(sw, samples):
     assert len(data) == samples
 
 
-def test_acq_only_status(sw):
-    status_interval_seconds = 0.1  # 100 ms
-
+@pytest.mark.parametrize("status_interval_seconds", (0.1, 0.2))
+def test_acq_only_status(sw, status_interval_seconds):
     sw.set_threshold(10_000_000)  # above range
     sw.set_continuous_mode(False)
     sw.set_logging_mode(False)
     sw.set_status_interval(status_interval_seconds)
-    sw.set_tr_enabled(False)
     sw.clear_buffer()
     sw.start_acquisition()
     sleep(1)

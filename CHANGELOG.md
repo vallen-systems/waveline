@@ -9,40 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- [conditionWave] all commands of new firmware (hit-based acquisition, pulsing, ...)
-- [conditionWave] example for hit-based acquisition
+- [conditionWave] Add all commands of new firmware (hit-based acquisition, pulsing, ...)
+- [conditionWave] Add example for hit-based acquisition
 - Add Python 3.9 and 3.10 to CI pipeline
 
 ### Changed
 
+- [conditionWave] Rename `set_decimation` method to `set_tr_decimation`
+- [conditionWave] Remove `get_temperature` and `get_buffersize` method (replace with `get_status` method)
 - [spotWave] Rename `stream` method to `acquire`. `stream` method is still an alias but deprecated and will be removed in the future
 
 ### Fixed
 
-- [conditionWave] wait for all stream connection before `start_acquisition`
+- [conditionWave] Wait for all stream connection before `start_acquisition`
 
 ## [0.3.0] - 2021-06-15
 
 ### Added
 
-- [conditionWave] multi-channel example
-- [conditionWave] optional `start` argument (timestamp) for `stream`
-- [spotWave] examples
-- [spotWave] firmware check
+- [conditionWave] Multi-channel example
+- [conditionWave] Optional `start` argument (timestamp) for `stream`
+- [spotWave] Add examples
+- [spotWave] Add firmware check
 
 ### Changed
 
-- [conditionWave] channel arguments for `set_range`, `set_decimation` and `set_filter`
+- [conditionWave] Channel arguments for `set_range`, `set_decimation` and `set_filter`
 - [spotWave] `set_status_interval` with seconds instead of milliseconds
-- [spotWave] require firmware >= 00.25
+- [spotWave] Require firmware >= 00.25
 
 ### Removed
-- [conditionWave] properties `input_range`, `decimation`, `filter_settings`
+- [conditionWave] Properties `input_range`, `decimation`, `filter_settings`
 
 ### Fixed
 
 - [conditionWave] ADC to volts conversion factor
-- [spotWave] aggregate TR/AE records to prevent IO timeouts
+- [spotWave] Aggregate TR/AE records to prevent IO timeouts
 
 ## [0.2.0] - 2020-12-18
 

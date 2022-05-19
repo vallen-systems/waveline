@@ -261,12 +261,6 @@ async def test_set_tr_decimation_invalid_channel(mock_objects, channel):
         await mock_objects.cw.set_tr_decimation(channel, 1)
 
 
-@pytest.mark.parametrize("value", (-1, 0, 1001))
-async def test_set_tr_decimation_invalid_value(mock_objects, value):
-    with pytest.raises(ValueError):
-        await mock_objects.cw.set_tr_decimation(0, value)
-
-
 @pytest.mark.parametrize(
     "channel, highpass, lowpass, order, command",
     (

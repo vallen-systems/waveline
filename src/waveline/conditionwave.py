@@ -428,6 +428,7 @@ class ConditionWave:
             channel: Channel number (0 for all channels)
             microseconds: DDT in µs
         """
+        self._check_channel_number(channel)
         await self._send_command(f"set_acq ddt {int(microseconds)} @{channel:d}")
 
     @_require_connected
@@ -439,6 +440,7 @@ class ConditionWave:
             channel: Channel number (0 for all channels)
             seconds: Status interval in s
         """
+        self._check_channel_number(channel)
         await self._send_command(f"set_acq status_interval {int(seconds * 1e3)} @{channel:d}")
 
     @_require_connected
@@ -532,6 +534,7 @@ class ConditionWave:
             channel: Channel number (0 for all channels)
             microvolts: Threshold in µV
         """
+        self._check_channel_number(channel)
         await self._send_command(f"set_acq thr {microvolts} @{channel:d}")
 
     @_require_connected
@@ -579,6 +582,7 @@ class ConditionWave:
             cycles: Number of pulse cycles (automatically pulse through each channel in cycles).
                 Only useful if all channels are chosen.
         """
+        self._check_channel_number(channel)
         if count % 2 != 0:
             warn("Number of pulse counts should be even")
         logger.info(

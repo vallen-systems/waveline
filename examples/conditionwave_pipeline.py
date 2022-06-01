@@ -73,12 +73,14 @@ async def pipeline(ip: str, queue: asyncio.Queue):
         await cw.set_range(0, range_volts=RANGE)
         await cw.set_tr_decimation(0, factor=int(cw.MAX_SAMPLERATE / SAMPLERATE))
         await cw.set_filter(0, highpass=100e3, lowpass=500e3, order=8)
+
+        stream = cw.stream(channel=1, blocksize=BLOCKSIZE)  # open streaming port before start acq
         await cw.start_acquisition()
 
         with ThreadPoolExecutor(max_workers=1) as pool:
             loop = asyncio.get_event_loop()
             # read streaming data in blocks
-            async for time, y in cw.stream(1, BLOCKSIZE):
+            async for time, y in stream:
                 # execute (longer) blocking operations in the thread pool -> don't block event loop
                 features = await loop.run_in_executor(pool, extract_features, y)
                 result = await loop.run_in_executor(pool, classify, features)

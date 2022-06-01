@@ -16,11 +16,13 @@ async def main(ip: str, samplerate: int, blocksize: int):
         await cw.set_range(channel=0, range_volts=0.05)
         await cw.set_tr_decimation(channel=0, factor=int(cw.MAX_SAMPLERATE / samplerate))
         await cw.set_filter(channel=0, highpass=100e3, lowpass=500e3, order=8)
+
+        stream = cw.stream(channel=1, blocksize=blocksize)  # open streaming port before start acq
         await cw.start_acquisition()
 
         with ThreadPoolExecutor(max_workers=1) as pool:
             loop = asyncio.get_event_loop()
-            async for _, y in cw.stream(1, blocksize):
+            async for _, y in stream:
                 # execute (longer) blocking operations in the thread pool, e.g.:
                 # Y = await loop.run_in_executor(pool, lambda y: np.abs(np.fft.rfft(y)), y)
 

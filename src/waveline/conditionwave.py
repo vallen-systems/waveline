@@ -755,9 +755,10 @@ class ConditionWave:
             >>>     # apply settings
             >>>     await cw.set_range(0.05)
             >>>     await cw.set_filter(100e3, 500e3, 8)
-            >>>     # start daq and streaming
+            >>>     # open streaming port before start acq afterwards (order matters!)
+            >>>     stream = cw.stream(channel=1, blocksize=65536)
             >>>     await cw.start_acquisition()
-            >>>     async for time, block in cw.stream(channel=1, blocksize=65536):
+            >>>     async for time, block in stream:
             >>>         # do something with the data
             >>>         ...
         """

@@ -615,7 +615,7 @@ class ConditionWave:
         await self._send_command("get_ae_data")
         records = []
         while True:
-            line = await self._readline(timeout_seconds=0.1)
+            line = await self._readline(timeout_seconds=1)
             if line == b"\n":  # last line is an empty new line
                 break
 
@@ -662,7 +662,7 @@ class ConditionWave:
         await self._send_command("get_tr_data")
         records = []
         while True:
-            headerline = await self._readline(timeout_seconds=0.1)
+            headerline = await self._readline(timeout_seconds=1)
             if headerline == b"\n":  # last line is an empty new line
                 break
 

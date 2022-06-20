@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- [conditionWave] Increase TCP read timeout for `get_ae_data` / `get_tr_data` to prevent timeout errors
+
 ## [0.4.0] - 2022-05-17
 
 ### Added

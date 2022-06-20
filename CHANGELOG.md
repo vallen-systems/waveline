@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2022-06-20
+
 ### Fixed
 
 - [conditionWave] Increase TCP read timeout for `get_ae_data` / `get_tr_data` to prevent timeout errors
@@ -56,7 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First public release
 
-[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.0...HEAD
-[0.3.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.3.0...0.4.0
+[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.1...HEAD
+[0.4.1]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.0...0.4.1
+[0.4.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/vallen-systems/pyWaveLine/releases/tag/0.2.0

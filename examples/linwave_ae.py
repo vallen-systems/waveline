@@ -9,7 +9,7 @@ data is acquired. The acquired data is mainly influenced by two parameters:
 
 Additionally, status data can be acquired in defined intervals.
 
-The following example shows a simple setup to acquire hits and status data with a conditionWave
+The following example shows a simple setup to acquire hits and status data with a linWave
 device. Hit data (AERecord) and transient data (TRRecord) are returned from different functions but
 can be merged by matching the transient recorder index (trai) field in both records.
 """
@@ -22,7 +22,7 @@ from typing import Dict
 
 import numpy as np
 
-from waveline import ConditionWave, AERecord, TRRecord
+from waveline import LinWave, AERecord, TRRecord
 
 logging.basicConfig(level=logging.INFO)
 
@@ -63,30 +63,30 @@ async def merge_ae_tr_records(async_generator):
 
 
 async def main(ip: str):
-    async with ConditionWave(ip) as cw:
-        print(await cw.get_info())
+    async with LinWave(ip) as lw:
+        print(await lw.get_info())
 
-        await cw.set_channel(channel=0, enabled=True)  # enabled all channels
-        await cw.set_range(channel=0, range_volts=0.05)  # set input range to 50 mV
-        await cw.set_continuous_mode(channel=0, enabled=False)  # -> hit-based
-        await cw.set_status_interval(channel=0, seconds=2)  # generate status data every 2 seconds
-        await cw.set_threshold(channel=0, microvolts=1_000)  # 1000 µV = 60 dB(AE)
-        await cw.set_tr_enabled(channel=0, enabled=True)  # enable transient data recording
-        await cw.set_tr_decimation(channel=0, factor=10)  # set decimation factor for transient data, 10 MHz / 10 = 1 MHz
-        await cw.set_tr_pretrigger(channel=0, samples=200)  # 200 pre-trigger samples
-        await cw.set_tr_postduration(channel=0, samples=200)  # 0 post-duration samples
-        await cw.set_filter(channel=0, highpass=100e3, lowpass=450e3)  # 100-450 kHz bandpass
+        await lw.set_channel(channel=0, enabled=True)  # enabled all channels
+        await lw.set_range(channel=0, range_volts=0.05)  # set input range to 50 mV
+        await lw.set_continuous_mode(channel=0, enabled=False)  # -> hit-based
+        await lw.set_status_interval(channel=0, seconds=2)  # generate status data every 2 seconds
+        await lw.set_threshold(channel=0, microvolts=1_000)  # 1000 µV = 60 dB(AE)
+        await lw.set_tr_enabled(channel=0, enabled=True)  # enable transient data recording
+        await lw.set_tr_decimation(channel=0, factor=10)  # set decimation factor for transient data, 10 MHz / 10 = 1 MHz
+        await lw.set_tr_pretrigger(channel=0, samples=200)  # 200 pre-trigger samples
+        await lw.set_tr_postduration(channel=0, samples=200)  # 0 post-duration samples
+        await lw.set_filter(channel=0, highpass=100e3, lowpass=450e3)  # 100-450 kHz bandpass
 
-        print(await cw.get_setup(channel=1))
-        print(await cw.get_setup(channel=2))
+        print(await lw.get_setup(channel=1))
+        print(await lw.get_setup(channel=2))
 
-        async for record in merge_ae_tr_records(cw.acquire()):
+        async for record in merge_ae_tr_records(lw.acquire()):
             print(record)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="conditionwave_ae")
-    parser.add_argument("ip", help="IP address of conditionWave device")
+    parser = argparse.ArgumentParser(description="linwave_ae")
+    parser.add_argument("ip", help="IP address of linWave device")
     args = parser.parse_args()
 
     try:

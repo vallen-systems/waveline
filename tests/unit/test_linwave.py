@@ -7,7 +7,7 @@ import pytest
 from asynctest import CoroutineMock, Mock  # alternative to unittest.mock.AsyncMock in Python >=3.8
 from numpy.testing import assert_allclose
 
-from waveline import ConditionWave
+from waveline import LinWave
 
 CLOCK = 10e6
 ADC_TO_VOLTS = [1.5625e-06, 0.00015625]
@@ -20,42 +20,42 @@ wait_forever = lambda: asyncio.sleep(3600)
 
 
 class MockedObjects(NamedTuple):
-    cw: ConditionWave
+    lw: LinWave
     reader: CoroutineMock
     writer: CoroutineMock
 
 
 @pytest.fixture(autouse=True, name="mock_objects")
-async def mock_conditionwave_with_asyncio_connection():
+async def mock_linwave_with_asyncio_connection():
     with patch("asyncio.open_connection", new=CoroutineMock()) as mock_create_connection:
         mock_reader = Mock(spec=asyncio.StreamReader)
         mock_writer = Mock(spec=asyncio.StreamWriter)
         mock_create_connection.return_value = (mock_reader, mock_writer)
 
-        # ConditionWave.connect will call _check_firmware_version and _get_adc_to_volts
+        # LinWave.connect will call _check_firmware_version and _get_adc_to_volts
         with patch.object(
-            ConditionWave, "_check_firmware_version", new=CoroutineMock()
+            LinWave, "_check_firmware_version", new=CoroutineMock()
         ) as method_firmware_version, patch.object(
-            ConditionWave, "_get_adc_to_volts", new=CoroutineMock()
+            LinWave, "_get_adc_to_volts", new=CoroutineMock()
         ) as method_adc_to_volts:
             method_firmware_version.return_value = None
             method_adc_to_volts.return_value = ADC_TO_VOLTS
 
-            async with ConditionWave("192.168.0.100") as cw:
+            async with LinWave("192.168.0.100") as lw:
                 yield MockedObjects(
-                    cw=cw,
+                    lw=lw,
                     reader=mock_reader,
                     writer=mock_writer,
                 )
 
 
 async def test_reconnect(mock_objects):
-    cw, *_ = mock_objects
-    assert cw.connected
-    await cw.close()
-    assert not cw.connected
-    await cw.connect()
-    assert cw.connected
+    lw, *_ = mock_objects
+    assert lw.connected
+    await lw.close()
+    assert not lw.connected
+    await lw.connect()
+    assert lw.connected
 
 
 async def test_default_settings(mock_objects):
@@ -69,7 +69,7 @@ async def test_default_settings(mock_objects):
 
 
 async def test_get_info(mock_objects):
-    cw, reader, writer = mock_objects
+    lw, reader, writer = mock_objects
     reader.readline.side_effect = [
         b"fw_version=2.1\n",
         b"fpga_version=3.1\n",
@@ -79,7 +79,7 @@ async def test_get_info(mock_objects):
         b"adc2uv=1.5625 156.25\n",
         wait_forever(),
     ]
-    info = await cw.get_info()
+    info = await lw.get_info()
     writer.write.assert_called_with(b"get_info\n")
     reader.readline.assert_awaited()
 
@@ -92,13 +92,13 @@ async def test_get_info(mock_objects):
 
 
 async def test_get_status(mock_objects):
-    cw, reader, writer = mock_objects
+    lw, reader, writer = mock_objects
     reader.readline.side_effect = [
         b"temp=55\n",
         b"buffer_size=112014\n",
         wait_forever(),
     ]
-    status = await cw.get_status()
+    status = await lw.get_status()
     writer.write.assert_called_with(b"get_status\n")
     reader.readline.assert_awaited()
 
@@ -107,7 +107,7 @@ async def test_get_status(mock_objects):
 
 
 async def test_get_setup(mock_objects):
-    cw, reader, writer = mock_objects
+    lw, reader, writer = mock_objects
     reader.readline.side_effect = [
         b"channel=1\n",
         b"dsp\n",
@@ -128,7 +128,7 @@ async def test_get_setup(mock_objects):
         b"\n",
         wait_forever(),
     ]
-    setup = await cw.get_setup(1)
+    setup = await lw.get_setup(1)
     writer.write.assert_called_with(b"get_setup @1\n")
     reader.readline.assert_awaited()
 
@@ -156,8 +156,8 @@ async def test_get_setup(mock_objects):
     ),
 )
 async def test_set_channel(mock_objects, channel, enabled, command):
-    cw, _, writer = mock_objects
-    await cw.set_channel(channel, enabled)
+    lw, _, writer = mock_objects
+    await lw.set_channel(channel, enabled)
     writer.write.assert_called_with(command)
 
 
@@ -170,21 +170,21 @@ async def test_set_channel(mock_objects, channel, enabled, command):
     ),
 )
 async def test_set_range(mock_objects, channel, value, command):
-    cw, _, writer = mock_objects
-    await cw.set_range(channel, value)
+    lw, _, writer = mock_objects
+    await lw.set_range(channel, value)
     writer.write.assert_called_with(command)
 
 
 @pytest.mark.parametrize("channel", (-1, 3))
 async def test_set_range_invalid_channel(mock_objects, channel):
     with pytest.raises(ValueError):
-        await mock_objects.cw.set_range(channel, 0.05)
+        await mock_objects.lw.set_range(channel, 0.05)
 
 
 @pytest.mark.parametrize("value", (-1, 0, 11))
 async def test_set_range_invalid_value(mock_objects, value):
     with pytest.raises(ValueError):
-        await mock_objects.cw.set_range(0, value)
+        await mock_objects.lw.set_range(0, value)
 
 
 @pytest.mark.parametrize(
@@ -195,8 +195,8 @@ async def test_set_range_invalid_value(mock_objects, value):
     ),
 )
 async def test_set_continuous_mode(mock_objects, channel, enabled, command):
-    cw, _, writer = mock_objects
-    await cw.set_continuous_mode(channel, enabled)
+    lw, _, writer = mock_objects
+    await lw.set_continuous_mode(channel, enabled)
     writer.write.assert_called_with(command)
 
 
@@ -208,8 +208,8 @@ async def test_set_continuous_mode(mock_objects, channel, enabled, command):
     ),
 )
 async def test_set_ddt(mock_objects, channel, microseconds, command):
-    cw, _, writer = mock_objects
-    await cw.set_ddt(channel, microseconds)
+    lw, _, writer = mock_objects
+    await lw.set_ddt(channel, microseconds)
     writer.write.assert_called_with(command)
 
 
@@ -222,8 +222,8 @@ async def test_set_ddt(mock_objects, channel, microseconds, command):
     ),
 )
 async def test_set_status_interval(mock_objects, channel, seconds, command):
-    cw, _, writer = mock_objects
-    await cw.set_status_interval(channel, seconds)
+    lw, _, writer = mock_objects
+    await lw.set_status_interval(channel, seconds)
     writer.write.assert_called_with(command)
 
 
@@ -235,8 +235,8 @@ async def test_set_status_interval(mock_objects, channel, seconds, command):
     ),
 )
 async def test_set_tr_enabled(mock_objects, channel, enabled, command):
-    cw, _, writer = mock_objects
-    await cw.set_tr_enabled(channel, enabled)
+    lw, _, writer = mock_objects
+    await lw.set_tr_enabled(channel, enabled)
     writer.write.assert_called_with(command)
 
 
@@ -250,15 +250,15 @@ async def test_set_tr_enabled(mock_objects, channel, enabled, command):
     ),
 )
 async def test_set_tr_decimation(mock_objects, channel, value, command):
-    cw, _, writer = mock_objects
-    await cw.set_tr_decimation(channel, value)
+    lw, _, writer = mock_objects
+    await lw.set_tr_decimation(channel, value)
     writer.write.assert_called_with(command)
 
 
 @pytest.mark.parametrize("channel", (-1, 3))
 async def test_set_tr_decimation_invalid_channel(mock_objects, channel):
     with pytest.raises(ValueError):
-        await mock_objects.cw.set_tr_decimation(channel, 1)
+        await mock_objects.lw.set_tr_decimation(channel, 1)
 
 
 @pytest.mark.parametrize(
@@ -271,15 +271,15 @@ async def test_set_tr_decimation_invalid_channel(mock_objects, channel):
     ),
 )
 async def test_set_filter(mock_objects, channel, highpass, lowpass, order, command):
-    cw, _, writer = mock_objects
-    await cw.set_filter(channel, highpass, lowpass, order)
+    lw, _, writer = mock_objects
+    await lw.set_filter(channel, highpass, lowpass, order)
     writer.write.assert_called_with(command)
 
 
 @pytest.mark.parametrize("channel", (-1, 3))
 async def test_set_filter_invalid_channel(mock_objects, channel):
     with pytest.raises(ValueError):
-        await mock_objects.cw.set_filter(channel, 50e3, 300e3, 4)
+        await mock_objects.lw.set_filter(channel, 50e3, 300e3, 4)
 
 
 @pytest.mark.parametrize(
@@ -290,8 +290,8 @@ async def test_set_filter_invalid_channel(mock_objects, channel):
     ),
 )
 async def test_set_tr_pretrigger(mock_objects, channel, samples, command):
-    cw, _, writer = mock_objects
-    await cw.set_tr_pretrigger(channel, samples)
+    lw, _, writer = mock_objects
+    await lw.set_tr_pretrigger(channel, samples)
     writer.write.assert_called_with(command)
 
 
@@ -303,8 +303,8 @@ async def test_set_tr_pretrigger(mock_objects, channel, samples, command):
     ),
 )
 async def test_set_tr_postduration(mock_objects, channel, samples, command):
-    cw, _, writer = mock_objects
-    await cw.set_tr_postduration(channel, samples)
+    lw, _, writer = mock_objects
+    await lw.set_tr_postduration(channel, samples)
     writer.write.assert_called_with(command)
 
 
@@ -316,16 +316,16 @@ async def test_set_tr_postduration(mock_objects, channel, samples, command):
     ),
 )
 async def test_set_threshold(mock_objects, channel, threshold, command):
-    cw, _, writer = mock_objects
-    await cw.set_threshold(channel, threshold)
+    lw, _, writer = mock_objects
+    await lw.set_threshold(channel, threshold)
     writer.write.assert_called_with(command)
 
 
 async def test_start_stop_acquisition(mock_objects):
-    cw, _, writer = mock_objects
-    await cw.start_acquisition()
+    lw, _, writer = mock_objects
+    await lw.start_acquisition()
     writer.write.assert_called_with(b"start_acq\n")
-    await cw.stop_acquisition()
+    await lw.stop_acquisition()
     writer.write.assert_called_with(b"stop_acq\n")
 
 
@@ -337,19 +337,19 @@ async def test_start_stop_acquisition(mock_objects):
     ),
 )
 async def test_start_pulsing(mock_objects, channel, interval, count, cycles, command):
-    cw, _, writer = mock_objects
-    await cw.start_pulsing(channel, interval, count, cycles)
+    lw, _, writer = mock_objects
+    await lw.start_pulsing(channel, interval, count, cycles)
     writer.write.assert_called_with(command)
 
 
 async def test_stop_pulsing(mock_objects):
-    cw, _, writer = mock_objects
-    await cw.stop_pulsing()
+    lw, _, writer = mock_objects
+    await lw.stop_pulsing()
     writer.write.assert_called_with(b"stop_pulsing\n")
 
 
 async def test_get_ae_data(mock_objects):
-    cw, reader, writer = mock_objects
+    lw, reader, writer = mock_objects
     reader.readline.side_effect = [
         b"S Ch=1 T=20000000 A=0 R=0 D=10000000 C=0 E=38788614 TRAI=0 flags=0\n",
         b"H Ch=2 T=43686000 A=31004 R=496 D=703 C=4 E=74860056830 TRAI=1 flags=0\n",
@@ -357,7 +357,7 @@ async def test_get_ae_data(mock_objects):
         wait_forever(),
     ]
 
-    ae_data = await cw.get_ae_data()
+    ae_data = await lw.get_ae_data()
     writer.write.assert_called_with(b"get_ae_data\n")
     reader.readline.assert_awaited()
 
@@ -395,7 +395,7 @@ async def test_get_ae_data(mock_objects):
 
 @pytest.mark.parametrize("raw", (False, True))
 async def test_get_tr_data(mock_objects, raw):
-    cw, reader, writer = mock_objects
+    lw, reader, writer = mock_objects
     reader.readline.side_effect = [
         b"Ch=1 TRAI=1 T=43686000 NS=13\n",
         b"Ch=2 TRAI=2 T=43686983 NS=27\n",
@@ -407,7 +407,7 @@ async def test_get_tr_data(mock_objects, raw):
 
     reader.readexactly.side_effect = binary_data
 
-    tr_data = await cw.get_tr_data(raw=raw)
+    tr_data = await lw.get_tr_data(raw=raw)
     writer.write.assert_called_with(b"get_tr_data\n")
 
     adc_to_volts = ADC_TO_VOLTS[0]

@@ -9,11 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `poll_interval_seconds` parameter for `SpotWave.acquire` and `ConditionWave.acquire` method
+- `poll_interval_seconds` parameter for `SpotWave.acquire` and `ConditionWave.acquire` / `LinWave.acquire` method
+
+### Changed
+
+- Rename `ConditionWave` to `LinWave` (and the corresponding module `conditionwave` to `linwave`). The `ConditionWave` class is still an alias for the `LinWave` class but deprecated and will be removed in the future
 
 ### Fixed
 
-- [conditionWave] Fix timeouts for multiline responses (`get_info`, `get_status`, `get_setup`)
+- [conditionWave/linWave] Fix timeouts for multiline responses (`get_info`, `get_status`, `get_setup`)
 
 ## [0.4.1] - 2022-06-20
 

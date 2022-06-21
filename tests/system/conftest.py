@@ -9,8 +9,8 @@ def pytest_addoption(parser):
         default=1,
     )
     parser.addoption(
-        "--cwave-ip",
-        help="IP address of specific conditionWave device",
+        "--linwave-ip",
+        help="IP address of specific linWave device",
         type=str,
     )
 
@@ -21,5 +21,5 @@ def duration_acq(pytestconfig):
 
 
 @pytest.fixture
-def cwave_ip(pytestconfig):
-    return pytestconfig.getoption("cwave_ip")
+def linwave_ip(pytestconfig):
+    return pytestconfig.getoption("linwave_ip")

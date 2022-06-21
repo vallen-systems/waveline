@@ -1,7 +1,7 @@
 """
 Skeleton pipeline with data acquisition, feature extraction, classification and OPC UA output.
 
-The pipeline can run on an external PC or directly on the conditionWave (using the IP 127.0.0.1).
+The pipeline can run on an external PC or directly on the linWave (using the IP 127.0.0.1).
 Please contact Vallen System <software@vallen.de> for more details.
 
 Make sure to install `asyncua` for the OPC UA server:
@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from asyncua import Server
-from waveline import ConditionWave
+from waveline import LinWave
 
 SAMPLERATE = 1_000_000  # 1 MHz
 BLOCKSIZE = 524288  # = 2^19 (use power of 2 for efficient FFT computation)
@@ -68,14 +68,14 @@ def classify(features: Features) -> Result:
 
 async def pipeline(ip: str, queue: asyncio.Queue):
     """Pipeline: data acquisition, feature extraction and classification."""
-    async with ConditionWave(ip) as cw:
-        print(await cw.get_info())
-        await cw.set_range(0, range_volts=RANGE)
-        await cw.set_tr_decimation(0, factor=int(cw.MAX_SAMPLERATE / SAMPLERATE))
-        await cw.set_filter(0, highpass=100e3, lowpass=500e3, order=8)
+    async with LinWave(ip) as lw:
+        print(await lw.get_info())
+        await lw.set_range(0, range_volts=RANGE)
+        await lw.set_tr_decimation(0, factor=int(lw.MAX_SAMPLERATE / SAMPLERATE))
+        await lw.set_filter(0, highpass=100e3, lowpass=500e3, order=8)
 
-        stream = cw.stream(channel=1, blocksize=BLOCKSIZE)  # open streaming port before start acq
-        await cw.start_acquisition()
+        stream = lw.stream(channel=1, blocksize=BLOCKSIZE)  # open streaming port before start acq
+        await lw.start_acquisition()
 
         with ThreadPoolExecutor(max_workers=1) as pool:
             loop = asyncio.get_event_loop()
@@ -88,7 +88,7 @@ async def pipeline(ip: str, queue: asyncio.Queue):
                 # push output to queue
                 queue.put_nowait(Output(features=features, result=result))
 
-        await cw.stop_acquisition()
+        await lw.stop_acquisition()
 
 
 async def opcua_server(queue: asyncio.Queue):
@@ -97,7 +97,7 @@ async def opcua_server(queue: asyncio.Queue):
     server = Server()
     await server.init()
     server.set_endpoint("opc.tcp://0.0.0.0:4840")
-    server.set_server_name("conditionWave OPC UA server")
+    server.set_server_name("linWave OPC UA server")
 
     # setup nodes
     uri = "https://www.vallen.de"
@@ -131,8 +131,8 @@ async def main(ip: str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="conditionwave_pipeline")
-    parser.add_argument("ip", help="IP address of conditionWave device")
+    parser = argparse.ArgumentParser(description="linwave_pipeline")
+    parser.add_argument("ip", help="IP address of linWave device")
     args = parser.parse_args()
 
     try:

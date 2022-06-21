@@ -10,7 +10,7 @@
 
 Python library to easily interface with Vallen Systeme WaveLine™ devices using the public APIs:
 
-- conditionWave
+- linWave / conditionWave
 - spotWave
 
 ## Documentation
@@ -98,8 +98,8 @@ pytest tests/system/spotwave --duration-acq 1
 
 Measurement durations for long-term acquisition tests can be specified with the `--duration-acq` parameter (default: 1 second).
 
-Run system tests with a conditionWave device (a specific IP can be provided with the `--cwave-ip` argument, otherwise the first discovered device will be used):
+Run system tests with a linWave device (a specific IP can be provided with the `--linwave-ip` argument, otherwise the first discovered device will be used):
 
 ```
-pytest tests/system/conditionwave --duration-acq 1 --cwave-ip 192.168.0.100
+pytest tests/system/linwave --duration-acq 1 --linwave-ip 192.168.0.100
 ```

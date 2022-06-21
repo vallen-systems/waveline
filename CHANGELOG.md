@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2022-06-21
+
 ### Added
 
 - `poll_interval_seconds` parameter for `SpotWave.acquire` and `ConditionWave.acquire` / `LinWave.acquire` method
@@ -70,7 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First public release
 
-[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.1...HEAD
+[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.5.0...HEAD
+[0.5.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.2.0...0.3.0

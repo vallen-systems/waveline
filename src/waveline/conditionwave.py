@@ -284,7 +284,7 @@ class ConditionWave:
 
     @_require_connected
     async def _readlines(self, limit: Optional[int] = None) -> List[bytes]:
-        lines = []
+        lines: List[bytes] = []
         while True:
             try:
                 # long timeout (1000 ms) for first line, then short timeouts (100 ms)

@@ -283,14 +283,12 @@ class ConditionWave:
         )
 
     @_require_connected
-    async def _readlines(
-        self,
-        limit: Optional[int] = None,
-        timeout_seconds: Optional[float] = None,
-    ) -> List[bytes]:
+    async def _readlines(self, limit: Optional[int] = None) -> List[bytes]:
         lines = []
         while True:
             try:
+                # long timeout (1000 ms) for first line, then short timeouts (100 ms)
+                timeout_seconds = 1.0 if not lines else 0.1
                 line = await asyncio.wait_for(
                     self._reader.readline(),  # type: ignore
                     timeout=timeout_seconds,
@@ -306,7 +304,7 @@ class ConditionWave:
     async def get_info(self) -> Info:
         """Get device information."""
         await self._send_command("get_info")
-        lines = await self._readlines(timeout_seconds=0.1)
+        lines = await self._readlines()
         if not lines:
             raise RuntimeError("Could not get device information")
 
@@ -324,7 +322,7 @@ class ConditionWave:
     async def get_status(self) -> Status:
         """Get status information."""
         await self._send_command("get_status")
-        lines = await self._readlines(timeout_seconds=0.1)
+        lines = await self._readlines()
         if not lines:
             raise RuntimeError("Could not get status")
 
@@ -347,7 +345,7 @@ class ConditionWave:
         """Get setup information."""
         self._check_channel_number(channel, allow_all=False)
         await self._send_command(f"get_setup @{channel:d}")
-        lines = await self._readlines(timeout_seconds=0.1)
+        lines = await self._readlines()
         if not lines:
             raise RuntimeError("Could not get setup")
 

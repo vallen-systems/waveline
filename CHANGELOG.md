@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- [conditionWave] Fix timeouts for multiline responses (`get_info`, `get_status`, `get_setup`)
+
 ## [0.4.1] - 2022-06-20
 
 ### Fixed

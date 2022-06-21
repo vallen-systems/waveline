@@ -692,12 +692,17 @@ class ConditionWave:
             records.append(record)
         return records
 
-    async def acquire(self, raw: bool = False) -> AsyncIterator[Union[AERecord, TRRecord]]:
+    async def acquire(
+        self,
+        raw: bool = False,
+        poll_interval_seconds: float = 0.05,
+    ) -> AsyncIterator[Union[AERecord, TRRecord]]:
         """
         High-level method to continuously acquire data.
 
         Args:
             raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
+            poll_interval_seconds: Pause between data polls in seconds
 
         Yields:
             AE and TR data records
@@ -724,9 +729,9 @@ class ConditionWave:
                 for tr_record in await self.get_tr_data(raw=raw):
                     yield tr_record
                 t = time.monotonic() - t
-                # avoid brute load
-                if t < 0.005:
-                    await asyncio.sleep(0.01)
+                # allow other tasks to run, prevent blocking the event loop
+                # https://docs.python.org/3/library/asyncio-task.html#sleeping
+                await asyncio.sleep(max(0, poll_interval_seconds - t))
         finally:
             await self.stop_acquisition()
 

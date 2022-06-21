@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `poll_interval_seconds` parameter for `SpotWave.acquire` and `ConditionWave.acquire` method
+
 ### Fixed
 
 - [conditionWave] Fix timeouts for multiline responses (`get_info`, `get_status`, `get_setup`)

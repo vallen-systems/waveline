@@ -535,12 +535,17 @@ class SpotWave:
 
         return records
 
-    def acquire(self, raw: bool = False) -> Iterator[Union[AERecord, TRRecord]]:
+    def acquire(
+        self,
+        raw: bool = False,
+        poll_interval_seconds: float = 0.01,
+    ) -> Iterator[Union[AERecord, TRRecord]]:
         """
         High-level method to continuously acquire data.
 
         Args:
             raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
+            poll_interval_seconds: Pause between data polls in seconds
 
         Yields:
             AE and TR data records
@@ -564,8 +569,8 @@ class SpotWave:
                 yield from self.get_tr_data(raw=raw)
                 t = time.monotonic() - t
                 # avoid brute load
-                if t < 0.005:
-                    time.sleep(0.01)
+                if t < poll_interval_seconds:
+                    time.sleep(poll_interval_seconds)
         finally:
             self.stop_acquisition()
 

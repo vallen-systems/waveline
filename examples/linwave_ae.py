@@ -69,16 +69,15 @@ async def main(ip: str):
 
         await lw.set_channel(channel=0, enabled=True)  # enabled all channels
         await lw.set_range(channel=0, range_volts=0.05)  # set input range to 50 mV
+        await lw.set_filter(channel=0, highpass=100e3, lowpass=450e3)  # 100-450 kHz bandpass
         await lw.set_continuous_mode(channel=0, enabled=False)  # -> hit-based
+        await lw.set_ddt(channel=0, microseconds=400)  # set duration discrimination time to 400 µs
         await lw.set_status_interval(channel=0, seconds=2)  # generate status data every 2 seconds
         await lw.set_threshold(channel=0, microvolts=1_000)  # 1000 µV = 60 dB(AE)
         await lw.set_tr_enabled(channel=0, enabled=True)  # enable transient data recording
-        await lw.set_tr_decimation(
-            channel=0, factor=10
-        )  # set decimation factor for transient data, 10 MHz / 10 = 1 MHz
+        await lw.set_tr_decimation(channel=0, factor=5)  # set decimation factor for transient data, 10 MHz / 10 = 1 MHz
         await lw.set_tr_pretrigger(channel=0, samples=200)  # 200 pre-trigger samples
         await lw.set_tr_postduration(channel=0, samples=200)  # 0 post-duration samples
-        await lw.set_filter(channel=0, highpass=100e3, lowpass=450e3)  # 100-450 kHz bandpass
 
         print(await lw.get_setup(channel=1))
         print(await lw.get_setup(channel=2))

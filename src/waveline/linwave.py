@@ -194,7 +194,7 @@ class LinWave:
         host = socket.gethostbyname(socket.gethostname())
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.bind((host, cls.PORT))
+        sock.bind((host, 0))  # random port for client
         sock.sendto(message, ("<broadcast>", cls.PORT))
 
         def get_response(timeout=timeout):

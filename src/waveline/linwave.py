@@ -790,7 +790,11 @@ class LinWave:
         interval = settings.decimation * blocksize / self.MAX_SAMPLERATE
 
         connection_task = asyncio.ensure_future(
-            asyncio.open_connection(self._address, port),
+            asyncio.open_connection(
+                self._address,
+                port,
+                limit=blocksize_bytes,  # reduces CPU load by 10-20 % (default: 65536)
+            ),
         )
         self._stream_connection_tasks.add(connection_task)
 

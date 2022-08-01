@@ -1,9 +1,6 @@
 import pytest
 from pytest import mark
 
-# all test coroutines will be treated as marked
-pytestmark = pytest.mark.asyncio
-
 
 async def test_connected(lw):
     assert lw.connected

@@ -34,6 +34,7 @@ addopts = "-ra -q --benchmark-columns=mean,stddev"
 testpaths = ["tests/unit"]
 log_cli = true
 log_cli_level = "WARNING"
+asyncio_mode = "auto"
 
 [tool.tox]
 legacy_tox_ini = """

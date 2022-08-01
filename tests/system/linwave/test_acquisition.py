@@ -3,9 +3,6 @@ from time import perf_counter
 
 import pytest
 
-# all test coroutines will be treated as marked
-pytestmark = pytest.mark.asyncio
-
 
 @pytest.mark.repeat(10)
 @pytest.mark.parametrize("channel", (1, 2))

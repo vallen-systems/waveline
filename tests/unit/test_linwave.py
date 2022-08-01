@@ -13,9 +13,6 @@ CLOCK = 10e6
 ADC_TO_VOLTS = [1.5625e-06, 0.00015625]
 ADC_TO_EU = [factor**2 * 1e14 / CLOCK for factor in ADC_TO_VOLTS]
 
-# all test coroutines will be treated as marked
-pytestmark = pytest.mark.asyncio
-
 wait_forever = lambda: asyncio.sleep(3600)
 
 

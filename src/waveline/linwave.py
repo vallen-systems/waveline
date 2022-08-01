@@ -737,7 +737,12 @@ class LinWave:
 
     @_require_connected
     def stream(
-        self, channel: int, blocksize: int, *, raw: bool = False
+        self,
+        channel: int,
+        blocksize: int,
+        *,
+        raw: bool = False,
+        timeout: Optional[float] = 5,
     ) -> AsyncIterator[Tuple[float, np.ndarray]]:
         """
         Async generator to stream channel data.
@@ -746,12 +751,16 @@ class LinWave:
             channel: Channel number [1, 2]
             blocksize: Number of samples per block
             raw: Return ADC values if `True`, skip conversion to volts
+            timeout: Timeout in seconds
 
         Yields:
             Tuple of
 
             - relative time in seconds (first block: t = 0)
             - data as numpy array in volts (or ADC values if `raw` is `True`)
+
+        Raises:
+            TimeoutError: If TCP socket read exceeds `timeout`, usually because of buffer overflows
 
         Example:
             >>> async with waveline.LinWave("192.168.0.100") as lw:
@@ -808,7 +817,10 @@ class LinWave:
             async def __anext__(self):
                 reader, _ = await self.get_reader_writer()
                 try:
-                    buffer = await reader.readexactly(blocksize_bytes)
+                    buffer = await asyncio.wait_for(
+                        reader.readexactly(blocksize_bytes),
+                        timeout=timeout,
+                    )
                     self._time += interval
                     data_adc = np.frombuffer(buffer, dtype=np.int16)
                     return (
@@ -816,6 +828,7 @@ class LinWave:
                         data_adc if raw else np.multiply(data_adc, to_volts, dtype=np.float32),
                     )
                 except asyncio.IncompleteReadError:
-                    pass  # eof
+                    logger.info(f"Stop streaming on channel {channel}: EOF reached")
+                    raise StopAsyncIteration from None
 
         return StreamGenerator()

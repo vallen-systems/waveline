@@ -52,7 +52,7 @@ class Output:
 def extract_features(signal: np.ndarray) -> Features:
     """Feature extraction."""
     peak = np.max(np.abs(signal))
-    rms = np.sqrt(np.mean(signal ** 2))
+    rms = np.sqrt(np.mean(signal**2))
     return Features(
         rms=rms,
         crest=peak / rms,

@@ -29,6 +29,7 @@ logging.basicConfig(level=logging.INFO)
 @dataclass
 class HitRecord(AERecord):
     """All fields from AERecord + fields for transient data."""
+
     samples: int
     data: np.ndarray
 

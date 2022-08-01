@@ -180,6 +180,7 @@ def test_threshold(sw, set_, expect):
     ),
 )
 def test_set_logging_mode(sw, set_, expect):
-    sw.clear_data_log();  # logging can not be enabled if internal memory isn't cleared
+    sw.clear_data_log()
+    # logging can not be enabled if internal memory isn't cleared
     sw.set_logging_mode(set_)
     assert sw.get_setup().logging == expect

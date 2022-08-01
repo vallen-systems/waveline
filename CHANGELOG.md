@@ -34,11 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [conditionWave/linWave] Fix timeouts for multiline responses (`get_info`, `get_status`, `get_setup`)
 
+
 ## [0.4.1] - 2022-06-20
 
 ### Fixed
 
 - [conditionWave] Increase TCP read timeout for `get_ae_data` / `get_tr_data` to prevent timeout errors
+
 
 ## [0.4.0] - 2022-05-17
 
@@ -57,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - [conditionWave] Wait for all stream connection before `start_acquisition`
+
 
 ## [0.3.0] - 2021-06-15
 
@@ -81,11 +84,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [conditionWave] ADC to volts conversion factor
 - [spotWave] Aggregate TR/AE records to prevent IO timeouts
 
+
 ## [0.2.0] - 2020-12-18
 
 First public release
 
-[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.5.0...HEAD
+[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.6.0...HEAD
+[0.6.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.3.0...0.4.0

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [0.6.0] - 2022-08-01
+
+### Changed
+
+- Timeout parameter for `LinWave.stream` method (to detect buffer overflows), default: 5 s
+
+### Fixed
+
+- Discovery port binding of client
+- Reduce CPU load in stream by setting TCP limit/buffer
+
+
 ## [0.5.0] - 2022-06-21
 
 ### Added

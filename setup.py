@@ -15,10 +15,11 @@ INSTALL_REQUIRES = [
 
 EXTRAS_REQUIRE = {
     "docs": [
-        "sphinx>3.1",
+        "sphinx>=5",
         "sphinx-autodoc-typehints",
-        "sphinx-rtd-theme",
+        "furo",
         "m2r2",  # include markdown files
+        "docutils<=0.18",  # 0.19 breaks m2r2: https://github.com/CrossNox/m2r2/pull/49
     ],
     "tests": [
         "asynctest",

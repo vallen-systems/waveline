@@ -9,12 +9,7 @@ import numpy as np
 
 @dataclass
 class AERecord:
-    """
-    AE data record, either status or hit data.
-
-    Todo:
-        - Documentation or data type with available hit flags
-    """
+    """AE data record, either status or hit data."""
 
     type_: str  #: Record type (hit or status data)
     channel: int  #: Channel number

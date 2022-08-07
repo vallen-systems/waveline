@@ -484,9 +484,6 @@ class SpotWave:
         """
         Get AE data records.
 
-        Todo:
-            - Implement parsing of record start marker
-
         Returns:
             List of AE data records (either status or hit data)
         """

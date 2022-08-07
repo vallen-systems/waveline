@@ -1,5 +1,5 @@
 """
-Module for conditionWave device.
+Module for conditionWave device (alias for :mod:`waveline.linwave`, *deprecated*).
 
 All device-related functions are exposed by the `ConditionWave` class.
 """

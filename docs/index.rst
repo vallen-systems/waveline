@@ -5,7 +5,7 @@ Library to easily interface with Vallen Systeme WaveLine™ devices using the pu
 
 .. autosummary::
     :caption: Library documentation
-    :toctree: generated
+    :toctree: _generated
     :recursive:
 
     waveline.spotwave
@@ -25,7 +25,6 @@ Library to easily interface with Vallen Systeme WaveLine™ devices using the pu
     :hidden:
 
     changelog
-    todo
 
 Indices and tables
 ------------------

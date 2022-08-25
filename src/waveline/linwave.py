@@ -368,6 +368,14 @@ class LinWave:
             tr_postduration_samples=as_int(setup_dict["tr_post_dur"]),
         )
 
+    async def _set_range_index(self, channel: int, range_index: int):
+        await self._send_command(f"set_adc_range {range_index:d} @{channel:d}")
+        if channel > 0:
+            self._channel_settings[channel].range_index = range_index
+        else:
+            self._channel_settings[1].range_index = range_index
+            self._channel_settings[2].range_index = range_index
+
     @_require_connected
     async def set_range(self, channel: int, range_volts: float):
         """
@@ -384,13 +392,22 @@ class LinWave:
             raise ValueError(f"Invalid range. Possible values: {self.RANGES}") from None
 
         logger.info(f"Set {_channel_str(channel)} range to {range_volts} V...")
-        await self._send_command(f"set_adc_range {range_index:d} @{channel:d}")
-        if channel > 0:
-            self._channel_settings[channel].range_index = range_index
-        else:
-            self._channel_settings[1].range_index = range_index
-            self._channel_settings[2].range_index = range_index
+        await self._set_range_index(channel, range_index)
 
+    @_require_connected
+    async def set_range_index(self, channel: int, range_index: int):
+        """
+        Set input range by index.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            range_index: Input range index (0: 0.05 V, 1: 5 V)
+        """
+        self._check_channel_number(channel)
+        logger.info(f"Set {_channel_str(channel)} range to index {range_index}...")
+        await self._set_range_index(channel, range_index)
+
+    @_require_connected
     async def set_channel(self, channel: int, enabled: bool):
         """
         Enable/disable channel.

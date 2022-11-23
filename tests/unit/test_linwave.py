@@ -80,7 +80,8 @@ async def test_get_info(mock_objects):
         b"range_count=2\n",
         b"max_sample_rate=10000000\n",
         b"adc2uv=1.5625 156.25\n",
-        wait_forever(),
+        b"\n",
+        TimeoutError,
     ]
     info = await lw.get_info()
     writer.write.assert_called_with(b"get_info\n")
@@ -99,7 +100,8 @@ async def test_get_status(mock_objects):
     reader.readline.side_effect = [
         b"temp=55\n",
         b"buffer_size=112014\n",
-        wait_forever(),
+        b"\n",
+        TimeoutError,
     ]
     status = await lw.get_status()
     writer.write.assert_called_with(b"get_status\n")
@@ -129,7 +131,7 @@ async def test_get_setup(mock_objects):
         b"tr_pre_trig=100\n",
         b"tr_post_dur=50\n",
         b"\n",
-        wait_forever(),
+        TimeoutError,
     ]
     setup = await lw.get_setup(1)
     writer.write.assert_called_with(b"get_setup @1\n")

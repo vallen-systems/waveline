@@ -283,7 +283,11 @@ class LinWave:
         )
 
     @_require_connected
-    async def _readlines(self, limit: Optional[int] = None) -> List[bytes]:
+    async def _readlines(
+        self,
+        limit: Optional[int] = None,
+        return_emptyline: bool = True,
+    ) -> List[bytes]:
         lines: List[bytes] = []
         while True:
             try:
@@ -294,12 +298,14 @@ class LinWave:
                     timeout=timeout_seconds,
                 )
                 lines.append(line)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 break
             if limit and len(lines) >= limit:
                 break
+            if return_emptyline and line == b"\n":
+                break
         return lines
-    
+
     @_require_connected
     async def identify(self, channel: int = 0):
         """

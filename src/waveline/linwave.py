@@ -299,6 +299,20 @@ class LinWave:
             if limit and len(lines) >= limit:
                 break
         return lines
+    
+    @_require_connected
+    async def identify(self, channel: int = 0):
+        """
+        Blink LEDs to identify device or single channel.
+
+        Args:
+            channel: Channel number (0 for all to identify device)
+
+        Note:
+            Available since firmware version 2.10.
+        """
+        self._check_channel_number(channel, allow_all=True)
+        await self._send_command(f"identify @{channel:d}")
 
     @_require_connected
     async def get_info(self) -> Info:
@@ -342,7 +356,12 @@ class LinWave:
 
     @_require_connected
     async def get_setup(self, channel: int) -> Setup:
-        """Get setup information."""
+        """
+        Get setup information.
+
+        Args:
+            channel: Channel number (0 for all channels)
+        """
         self._check_channel_number(channel, allow_all=False)
         await self._send_command(f"get_setup @{channel:d}")
         lines = await self._readlines()

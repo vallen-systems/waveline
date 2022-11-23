@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `LinWave.set_range_index` method
 - Pulsing example for linWave
+- `LinWave.identify` method to blind all LEDs or single channel to identify device/channel
 
 
 ## [0.6.0] - 2022-08-01

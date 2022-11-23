@@ -65,6 +65,12 @@ async def test_default_settings(mock_objects):
     writer.write.assert_has_calls(expected_calls, any_order=True)
 
 
+async def test_identify(mock_objects):
+    lw, _, writer = mock_objects
+    await lw.identify(channel=2)
+    writer.write.assert_called_with(b"identify @2\n")
+
+
 async def test_get_info(mock_objects):
     lw, reader, writer = mock_objects
     reader.readline.side_effect = [

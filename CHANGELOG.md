@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `LinWave.set_range_index` method
+- Pulsing example for linWave
 
 
 ## [0.6.0] - 2022-08-01

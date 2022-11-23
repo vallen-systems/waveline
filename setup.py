@@ -4,8 +4,7 @@ from setuptools import find_packages, setup
 
 HERE = Path(__file__).parent
 
-with open(HERE / "README.md", encoding="utf-8") as f:
-    LONG_DESCRIPTION = f.read()
+LONG_DESCRIPTION = (HERE / "README.md").read_text("utf-8")
 
 INSTALL_REQUIRES = [
     "numpy",
@@ -22,7 +21,7 @@ EXTRAS_REQUIRE = {
         "docutils<=0.18",  # 0.19 breaks m2r2: https://github.com/CrossNox/m2r2/pull/49
     ],
     "tests": [
-        "asynctest",
+        "asyncmock>=0.4.2; python_version<'3.8'",
         "coverage[toml]>=5",  # pyproject.toml support
         "freezegun",
         "pytest>=6",  # pyproject.toml support
@@ -61,6 +60,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
     ],
     keywords=[

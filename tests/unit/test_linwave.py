@@ -2,9 +2,13 @@ import asyncio
 from typing import NamedTuple
 from unittest.mock import call, patch
 
+try:
+    from unittest.mock import AsyncMock, Mock
+except ImportError:
+    from asyncmock import AsyncMock, Mock  # for Python < 3.8
+
 import numpy as np
 import pytest
-from asynctest import CoroutineMock, Mock  # alternative to unittest.mock.AsyncMock in Python >=3.8
 from numpy.testing import assert_allclose
 
 from waveline import LinWave
@@ -13,27 +17,25 @@ CLOCK = 10e6
 ADC_TO_VOLTS = [1.5625e-06, 0.00015625]
 ADC_TO_EU = [factor**2 * 1e14 / CLOCK for factor in ADC_TO_VOLTS]
 
-wait_forever = lambda: asyncio.sleep(3600)
-
 
 class MockedObjects(NamedTuple):
     lw: LinWave
-    reader: CoroutineMock
-    writer: CoroutineMock
+    reader: AsyncMock
+    writer: AsyncMock
 
 
 @pytest.fixture(autouse=True, name="mock_objects")
 async def mock_linwave_with_asyncio_connection():
-    with patch("asyncio.open_connection", new=CoroutineMock()) as mock_create_connection:
+    with patch("asyncio.open_connection", new=AsyncMock()) as mock_create_connection:
         mock_reader = Mock(spec=asyncio.StreamReader)
         mock_writer = Mock(spec=asyncio.StreamWriter)
         mock_create_connection.return_value = (mock_reader, mock_writer)
 
         # LinWave.connect will call _check_firmware_version and _get_adc_to_volts
         with patch.object(
-            LinWave, "_check_firmware_version", new=CoroutineMock()
+            LinWave, "_check_firmware_version", new=AsyncMock()
         ) as method_firmware_version, patch.object(
-            LinWave, "_get_adc_to_volts", new=CoroutineMock()
+            LinWave, "_get_adc_to_volts", new=AsyncMock()
         ) as method_adc_to_volts:
             method_firmware_version.return_value = None
             method_adc_to_volts.return_value = ADC_TO_VOLTS
@@ -373,7 +375,7 @@ async def test_get_ae_data(mock_objects):
         b"S Ch=1 T=20000000 A=0 R=0 D=10000000 C=0 E=38788614 TRAI=0 flags=0\n",
         b"H Ch=2 T=43686000 A=31004 R=496 D=703 C=4 E=74860056830 TRAI=1 flags=0\n",
         b"\n",
-        wait_forever(),
+        TimeoutError,
     ]
 
     ae_data = await lw.get_ae_data()
@@ -419,7 +421,7 @@ async def test_get_tr_data(mock_objects, raw):
         b"Ch=1 TRAI=1 T=43686000 NS=13\n",
         b"Ch=2 TRAI=2 T=43686983 NS=27\n",
         b"\n",
-        wait_forever(),
+        TimeoutError,
     ]
     data = [np.arange(samples, dtype=np.int16) for samples in (13, 27)]
     binary_data = [arr.tobytes() for arr in data]

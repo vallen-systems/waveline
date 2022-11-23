@@ -10,7 +10,6 @@ use_parentheses = true
 [tool.pylint.message_control]
 disable = [
     "import-error",
-    "bad-continuation",
     "missing-module-docstring",
     "missing-function-docstring",
     "logging-fstring-interpolation",
@@ -39,7 +38,7 @@ asyncio_mode = "auto"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = black, isort, pylint, mypy, py36, py37, py38, py39, py310, coverage-report
+envlist = black, isort, pylint, mypy, py36, py37, py38, py39, py310, py311, coverage-report
 
 [testenv:black]
 skip_install = true
@@ -70,7 +69,7 @@ commands = mypy src/
 [testenv]
 extras = tests
 commands = 
-    coverage run --parallel -m pytest --benchmark-skip
+    coverage run -m pytest --benchmark-disable
 
 [testenv:coverage-report]
 skip_install = true
@@ -101,6 +100,7 @@ commands =
 
 [tool.coverage.run]
 branch = true
+parallel = true
 source = ["waveline"]
 
 [tool.coverage.paths]

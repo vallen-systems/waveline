@@ -9,21 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `LinWave.set_range_index` method
-- Pulsing example for linWave
-- `LinWave.identify` method to blind all LEDs or single channel to identify device/channel
+- [linwave] Add `set_range_index` method
+- [linwave] Add Pulsing example for linWave
+- [linwave] Add `identify` method to blind all LEDs or single channel to identify device/channel
 
 
 ## [0.6.0] - 2022-08-01
 
 ### Changed
 
-- Timeout parameter for `LinWave.stream` method (to detect buffer overflows), default: 5 s
+- [linwave] Timeout parameter for `LinWave.stream` method (to detect buffer overflows), default: 5 s
 
 ### Fixed
 
-- Discovery port binding of client
-- Reduce CPU load in stream by setting TCP limit/buffer
+- [linwave] Discovery port binding of client
+- [linwave] Reduce CPU load in stream by setting TCP limit/buffer
 
 
 ## [0.5.0] - 2022-06-21
@@ -38,56 +38,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- [conditionWave/linWave] Fix timeouts for multiline responses (`get_info`, `get_status`, `get_setup`)
+- [linwave] Fix timeouts for multiline responses (`get_info`, `get_status`, `get_setup`)
 
 
 ## [0.4.1] - 2022-06-20
 
 ### Fixed
 
-- [conditionWave] Increase TCP read timeout for `get_ae_data` / `get_tr_data` to prevent timeout errors
+- [linwave] Increase TCP read timeout for `get_ae_data` / `get_tr_data` to prevent timeout errors
 
 
 ## [0.4.0] - 2022-05-17
 
 ### Added
 
-- [conditionWave] Add all commands of new firmware (hit-based acquisition, pulsing, ...)
-- [conditionWave] Add example for hit-based acquisition
+- [linwave] Add all commands of new firmware (hit-based acquisition, pulsing, ...)
+- [linwave] Add example for hit-based acquisition
 - Add Python 3.9 and 3.10 to CI pipeline
 
 ### Changed
 
-- [conditionWave] Rename `set_decimation` method to `set_tr_decimation`
-- [conditionWave] Remove `get_temperature` and `get_buffersize` method (replace with `get_status` method)
+- [linwave] Rename `set_decimation` method to `set_tr_decimation`
+- [linwave] Remove `get_temperature` and `get_buffersize` method (replace with `get_status` method)
 - [spotWave] Rename `stream` method to `acquire`. `stream` method is still an alias but deprecated and will be removed in the future
 
 ### Fixed
 
-- [conditionWave] Wait for all stream connection before `start_acquisition`
+- [linwave] Wait for all stream connection before `start_acquisition`
 
 
 ## [0.3.0] - 2021-06-15
 
 ### Added
 
-- [conditionWave] Multi-channel example
-- [conditionWave] Optional `start` argument (timestamp) for `stream`
+- [linwave] Multi-channel example
+- [linwave] Optional `start` argument (timestamp) for `stream`
 - [spotWave] Add examples
 - [spotWave] Add firmware check
 
 ### Changed
 
-- [conditionWave] Channel arguments for `set_range`, `set_decimation` and `set_filter`
+- [linwave] Channel arguments for `set_range`, `set_decimation` and `set_filter`
 - [spotWave] `set_status_interval` with seconds instead of milliseconds
 - [spotWave] Require firmware >= 00.25
 
 ### Removed
-- [conditionWave] Properties `input_range`, `decimation`, `filter_settings`
+- [linwave] Properties `input_range`, `decimation`, `filter_settings`
 
 ### Fixed
 
-- [conditionWave] ADC to volts conversion factor
+- [linwave] ADC to volts conversion factor
 - [spotWave] Aggregate TR/AE records to prevent IO timeouts
 
 

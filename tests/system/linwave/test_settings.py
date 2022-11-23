@@ -1,5 +1,4 @@
 import pytest
-from pytest import mark
 
 
 async def test_connected(lw):
@@ -17,37 +16,37 @@ async def test_get_status(lw):
     await lw.get_status()
 
 
-@mark.parametrize("channel", [1, 2])
+@pytest.mark.parametrize("channel", [1, 2])
 class TestChannelSettings:
     async def test_get_setup(self, lw, channel):
         await lw.get_setup(channel)
 
-    @mark.parametrize("range_volts", [0.05, 5])
+    @pytest.mark.parametrize("range_volts", [0.05, 5])
     async def test_set_range(self, lw, channel, range_volts):
         await lw.set_range(channel, range_volts)
         assert (await lw.get_setup(channel)).adc_range_volts == range_volts
 
-    @mark.parametrize("range_volts", [-1, 0, 0.5])
+    @pytest.mark.parametrize("range_volts", [-1, 0, 0.5])
     async def test_set_range_invalid(self, lw, channel, range_volts):
         with pytest.raises(ValueError):
             await lw.set_range(channel, range_volts)
 
-    @mark.parametrize("enabled", [False, True])
+    @pytest.mark.parametrize("enabled", [False, True])
     async def test_set_channel(self, lw, channel, enabled):
         await lw.set_channel(channel, enabled)
         assert (await lw.get_setup(channel)).enabled == enabled
 
-    @mark.parametrize("enabled", [False, True])
+    @pytest.mark.parametrize("enabled", [False, True])
     async def test_set_continuous_mode(self, lw, channel, enabled):
         await lw.set_continuous_mode(channel, enabled)
         assert (await lw.get_setup(channel)).continuous_mode == enabled
 
-    @mark.parametrize("ddt_microseconds", [400, 10_000])
+    @pytest.mark.parametrize("ddt_microseconds", [400, 10_000])
     async def test_set_ddt(self, lw, channel, ddt_microseconds):
         await lw.set_ddt(channel, ddt_microseconds)
         assert (await lw.get_setup(channel)).ddt_seconds == ddt_microseconds / 1e6
 
-    @mark.parametrize(
+    @pytest.mark.parametrize(
         "set_, expect",
         (
             (0, 0),
@@ -60,12 +59,12 @@ class TestChannelSettings:
         await lw.set_status_interval(channel, set_)
         assert (await lw.get_setup(channel)).status_interval_seconds == expect
 
-    @mark.parametrize("enabled", [False, True])
+    @pytest.mark.parametrize("enabled", [False, True])
     async def test_set_tr_enabled(self, lw, channel, enabled):
         await lw.set_tr_enabled(channel, enabled)
         assert (await lw.get_setup(channel)).tr_enabled == enabled
 
-    @mark.parametrize(
+    @pytest.mark.parametrize(
         "set_, expect",
         (
             (-1, 1),
@@ -79,7 +78,7 @@ class TestChannelSettings:
         await lw.set_tr_decimation(channel, set_)
         assert (await lw.get_setup(channel)).tr_decimation == expect
 
-    @mark.parametrize(
+    @pytest.mark.parametrize(
         "set_, expect",
         (
             (0, 0),
@@ -91,7 +90,7 @@ class TestChannelSettings:
         await lw.set_tr_pretrigger(channel, set_)
         assert (await lw.get_setup(channel)).tr_pretrigger_samples == expect
 
-    @mark.parametrize(
+    @pytest.mark.parametrize(
         "set_, expect",
         (
             (0, 0),
@@ -103,7 +102,7 @@ class TestChannelSettings:
         await lw.set_tr_postduration(channel, set_)
         assert (await lw.get_setup(channel)).tr_postduration_samples == expect
 
-    @mark.parametrize(
+    @pytest.mark.parametrize(
         "set_, expect",
         (
             ((50, 300, 8), (50, 300, 8)),

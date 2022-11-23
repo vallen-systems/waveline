@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pytest import mark
+import pytest
 
 
 def test_get_info(sw):
@@ -17,7 +17,7 @@ def test_get_status(sw):
     assert sw.get_status()  # valid, non-empty response
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "set_, expect",
     (
         (False, False),
@@ -29,7 +29,7 @@ def test_set_continuous_mode(sw, set_, expect):
     assert sw.get_setup().cont_enabled == expect
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "set_, expect",
     (
         (-1, 0),
@@ -43,7 +43,7 @@ def test_set_ddt(sw, set_, expect):
     assert sw.get_setup().ddt_seconds == expect / 1e6
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "set_, expect",
     (
         (-1, 0),
@@ -57,7 +57,7 @@ def test_set_status_interval(sw, set_, expect):
     assert sw.get_setup().status_interval_seconds == expect
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "set_, expect",
     (
         (False, False),
@@ -69,7 +69,7 @@ def test_set_tr_enabled(sw, set_, expect):
     assert sw.get_setup().tr_enabled == expect
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "set_, expect",
     (
         (-1, 1),
@@ -85,7 +85,7 @@ def test_set_tr_decimation(sw, set_, expect):
     assert sw.get_setup().tr_decimation == expect
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "set_, expect",
     (
         (-5, 0),
@@ -99,7 +99,7 @@ def test_set_tr_pretrigger(sw, set_, expect):
     assert sw.get_setup().tr_pretrigger_samples == expect
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "set_, expect, ddt",
     (
         (0, 0, 1000),
@@ -112,7 +112,7 @@ def test_set_tr_postduration(sw, set_, expect, ddt):
     assert sw.get_setup().tr_postduration_samples == expect
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "set_, expect",
     (
         ((50, 300, 8), (50, 300, 8)),
@@ -145,7 +145,7 @@ def test_set_datetime(sw):
     assert sw.get_status().datetime == timestamp
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "set_, expect",
     (
         (-1, 0),
@@ -159,7 +159,7 @@ def test_threshold(sw, set_, expect):
     assert sw.get_setup().threshold_volts == expect / 1e6
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "set_, expect",
     (
         (False, False),

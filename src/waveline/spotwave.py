@@ -189,6 +189,15 @@ class SpotWave:
         )
         return [port.name for port in ports_spotwave]
 
+    def identify(self):
+        """
+        Blink LED to identify device.
+
+        Note:
+            Available since firmware version 00.2D.
+        """
+        self._send_command("identify")
+
     def _readlines(self, timeout: float = 0.1):
         """Read lines using custom timeout."""
         with self._timeout_context(timeout):

@@ -194,6 +194,9 @@ def test_commands_without_response(serial_mock):
     def assert_write(expected):
         serial_mock.write.assert_called_with(expected)
 
+    sw.identify()
+    assert_write(b"identify\n")
+
     sw.set_continuous_mode(True)
     assert_write(b"set_acq cont 1\n")
 

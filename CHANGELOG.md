@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- [linwave] Add `set_range_index` method
+- [linwave] Add `LinWave.set_range_index` method
 - [linwave] Add Pulsing example for linWave
-- [linwave] Add `identify` method to blind all LEDs or single channel to identify device/channel
+- [linwave] Add `LinWave.identify` method to blind all LEDs or single channel to identify device/channel
+- [spotwave] Add `LinWave.identify` method to blind LED
 - Add Python 3.11 to CI pipeline
 
 ### Changed

@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [linwave] Add `identify` method to blind all LEDs or single channel to identify device/channel
 - Add Python 3.11 to CI pipeline
 
+### Changed
+
+- [spotwave] Remove `cct_seconds` field in `get_setup` response `Setup`
+
 
 ## [0.6.0] - 2022-08-01
 

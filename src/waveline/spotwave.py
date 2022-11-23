@@ -62,7 +62,6 @@ class Setup:
     tr_decimation: int  #: Decimation factor for transient data
     tr_pretrigger_samples: int  #: Pre-trigger samples for transient data
     tr_postduration_samples: int  #: Post-duration samples for transient data
-    cct_seconds: float  #: Coupling check transmitter (CCT) / pulser interval in seconds
 
 
 class SpotWave:
@@ -255,7 +254,6 @@ class SpotWave:
             tr_decimation=as_int(setup_dict["tr_decimation"]),
             tr_pretrigger_samples=as_int(setup_dict["tr_pre_trig"]),
             tr_postduration_samples=as_int(setup_dict["tr_post_dur"]),
-            cct_seconds=as_float(setup_dict["cct"]),
         )
 
     def get_status(self) -> Status:

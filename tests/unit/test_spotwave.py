@@ -66,18 +66,17 @@ def test_get_setup(serial_mock):
         b"recording=1\n",
         b"logging=0\n",
         b"adc2uv=1.74\n",
-        b"cct=-0.5 s\n",
-        b"filter=10.5-350 kHz, order 4\n",
+        b"filter=10.5 - 350 kHz, order 4\n",
         b"cont=0\n",
         b"thr=3162.5 uV\n",
         b"ddt=250  us\n",
-        b"dummy line without value",
-        b" status_interval = 1000 ms ",
+        b"dummy line without value",  # modified on puporse
+        b" status_interval = 1000 ms\n",  # modified on purpose
         b"tr_enabled=1\n",
         b"tr_decimation=2\n",
         b"tr_pre_trig=100\n",
         b"tr_post_dur=100\n",
-        b"tr_max_samples=2097152\n",
+        b"\n",
     ]
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
@@ -97,25 +96,24 @@ def test_get_setup(serial_mock):
         tr_decimation=2,
         tr_pretrigger_samples=100,
         tr_postduration_samples=100,
-        cct_seconds=-0.5,
     )
 
     # test special filter outputs
-    response[4] = b"filter=none-350 kHz, order 4\n"
+    response[3] = b"filter=none-350 kHz, order 4\n"
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
     assert setup.filter_highpass_hz == None
     assert setup.filter_lowpass_hz == 350_000
     assert setup.filter_order == 4
 
-    response[4] = b"filter=10.5-none kHz, order 4\n"
+    response[3] = b"filter=10.5-none kHz, order 4\n"
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
     assert setup.filter_highpass_hz == 10_500
     assert setup.filter_lowpass_hz == None
     assert setup.filter_order == 4
 
-    response[4] = b"filter=none-none kHz, order 0\n"
+    response[3] = b"filter=none-none kHz, order 0\n"
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
     assert setup.filter_highpass_hz == None
@@ -132,16 +130,27 @@ def test_get_info(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
-        b"fw_version=00.21\n",
+        b"fw_version=00.2C\n",
         b"type=spotWave\n",
         b"model=201\n",
+        b"adc2uv=1.74 uV\n",
         b"input_range=94 dBAE\n",
+        b"input_resistance=16 kOhm\n",
+        b"input_capacity=12 pF\n",
+        b"max_samplerate=2 MHz\n",
+        b"analog_bandwidth=20-500 kHz\n",
+        b"cct_voltage=3.3 V\n",
+        b"flash_memory=64 MB\n",
+        b"serial_number=0007\n",
+        b"pcb_vid=200505-06-0123\n",
+        b"verification=2021-01-01 06:41:09.54\n",
+        b"\n",
     ]
     serial_mock.readlines.return_value = response
     info = sw.get_info()
     serial_mock.write.assert_called_with(b"get_info\n")
 
-    assert info.firmware_version == "00.21"
+    assert info.firmware_version == "00.2C"
     assert info.type_ == "spotWave"
     assert info.model == "201"
     assert info.input_range_decibel == 94

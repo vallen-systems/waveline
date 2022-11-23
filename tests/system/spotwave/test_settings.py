@@ -115,19 +115,6 @@ def test_set_tr_postduration(sw, set_, expect, ddt):
 @mark.parametrize(
     "set_, expect",
     (
-        (0, 0),
-        (-1, -1),
-        (0.1, 0.1),
-    ),
-)
-def test_set_cct(sw, set_, expect):
-    sw.set_cct(set_)
-    assert sw.get_setup().cct_seconds == expect
-
-
-@mark.parametrize(
-    "set_, expect",
-    (
         ((50, 300, 8), (50, 300, 8)),
         ((50, None, 8), (50, None, 8)),  # highpass
         ((50, 0, 8), (50, None, 8)),  # highpass

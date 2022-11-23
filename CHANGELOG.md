@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - [spotwave] Remove `cct_seconds` field in `get_setup` response `Setup`
+- [spotwave] Make `readlines` method private
 
 
 ## [0.6.0] - 2022-08-01

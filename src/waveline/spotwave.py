@@ -189,14 +189,14 @@ class SpotWave:
         )
         return [port.name for port in ports_spotwave]
 
-    def readlines(self):
-        # read lines using short timeout
-        with self._timeout_context(0.1):
+    def _readlines(self, timeout: float = 0.1):
+        """Read lines using custom timeout."""
+        with self._timeout_context(timeout):
             return self._ser.readlines()
 
     def clear_buffer(self):
         """Clear input and output buffer."""
-        self.readlines()
+        self._readlines()
         self._ser.reset_input_buffer()
         self._ser.reset_output_buffer()
 
@@ -213,7 +213,7 @@ class SpotWave:
             Dataclass with device information
         """
         self._send_command("get_info")
-        lines = self.readlines()
+        lines = self._readlines()
         if not lines:
             raise RuntimeError("Could not get device information")
 
@@ -233,7 +233,7 @@ class SpotWave:
             Dataclass with setup information
         """
         self._send_command("get_setup")
-        lines = self.readlines()
+        lines = self._readlines()
         if not lines:
             raise RuntimeError("Could not get setup")
 
@@ -264,7 +264,7 @@ class SpotWave:
             Dataclass with status information
         """
         self._send_command("get_status")
-        lines = self.readlines()
+        lines = self._readlines()
         if not lines:
             raise RuntimeError("Could not get status")
 

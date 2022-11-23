@@ -17,8 +17,7 @@ EXTRAS_REQUIRE = {
         "sphinx>=5",
         "sphinx-autodoc-typehints",
         "furo",
-        "m2r2",  # include markdown files
-        "docutils<=0.18",  # 0.19 breaks m2r2: https://github.com/CrossNox/m2r2/pull/49
+        "myst-parser",  # include markdown files
     ],
     "tests": [
         "asyncmock>=0.4.2; python_version<'3.8'",

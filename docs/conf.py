@@ -24,7 +24,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx_autodoc_typehints",
-    "m2r2",
+    "myst_parser",
 ]
 
 source_suffix = [".rst", ".md"]

@@ -58,36 +58,21 @@ $ .venv\Scripts\activate  # Windows
 
 # Install package (editable) and all development tools
 $ pip install -e .[dev]
-```
 
-Run auto-formatter:
-
-```shell
+# Run auto-formatter
 $ black .
 $ isort .
-```
 
-Run linter:
-
-```shell
+# Run linter
 $ pylint src/
-```
 
-Run the test suite in the current environment:
-
-```shell
+# Run the test suite in the current environment
 $ pytest
-```
 
-Run the CI pipeline (checks and tests) for all targeted (and installed) Python versions with tox:
-
-```shell
+# Run the CI pipeline (checks and tests) for all targeted (and installed) Python versions with tox
 $ tox
-```
 
-Build the documentation with [sphinx](https://www.sphinx-doc.org):
-
-```shell
+# Build the documentation
 $ cd docs
 $ sphinx-build . _build
 ```

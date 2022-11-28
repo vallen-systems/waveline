@@ -22,7 +22,7 @@ from typing import Dict
 
 import numpy as np
 
-from waveline import LinWave, AERecord, TRRecord
+from waveline import AERecord, LinWave, TRRecord
 
 logging.basicConfig(level=logging.INFO)
 
@@ -75,7 +75,7 @@ async def main(ip: str):
         await lw.set_status_interval(channel=0, seconds=2)  # generate status data every 2 seconds
         await lw.set_threshold(channel=0, microvolts=1_000)  # 1000 µV = 60 dB(AE)
         await lw.set_tr_enabled(channel=0, enabled=True)  # enable transient data recording
-        await lw.set_tr_decimation(channel=0, factor=5)  # set decimation factor for transient data, 10 MHz / 10 = 1 MHz
+        await lw.set_tr_decimation(channel=0, factor=5)  # decimation factor, 10 MHz / 10 = 1 MHz
         await lw.set_tr_pretrigger(channel=0, samples=200)  # 200 pre-trigger samples
         await lw.set_tr_postduration(channel=0, samples=200)  # 0 post-duration samples
 

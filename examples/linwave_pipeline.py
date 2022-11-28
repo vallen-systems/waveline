@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from asyncua import Server
+
 from waveline import LinWave
 
 SAMPLERATE = 1_000_000  # 1 MHz

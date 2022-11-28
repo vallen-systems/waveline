@@ -15,6 +15,7 @@ from waveline.spotwave import AERecord
     ),
 )
 def test_get_data(sw, samples):
+    sw.set_tr_decimation(1)
     data = sw.get_data(samples)
     assert len(data) == samples
 
@@ -92,7 +93,7 @@ def test_acq_continuous_tr_loss(sw, ddt_us, decimation, duration_acq):
     sw.set_status_interval(0)
     sw.clear_buffer()
 
-    for record in sw.stream():
+    for record in sw.acquire():
         if isinstance(record, AERecord):
             assert record.trai != 0, f"TR loss after {record.time} seconds"
         if record.time > duration_acq:
@@ -108,7 +109,7 @@ def test_logging_only_status(sw, duration_acq):
     sw.set_logging_mode(True)
     sw.set_status_interval(status_interval_seconds)
     sw.set_threshold(10_000_000)  # above range
-    assert sw.get_setup().logging == True
+    assert sw.get_setup().logging is True
 
     sw.start_acquisition()
     sleep(duration_acq)
@@ -127,7 +128,7 @@ def test_logging_continuous(sw, duration_acq):
     sw.set_logging_mode(True)
     sw.set_ddt(ddt_seconds * 1e6)
     sw.set_status_interval(0)
-    assert sw.get_setup().logging == True
+    assert sw.get_setup().logging is True
 
     sw.start_acquisition()
     sleep(duration_acq)

@@ -29,7 +29,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --benchmark-columns=mean,stddev"
+addopts = "-q --benchmark-columns=mean,stddev"
 testpaths = ["tests/unit"]
 log_cli = true
 log_cli_level = "WARNING"

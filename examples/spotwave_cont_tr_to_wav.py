@@ -7,7 +7,6 @@ import queue
 import threading
 import time
 import wave
-from dataclasses import asdict
 from datetime import datetime
 
 import numpy as np

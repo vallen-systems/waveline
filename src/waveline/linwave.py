@@ -298,7 +298,7 @@ class LinWave:
                     timeout=timeout_seconds,
                 )
                 lines.append(line)
-            except TimeoutError:
+            except (TimeoutError, asyncio.TimeoutError):
                 break
             if limit and len(lines) >= limit:
                 break

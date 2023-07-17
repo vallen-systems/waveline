@@ -1,3 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "waveline"
+version = "0.6.0"
+description = "Library to easily interface with Vallen Systeme WaveLine™ devices"
+authors = [{ name = "Lukas Berbuer", email = "software@vallen.de" }]
+readme = "README.md"
+license = { text = "MIT License" }
+requires-python = ">=3.6"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+]
+keywords = [
+    "Vallen",
+    "Acoustic Emission",
+    "ultrasonic",
+    "data acquisition",
+    "WaveLine",
+    "conditionWave",
+    "linWave",
+    "spotWave",
+]
+dependencies = [
+    "numpy",
+    "pyserial>=3",
+    "dataclasses>=0.6; python_version<'3.7'",
+]
+
+[project.optional-dependencies]
+docs = [
+    "sphinx>=5",
+    "sphinx-autodoc-typehints",
+    "furo",
+    "myst-parser",  # include markdown files
+]
+tests = [
+    "asyncmock>=0.4.2; python_version<'3.8'",
+    "coverage[toml]>=5",  # pyproject.toml support
+    "freezegun",
+    "pytest>=6",  # pyproject.toml support
+    "pytest-asyncio",
+    "pytest-benchmark",
+    "pytest-repeat",
+]
+tools = [
+    "black",
+    "mypy>=0.9",  # pyproject.toml support
+    "ruff>=0.0.278",
+    "tox>=3.4",  # pyproject.toml support
+]
+dev = [
+    "waveline[docs,tests,tools]", # recursive dependency since pip 21.2
+]
+
+[project.urls]
+Changelog = "https://github.com/vallen-systems/pyWaveLine/blob/master/CHANGELOG.md"
+Source = "https://github.com/vallen-systems/pyWaveLine"
+Issues = "https://github.com/vallen-systems/pyWaveLine/issues"
+
 [tool.black]
 line-length = 100
 
@@ -56,6 +131,7 @@ asyncio_mode = "auto"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
+isolated_build = True
 envlist = black, isort, pylint, mypy, py36, py37, py38, py39, py310, py311, coverage-report
 
 [testenv:black]

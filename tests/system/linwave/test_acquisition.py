@@ -119,6 +119,28 @@ async def test_acq_continuous_mode(lw, channel):
         assert record.samples == expected_samples
 
 
+@pytest.mark.xfail(reason="only available since firmware version 2.13")
+@pytest.mark.parametrize("channel", (0, 1, 2))
+@pytest.mark.parametrize("samples", (0, 1_000, 1_000_000))
+@pytest.mark.parametrize("pretrigger_samples", (0, 1_000))
+async def test_acq_tr_snapshot(lw, channel, samples, pretrigger_samples):
+    await lw.set_tr_decimation(0, 1)
+    records = await lw.get_tr_snapshot(channel, samples, pretrigger_samples)
+
+    if channel == 0:
+        assert len(records) == 2
+        assert records[0] == 1
+        assert records[1] == 2
+    else:
+        assert len(records) == 1
+        assert records[0] == channel
+
+    for record in records:
+        assert record.trai == 0
+        assert record.time == 0
+        assert record.samples == samples + pretrigger_samples
+
+
 @pytest.mark.parametrize("count", (2, 4))
 @pytest.mark.parametrize("interval", (0.1, 0.5))
 @pytest.mark.parametrize("channel", (1, 2))

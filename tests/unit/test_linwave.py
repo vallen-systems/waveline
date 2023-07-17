@@ -515,3 +515,34 @@ async def test_get_tr_data(mock_objects, raw):
         assert_allclose(tr_data[1].data, data[1])
     else:
         assert_allclose(tr_data[1].data, data[1] * adc_to_volts)
+
+
+async def test_get_tr_snapshot(mock_objects):
+    lw, reader, writer = mock_objects
+    reader.readline.side_effect = [
+        b"Ch=1 NS=20 NB=40\n",
+        b"Ch=2 NS=20 NB=40\n",
+        b"\n",
+        TimeoutError,
+    ]
+    data = [np.arange(samples, dtype=np.int16) for samples in (20, 20)]
+    binary_data = [arr.tobytes() for arr in data]
+
+    reader.readexactly.side_effect = binary_data
+
+    tr_data = await lw.get_tr_snapshot(0, samples=20, pretrigger_samples=0, raw=True)
+    writer.write.assert_called_with(b"get_tr_snapshot 20 @0\n")
+
+    assert tr_data[0].channel == 1
+    assert tr_data[0].trai == 0
+    assert tr_data[0].time == 0
+    assert tr_data[0].samples == 20
+    assert tr_data[0].raw == True
+    assert_allclose(tr_data[0].data, data[0])
+
+    assert tr_data[1].channel == 2
+    assert tr_data[1].trai == 0
+    assert tr_data[1].time == 0
+    assert tr_data[1].samples == 20
+    assert tr_data[1].raw == True
+    assert_allclose(tr_data[1].data, data[1])

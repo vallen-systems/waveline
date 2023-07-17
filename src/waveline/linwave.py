@@ -705,21 +705,11 @@ class LinWave:
                 logger.warning(f"Unknown AE data record: {line}")
         return records
 
-    @_require_connected
-    async def get_tr_data(self, raw: bool = False) -> List[TRRecord]:
-        """
-        Get transient data records.
-
-        Args:
-            raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
-
-        Returns:
-            List of transient data records
-        """
-        await self._send_command("get_tr_data")
+    async def _read_tr_records(self, raw: bool) -> List[TRRecord]:
         records = []
         while True:
             headerline = await self._readline(timeout_seconds=1)
+            print(headerline)
             if headerline == b"\n":  # last line is an empty new line
                 break
 
@@ -742,14 +732,61 @@ class LinWave:
 
             record = TRRecord(
                 channel=channel,
-                trai=int(matches[b"TRAI"]),
-                time=int(matches[b"T"]) / self.MAX_SAMPLERATE,
+                trai=int(matches.get(b"TRAI", 0)),
+                time=int(matches.get(b"T", 0)) / self.MAX_SAMPLERATE,
                 samples=samples,
                 data=data,
                 raw=raw,
             )
             records.append(record)
         return records
+
+    @_require_connected
+    async def get_tr_data(self, raw: bool = False) -> List[TRRecord]:
+        """
+        Get transient data records.
+
+        Args:
+            raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
+
+        Returns:
+            List of transient data records
+        """
+        await self._send_command("get_tr_data")
+        return await self._read_tr_records(raw=raw)
+
+    @_require_connected
+    async def get_tr_snapshot(
+        self, channel: int, samples: int, pretrigger_samples: int = 0, *, raw: bool = False
+    ) -> List[TRRecord]:
+        """
+        Get snapshot of transient data.
+
+        The recording starts with the execution of the command.
+        The total number of samples is the sum of `samples` and the `pretrigger_samples`.
+        The trai and time of the returned records are always `0`.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            samples: Number of samples to read
+            pretrigger_samples: Number of samples to read before the execution of the command
+            raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
+
+        Returns:
+            List of transient data records
+        """
+        self._check_channel_number(channel)
+        decimations = {settings.decimation for settings in self._channel_settings.values()}
+        if channel == 0 and len(decimations) > 1:
+            raise ValueError(
+                "TR decimation must be equal for all channels (current limitation of the firmware)"
+            )
+        assert len(decimations) == 1
+        decimation = decimations.pop()
+        samplerate = self.MAX_SAMPLERATE / decimation
+        await asyncio.sleep(samples / samplerate)
+        await self._send_command(f"get_tr_snapshot {(samples + pretrigger_samples):d} @{channel:d}")
+        return await self._read_tr_records(raw=raw)
 
     async def acquire(
         self,

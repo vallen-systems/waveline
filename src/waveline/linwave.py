@@ -10,7 +10,7 @@ import socket
 import time
 from dataclasses import dataclass, replace
 from functools import wraps
-from typing import AsyncIterator, List, Optional, Set, Tuple, Union
+from typing import AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, Union
 from warnings import warn
 
 import numpy as np
@@ -19,8 +19,8 @@ from ._common import (
     KV_PATTERN,
     as_float,
     as_int,
-    multiline_output_to_dict,
     dict_get_first,
+    multiline_output_to_dict,
     parse_array,
     parse_filter_setup_line,
 )
@@ -140,7 +140,7 @@ class LinWave:
     RANGES = (0.05, 5.0)
 
     _DEFAULT_SETTINGS = _ChannelSettings(range_index=0, decimation=1)  #: Default settings
-    _RANGE_INDEX = {
+    _RANGE_INDEX: ClassVar[Dict[float, int]] = {
         0.05: 0,  # 50 mV
         5.0: 1,  # 5 V
     }  #: Mapping of range in volts and range index
@@ -222,12 +222,12 @@ class LinWave:
 
         def get_response(timeout=timeout):
             sock.settimeout(timeout)
-            while True:
-                try:
+            try:
+                while True:
                     _, (ip, _) = sock.recvfrom(1024)
                     yield ip
-                except socket.timeout:
-                    break
+            except socket.timeout:
+                return
 
         ip_addresses = list(get_response())
         if host in ip_addresses:
@@ -296,8 +296,8 @@ class LinWave:
         return_emptyline: bool = True,
     ) -> List[bytes]:
         lines: List[bytes] = []
-        while True:
-            try:
+        try:
+            while True:
                 # long timeout (1000 ms) for first line, then short timeouts (100 ms)
                 timeout_seconds = 1.0 if not lines else 0.1
                 line = await asyncio.wait_for(
@@ -305,12 +305,12 @@ class LinWave:
                     timeout=timeout_seconds,
                 )
                 lines.append(line)
-            except (TimeoutError, asyncio.TimeoutError):
-                break
-            if limit and len(lines) >= limit:
-                break
-            if return_emptyline and line == b"\n":
-                break
+                if limit and len(lines) >= limit:
+                    break
+                if return_emptyline and line == b"\n":
+                    break
+        except (TimeoutError, asyncio.TimeoutError):
+            ...
         return lines
 
     @_require_connected
@@ -641,7 +641,7 @@ class LinWave:
         """
         self._check_channel_number(channel)
         if count % 2 != 0:
-            warn("Number of pulse counts should be even")
+            warn("Number of pulse counts should be even", stacklevel=1)
         logger.info(
             f"Start pulsing on {_channel_str(channel)} ("
             f"interval: {interval} s, "

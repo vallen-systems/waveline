@@ -13,7 +13,6 @@ import logging
 from dataclasses import asdict
 
 import numpy as np
-
 from waveline import SpotWave
 from waveline.spotwave import AERecord, TRRecord
 
@@ -53,7 +52,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        ...
+    main()

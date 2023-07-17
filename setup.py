@@ -30,9 +30,8 @@ EXTRAS_REQUIRE = {
     ],
     "tools": [
         "black",
-        "isort",
         "mypy>=0.9",  # pyproject.toml support
-        "pylint>=2.5",  # pyproject.toml support
+        "ruff>=0.0.278",
         "tox>=3.4",  # pyproject.toml support
     ],
 }

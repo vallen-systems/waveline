@@ -21,7 +21,6 @@ from dataclasses import asdict, dataclass
 from typing import Dict
 
 import numpy as np
-
 from waveline import AERecord, LinWave, TRRecord
 
 logging.basicConfig(level=logging.INFO)
@@ -91,7 +90,4 @@ if __name__ == "__main__":
     parser.add_argument("ip", help="IP address of linWave device")
     args = parser.parse_args()
 
-    try:
-        asyncio.run(main(args.ip))
-    except KeyboardInterrupt:
-        ...
+    asyncio.run(main(args.ip))

@@ -10,7 +10,6 @@ except ImportError:
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-
 from waveline.linwave import Info, LinWave
 
 CLOCK = 10e6
@@ -36,13 +35,13 @@ async def mock_linwave_with_asyncio_connection():
         try:
             with patch.object(LinWave, "get_info", new=AsyncMock()) as mock_get_info:
                 mock_get_info.return_value = Info(
-                    hardware_id = "E8EB1B3D9E76",
-                    firmware_version = "2.13",
-                    fpga_version = "3.3",
-                    channel_count = 2,
-                    input_range = ["50 mV", "5 V"],
-                    max_sample_rate = 10_000_000,
-                    adc_to_volts = [1.5625e-6, 156.25e-6],
+                    hardware_id="E8EB1B3D9E76",
+                    firmware_version="2.13",
+                    fpga_version="3.3",
+                    channel_count=2,
+                    input_range=["50 mV", "5 V"],
+                    max_sample_rate=10_000_000,
+                    adc_to_volts=[1.5625e-6, 156.25e-6],
                 )
                 await lw.connect()  # get_info called during connect to get adc2uv, firmware, ...
 
@@ -162,15 +161,15 @@ async def test_get_setup(mock_objects):
 
     assert setup.adc_range_volts == 0.05
     assert setup.adc_to_volts == 1.5625e-6
-    assert setup.filter_highpass_hz == None
+    assert setup.filter_highpass_hz is None
     assert setup.filter_lowpass_hz == 300e3
     assert setup.filter_order == 8
-    assert setup.enabled == True
-    assert setup.continuous_mode == False
+    assert setup.enabled is True
+    assert setup.continuous_mode is False
     assert setup.threshold_volts == 100e-6
     assert setup.ddt_seconds == 500e-6
     assert setup.status_interval_seconds == 0.1
-    assert setup.tr_enabled == True
+    assert setup.tr_enabled is True
     assert setup.tr_decimation == 2
     assert setup.tr_pretrigger_samples == 100
     assert setup.tr_postduration_samples == 50
@@ -204,26 +203,26 @@ async def test_get_setup_since_v2_13(mock_objects):
 
     assert setup.adc_range_volts == 0.05
     assert setup.adc_to_volts == 1.5625e-6
-    assert setup.filter_highpass_hz == None
+    assert setup.filter_highpass_hz is None
     assert setup.filter_lowpass_hz == 300e3
     assert setup.filter_order == 8
-    assert setup.enabled == True
-    assert setup.continuous_mode == False
+    assert setup.enabled is True
+    assert setup.continuous_mode is False
     assert setup.threshold_volts == 100e-6
     assert setup.ddt_seconds == 500e-6
     assert setup.status_interval_seconds == 0.1
-    assert setup.tr_enabled == True
+    assert setup.tr_enabled is True
     assert setup.tr_decimation == 2
     assert setup.tr_pretrigger_samples == 100
     assert setup.tr_postduration_samples == 50
 
 
 @pytest.mark.parametrize(
-    "channel, enabled, command",
-    (
+    ("channel", "enabled", "command"),
+    [
         (0, True, b"set_acq enabled 1 @0\n"),
         (1, False, b"set_acq enabled 0 @1\n"),
-    ),
+    ],
 )
 async def test_set_channel(mock_objects, channel, enabled, command):
     lw, _, writer = mock_objects
@@ -232,12 +231,12 @@ async def test_set_channel(mock_objects, channel, enabled, command):
 
 
 @pytest.mark.parametrize(
-    "channel, value, command",
-    (
+    ("channel", "value", "command"),
+    [
         (0, 0.05, b"set_adc_range 0 @0\n"),
         (1, 5, b"set_adc_range 1 @1\n"),
         (2, 5, b"set_adc_range 1 @2\n"),
-    ),
+    ],
 )
 async def test_set_range(mock_objects, channel, value, command):
     lw, _, writer = mock_objects
@@ -246,12 +245,12 @@ async def test_set_range(mock_objects, channel, value, command):
 
 
 @pytest.mark.parametrize(
-    "channel, index, command",
-    (
+    ("channel", "index", "command"),
+    [
         (0, 0, b"set_adc_range 0 @0\n"),
         (1, 1, b"set_adc_range 1 @1\n"),
         (2, 1, b"set_adc_range 1 @2\n"),
-    ),
+    ],
 )
 async def test_set_range_index(mock_objects, channel, index, command):
     lw, _, writer = mock_objects
@@ -259,24 +258,24 @@ async def test_set_range_index(mock_objects, channel, index, command):
     writer.write.assert_called_with(command)
 
 
-@pytest.mark.parametrize("channel", (-1, 3))
+@pytest.mark.parametrize("channel", [-1, 3])
 async def test_set_range_invalid_channel(mock_objects, channel):
     with pytest.raises(ValueError):
         await mock_objects.lw.set_range(channel, 0.05)
 
 
-@pytest.mark.parametrize("value", (-1, 0, 11))
+@pytest.mark.parametrize("value", [-1, 0, 11])
 async def test_set_range_invalid_value(mock_objects, value):
     with pytest.raises(ValueError):
         await mock_objects.lw.set_range(0, value)
 
 
 @pytest.mark.parametrize(
-    "channel, enabled, command",
-    (
+    ("channel", "enabled", "command"),
+    [
         (0, True, b"set_acq cont 1 @0\n"),
         (2, False, b"set_acq cont 0 @2\n"),
-    ),
+    ],
 )
 async def test_set_continuous_mode(mock_objects, channel, enabled, command):
     lw, _, writer = mock_objects
@@ -285,11 +284,11 @@ async def test_set_continuous_mode(mock_objects, channel, enabled, command):
 
 
 @pytest.mark.parametrize(
-    "channel, microseconds, command",
-    (
+    ("channel", "microseconds", "command"),
+    [
         (0, 0, b"set_acq ddt 0 @0\n"),
         (1, 200, b"set_acq ddt 200 @1\n"),
-    ),
+    ],
 )
 async def test_set_ddt(mock_objects, channel, microseconds, command):
     lw, _, writer = mock_objects
@@ -298,12 +297,12 @@ async def test_set_ddt(mock_objects, channel, microseconds, command):
 
 
 @pytest.mark.parametrize(
-    "channel, seconds, command",
-    (
+    ("channel", "seconds", "command"),
+    [
         (0, 0, b"set_acq status_interval 0 @0\n"),
         (1, 0.01, b"set_acq status_interval 10 @1\n"),
         (2, 10, b"set_acq status_interval 10000 @2\n"),
-    ),
+    ],
 )
 async def test_set_status_interval(mock_objects, channel, seconds, command):
     lw, _, writer = mock_objects
@@ -312,11 +311,11 @@ async def test_set_status_interval(mock_objects, channel, seconds, command):
 
 
 @pytest.mark.parametrize(
-    "channel, enabled, command",
-    (
+    ("channel", "enabled", "command"),
+    [
         (0, True, b"set_acq tr_enabled 1 @0\n"),
         (1, False, b"set_acq tr_enabled 0 @1\n"),
-    ),
+    ],
 )
 async def test_set_tr_enabled(mock_objects, channel, enabled, command):
     lw, _, writer = mock_objects
@@ -325,13 +324,13 @@ async def test_set_tr_enabled(mock_objects, channel, enabled, command):
 
 
 @pytest.mark.parametrize(
-    "channel, value, command",
-    (
+    ("channel", "value", "command"),
+    [
         (0, 1, b"set_acq tr_decimation 1 @0\n"),
         (1, 4, b"set_acq tr_decimation 4 @1\n"),
         (2, 8, b"set_acq tr_decimation 8 @2\n"),
         (0, 1000, b"set_acq tr_decimation 1000 @0\n"),
-    ),
+    ],
 )
 async def test_set_tr_decimation(mock_objects, channel, value, command):
     lw, _, writer = mock_objects
@@ -339,20 +338,20 @@ async def test_set_tr_decimation(mock_objects, channel, value, command):
     writer.write.assert_called_with(command)
 
 
-@pytest.mark.parametrize("channel", (-1, 3))
+@pytest.mark.parametrize("channel", [-1, 3])
 async def test_set_tr_decimation_invalid_channel(mock_objects, channel):
     with pytest.raises(ValueError):
         await mock_objects.lw.set_tr_decimation(channel, 1)
 
 
 @pytest.mark.parametrize(
-    "channel, highpass, lowpass, order, command",
-    (
+    ("channel", "highpass", "lowpass", "order", "command"),
+    [
         (0, None, None, 4, b"set_filter none none 4 @0\n"),
         (1, 0, 0, 0, b"set_filter 0.0 0.0 0 @1\n"),
         (1, 10e3, 350e3, 8, b"set_filter 10.0 350.0 8 @1\n"),
         (2, 10e3, None, 8, b"set_filter 10.0 none 8 @2\n"),
-    ),
+    ],
 )
 async def test_set_filter(mock_objects, channel, highpass, lowpass, order, command):
     lw, _, writer = mock_objects
@@ -360,18 +359,18 @@ async def test_set_filter(mock_objects, channel, highpass, lowpass, order, comma
     writer.write.assert_called_with(command)
 
 
-@pytest.mark.parametrize("channel", (-1, 3))
+@pytest.mark.parametrize("channel", [-1, 3])
 async def test_set_filter_invalid_channel(mock_objects, channel):
     with pytest.raises(ValueError):
         await mock_objects.lw.set_filter(channel, 50e3, 300e3, 4)
 
 
 @pytest.mark.parametrize(
-    "channel, samples, command",
-    (
+    ("channel", "samples", "command"),
+    [
         (0, 0, b"set_acq tr_pre_trig 0 @0\n"),
         (1, 200, b"set_acq tr_pre_trig 200 @1\n"),
-    ),
+    ],
 )
 async def test_set_tr_pretrigger(mock_objects, channel, samples, command):
     lw, _, writer = mock_objects
@@ -380,11 +379,11 @@ async def test_set_tr_pretrigger(mock_objects, channel, samples, command):
 
 
 @pytest.mark.parametrize(
-    "channel, samples, command",
-    (
+    ("channel", "samples", "command"),
+    [
         (0, 0, b"set_acq tr_post_dur 0 @0\n"),
         (2, 1000, b"set_acq tr_post_dur 1000 @2\n"),
-    ),
+    ],
 )
 async def test_set_tr_postduration(mock_objects, channel, samples, command):
     lw, _, writer = mock_objects
@@ -393,11 +392,11 @@ async def test_set_tr_postduration(mock_objects, channel, samples, command):
 
 
 @pytest.mark.parametrize(
-    "channel, threshold, command",
-    (
+    ("channel", "threshold", "command"),
+    [
         (0, 0, b"set_acq thr 0 @0\n"),
         (2, 0.1, b"set_acq thr 0.1 @2\n"),
-    ),
+    ],
 )
 async def test_set_threshold(mock_objects, channel, threshold, command):
     lw, _, writer = mock_objects
@@ -414,11 +413,11 @@ async def test_start_stop_acquisition(mock_objects):
 
 
 @pytest.mark.parametrize(
-    "channel, interval, count, cycles, command",
-    (
+    ("channel", "interval", "count", "cycles", "command"),
+    [
         (0, 1, 4, 1, b"start_pulsing 1 4 1 @0\n"),
         (1, 0.1, 0, 0, b"start_pulsing 0.1 0 0 @1\n"),
-    ),
+    ],
 )
 async def test_start_pulsing(mock_objects, channel, interval, count, cycles, command):
     lw, _, writer = mock_objects
@@ -477,7 +476,7 @@ async def test_get_ae_data(mock_objects):
     assert h.flags == 0
 
 
-@pytest.mark.parametrize("raw", (False, True))
+@pytest.mark.parametrize("raw", [False, True])
 async def test_get_tr_data(mock_objects, raw):
     lw, reader, writer = mock_objects
     reader.readline.side_effect = [
@@ -537,12 +536,12 @@ async def test_get_tr_snapshot(mock_objects):
     assert tr_data[0].trai == 0
     assert tr_data[0].time == 0
     assert tr_data[0].samples == 20
-    assert tr_data[0].raw == True
+    assert tr_data[0].raw is True
     assert_allclose(tr_data[0].data, data[0])
 
     assert tr_data[1].channel == 2
     assert tr_data[1].trai == 0
     assert tr_data[1].time == 0
     assert tr_data[1].samples == 20
-    assert tr_data[1].raw == True
+    assert tr_data[1].raw is True
     assert_allclose(tr_data[1].data, data[1])

@@ -61,7 +61,7 @@ def parse_filter_setup_line(line: str):
     def khz_or_none(k):
         try:
             return 1e3 * float(match.group(k))
-        except:  # pylint: disable=bare-except
+        except:  # noqa
             return None
 
     return khz_or_none("hp"), khz_or_none("lp"), int(match.group("order"))

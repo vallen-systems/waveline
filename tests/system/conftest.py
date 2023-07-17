@@ -15,11 +15,11 @@ def pytest_addoption(parser):
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def duration_acq(pytestconfig):
     return pytestconfig.getoption("duration_acq")
 
 
-@pytest.fixture
+@pytest.fixture()
 def linwave_ip(pytestconfig):
     return pytestconfig.getoption("linwave_ip")

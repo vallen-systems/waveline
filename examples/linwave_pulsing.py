@@ -11,7 +11,6 @@ import asyncio
 import logging
 
 import matplotlib.pyplot as plt
-
 from waveline import LinWave
 
 logging.basicConfig(level=logging.INFO)

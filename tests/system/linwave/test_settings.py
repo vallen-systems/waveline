@@ -47,13 +47,13 @@ class TestChannelSettings:
         assert (await lw.get_setup(channel)).ddt_seconds == ddt_microseconds / 1e6
 
     @pytest.mark.parametrize(
-        "set_, expect",
-        (
+        ("set_", "expect"),
+        [
             (0, 0),
             (-1, 0),
             (1, 1),
             (100, 100),
-        ),
+        ],
     )
     async def test_set_status_interval(self, lw, channel, set_, expect):
         await lw.set_status_interval(channel, set_)
@@ -65,46 +65,46 @@ class TestChannelSettings:
         assert (await lw.get_setup(channel)).tr_enabled == enabled
 
     @pytest.mark.parametrize(
-        "set_, expect",
-        (
+        ("set_", "expect"),
+        [
             (-1, 1),
             (0, 1),
             (1, 1),
             (10, 10),
             (11.1, 11),
-        ),
+        ],
     )
     async def test_set_tr_decimation(self, lw, channel, set_, expect):
         await lw.set_tr_decimation(channel, set_)
         assert (await lw.get_setup(channel)).tr_decimation == expect
 
     @pytest.mark.parametrize(
-        "set_, expect",
-        (
+        ("set_", "expect"),
+        [
             (0, 0),
             (-1, 0),
             (100, 100),
-        ),
+        ],
     )
     async def test_set_tr_pretrigger(self, lw, channel, set_, expect):
         await lw.set_tr_pretrigger(channel, set_)
         assert (await lw.get_setup(channel)).tr_pretrigger_samples == expect
 
     @pytest.mark.parametrize(
-        "set_, expect",
-        (
+        ("set_", "expect"),
+        [
             (0, 0),
             (-1, 0),
             (100, 100),
-        ),
+        ],
     )
     async def test_set_tr_postduration(self, lw, channel, set_, expect):
         await lw.set_tr_postduration(channel, set_)
         assert (await lw.get_setup(channel)).tr_postduration_samples == expect
 
     @pytest.mark.parametrize(
-        "set_, expect",
-        (
+        ("set_", "expect"),
+        [
             ((50, 300, 8), (50, 300, 8)),
             ((50, None, 8), (50, None, 8)),  # highpass
             ((50, 0, 8), (50, None, 8)),  # highpass
@@ -114,7 +114,7 @@ class TestChannelSettings:
             ((0, 0, 8), (None, None, 0)),  # bypass
             ((50, 10_000, 8), (50, None, 8)),  # lowpass > nyquist -> highpass
             ((400, 300, 8), (400, None, 8)),  # highpass > lowpass -> highpass
-        ),
+        ],
     )
     async def test_set_filter(self, lw, channel, set_, expect):
         await lw.set_tr_decimation(channel, 1)  # max. sampling rate -> nyquist = 5 MHz

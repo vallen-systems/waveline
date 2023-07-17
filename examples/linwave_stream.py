@@ -4,7 +4,6 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
-
 from waveline import LinWave
 
 logging.basicConfig(level=logging.INFO)
@@ -20,8 +19,8 @@ async def main(ip: str, samplerate: int, blocksize: int):
         stream = lw.stream(channel=1, blocksize=blocksize)  # open streaming port before start acq
         await lw.start_acquisition()
 
-        with ThreadPoolExecutor(max_workers=1) as pool:
-            loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor(max_workers=1):
+            asyncio.get_event_loop()
             async for _, y in stream:
                 # execute (longer) blocking operations in the thread pool, e.g.:
                 # Y = await loop.run_in_executor(pool, lambda y: np.abs(np.fft.rfft(y)), y)
@@ -55,7 +54,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    try:
-        asyncio.run(main(args.ip, args.samplerate, args.blocksize))
-    except KeyboardInterrupt:
-        ...
+    asyncio.run(main(args.ip, args.samplerate, args.blocksize))

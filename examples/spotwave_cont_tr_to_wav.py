@@ -10,7 +10,6 @@ import wave
 from datetime import datetime
 
 import numpy as np
-
 from waveline import SpotWave
 from waveline.spotwave import AERecord, TRRecord
 
@@ -61,7 +60,7 @@ def main(basename: str, seconds_per_file: float):
             while trqueue:
                 try:
                     tr = trqueue.get(timeout=0.1)
-                except queue.Empty:
+                except queue.Empty:  # noqa
                     continue
                 if chunks >= chunks_per_file:
                     logger.info(f"{chunks_per_file} chunks acquired")
@@ -80,9 +79,8 @@ def main(basename: str, seconds_per_file: float):
             for record in sw.acquire(raw=True):  # return ADC values with enabled raw flag
                 if isinstance(record, TRRecord):
                     trqueue.put(record)
-                elif isinstance(record, AERecord):
-                    if record.trai == 0 or record.flags > 0:
-                        missed += 1
+                elif isinstance(record, AERecord) and (record.trai == 0 or record.flags > 0):
+                    missed += 1
 
                 if missed > 0 and time.monotonic() - last_t > 1:
                     logger.warning(f"Missed {missed} record(s)")
@@ -93,7 +91,4 @@ def main(basename: str, seconds_per_file: float):
 
 
 if __name__ == "__main__":
-    try:
-        main("trtest", 5)
-    except KeyboardInterrupt:
-        ...
+    main("trtest", 5)

@@ -1,18 +1,17 @@
 from time import sleep
 
 import pytest
-
 from waveline.spotwave import AERecord
 
 
 @pytest.mark.parametrize(
     "samples",
-    (
+    [
         10,
         1024,
         65536,
         200_000,
-    ),
+    ],
 )
 def test_get_data(sw, samples):
     sw.set_tr_decimation(1)
@@ -20,7 +19,7 @@ def test_get_data(sw, samples):
     assert len(data) == samples
 
 
-@pytest.mark.parametrize("status_interval_seconds", (0.1, 0.2))
+@pytest.mark.parametrize("status_interval_seconds", [0.1, 0.2])
 def test_acq_only_status(sw, status_interval_seconds):
     sw.set_threshold(10_000_000)  # above range
     sw.set_continuous_mode(False)
@@ -41,7 +40,7 @@ def test_acq_only_status(sw, status_interval_seconds):
         assert record.trai == 0
 
 
-@pytest.mark.parametrize("tr_enabled", (False, True))
+@pytest.mark.parametrize("tr_enabled", [False, True])
 def test_acq_continuous(sw, tr_enabled):
     ddt_seconds = 0.01  # 10 ms
     acq_duration = 0.1
@@ -83,8 +82,8 @@ def test_acq_continuous(sw, tr_enabled):
 
 
 @pytest.mark.xfail(reason="continous mode, especiall with high sampling rates, is unspecified")
-@pytest.mark.parametrize("ddt_us", (1000, 2500, 5000, 10_000, 25_000, 50_000, 100_000))
-@pytest.mark.parametrize("decimation", (1, 2, 4))
+@pytest.mark.parametrize("ddt_us", [1000, 2500, 5000, 10_000, 25_000, 50_000, 100_000])
+@pytest.mark.parametrize("decimation", [1, 2, 4])
 def test_acq_continuous_tr_loss(sw, ddt_us, decimation, duration_acq):
     sw.set_continuous_mode(True)
     sw.set_ddt(ddt_us)

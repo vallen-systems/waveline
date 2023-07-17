@@ -11,7 +11,7 @@ import pkg_resources
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "waveline"
-copyright = f"{date.today().year}, Vallen Systeme GmbH"
+copyright = f"{date.today().year}, Vallen Systeme GmbH"  # noqa
 author = "Lukas Berbuer (Vallen Systeme GmbH)"
 release = pkg_resources.get_distribution("waveline").version
 

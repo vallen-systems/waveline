@@ -26,7 +26,7 @@ def multiline_output_to_dict_orig(lines):
     return defaultdict(
         str,
         [
-            (lambda k, v="": [k.strip(), v.strip()])(*line.decode().split("=", maxsplit=1))
+            (lambda k, v="": [k.strip(), v.strip()])(*line.decode().split("=", maxsplit=1))  # noqa
             for line in lines
         ],
     )
@@ -83,7 +83,7 @@ def multiline_output_to_dict_regex2(lines):
 )
 @pytest.mark.parametrize(
     "function",
-    (
+    [
         multiline_output_to_dict_orig,
         multiline_output_to_dict_partition,
         multiline_output_to_dict_split,
@@ -91,7 +91,7 @@ def multiline_output_to_dict_regex2(lines):
         multiline_output_to_dict_part_simple_no_strip,
         multiline_output_to_dict_regex1,
         multiline_output_to_dict_regex2,
-    ),
+    ],
 )
 def test_multiline_output(benchmark, function):
     benchmark(function, MULTILINE_OUTPUT)

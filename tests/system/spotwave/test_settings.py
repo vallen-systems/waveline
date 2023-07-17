@@ -18,11 +18,11 @@ def test_get_status(sw):
 
 
 @pytest.mark.parametrize(
-    "set_, expect",
-    (
+    ("set_", "expect"),
+    [
         (False, False),
         (True, True),
-    ),
+    ],
 )
 def test_set_continuous_mode(sw, set_, expect):
     sw.set_continuous_mode(set_)
@@ -30,13 +30,13 @@ def test_set_continuous_mode(sw, set_, expect):
 
 
 @pytest.mark.parametrize(
-    "set_, expect",
-    (
+    ("set_", "expect"),
+    [
         (-1, 0),
         (1000, 1000),
         (100_000, 100_000),
         (1_000_000, 1_000_000),  # TODO: should be set to max of 100_000
-    ),
+    ],
 )
 def test_set_ddt(sw, set_, expect):
     sw.set_ddt(set_)
@@ -44,13 +44,13 @@ def test_set_ddt(sw, set_, expect):
 
 
 @pytest.mark.parametrize(
-    "set_, expect",
-    (
+    ("set_", "expect"),
+    [
         (-1, 0),
         (0.01, 0.01),
         (2, 2),
         (3600, 3600),
-    ),
+    ],
 )
 def test_set_status_interval(sw, set_, expect):
     sw.set_status_interval(set_)
@@ -58,11 +58,11 @@ def test_set_status_interval(sw, set_, expect):
 
 
 @pytest.mark.parametrize(
-    "set_, expect",
-    (
+    ("set_", "expect"),
+    [
         (False, False),
         (True, True),
-    ),
+    ],
 )
 def test_set_tr_enabled(sw, set_, expect):
     sw.set_tr_enabled(set_)
@@ -70,15 +70,15 @@ def test_set_tr_enabled(sw, set_, expect):
 
 
 @pytest.mark.parametrize(
-    "set_, expect",
-    (
+    ("set_", "expect"),
+    [
         (-1, 1),
         (0, 1),
         (1, 1),
         (10, 10),
         (11.1, 11),
         (1_000_000, 1_000_000),
-    ),
+    ],
 )
 def test_set_tr_decimation(sw, set_, expect):
     sw.set_tr_decimation(set_)
@@ -86,13 +86,13 @@ def test_set_tr_decimation(sw, set_, expect):
 
 
 @pytest.mark.parametrize(
-    "set_, expect",
-    (
+    ("set_", "expect"),
+    [
         (-5, 0),
         (0, 0),
         (2000, 2000),
         (10000, 10000),  # TODO: limit to 2000 / decimation
-    ),
+    ],
 )
 def test_set_tr_pretrigger(sw, set_, expect):
     sw.set_tr_pretrigger(set_)
@@ -100,11 +100,11 @@ def test_set_tr_pretrigger(sw, set_, expect):
 
 
 @pytest.mark.parametrize(
-    "set_, expect, ddt",
-    (
+    ("set_", "expect", "ddt"),
+    [
         (0, 0, 1000),
         (2000, 2000, 1000),  # TODO: limit to DDT
-    ),
+    ],
 )
 def test_set_tr_postduration(sw, set_, expect, ddt):
     sw.set_ddt(ddt)
@@ -113,8 +113,8 @@ def test_set_tr_postduration(sw, set_, expect, ddt):
 
 
 @pytest.mark.parametrize(
-    "set_, expect",
-    (
+    ("set_", "expect"),
+    [
         ((50, 300, 8), (50, 300, 8)),
         ((50, None, 8), (50, None, 8)),  # highpass
         ((50, 0, 8), (50, None, 8)),  # highpass
@@ -125,7 +125,7 @@ def test_set_tr_postduration(sw, set_, expect, ddt):
         ((50, 2000, 8), (50, None, 8)),  # lowpass freq > nyquist -> highpass
         ((50, 300, 3), (None, None, 0)),  # invalid order -> disable
         ((400, 300, 8), (None, None, 0)),  # invalid filter freqs -> disable
-    ),
+    ],
 )
 def test_set_filter(sw, set_, expect):
     sw.set_filter(
@@ -146,13 +146,13 @@ def test_set_datetime(sw):
 
 
 @pytest.mark.parametrize(
-    "set_, expect",
-    (
+    ("set_", "expect"),
+    [
         (-1, 0),
         (0, 0),
         (100, 100),
         (1_000_000, 1_000_000),
-    ),
+    ],
 )
 def test_threshold(sw, set_, expect):
     sw.set_threshold(set_)
@@ -160,11 +160,11 @@ def test_threshold(sw, set_, expect):
 
 
 @pytest.mark.parametrize(
-    "set_, expect",
-    (
+    ("set_", "expect"),
+    [
         (False, False),
         (True, True),
-    ),
+    ],
 )
 def test_set_logging_mode(sw, set_, expect):
     sw.clear_data_log()

@@ -18,6 +18,7 @@ from waveline import AERecord, LinWave, TRRecord
 
 logging.basicConfig(level=logging.INFO)
 
+
 async def main(ip: str):
     async with LinWave(ip) as lw:
         print(await lw.get_info())
@@ -49,7 +50,4 @@ if __name__ == "__main__":
     parser.add_argument("ip", help="IP address of linWave device")
     args = parser.parse_args()
 
-    try:
-        asyncio.run(main(args.ip))
-    except KeyboardInterrupt:
-        ...
+    asyncio.run(main(args.ip))

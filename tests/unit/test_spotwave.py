@@ -6,7 +6,6 @@ import pytest
 from freezegun import freeze_time
 from numpy.testing import assert_allclose
 from serial import Serial, SerialException
-
 from waveline import SpotWave
 from waveline.spotwave import Setup
 
@@ -102,7 +101,7 @@ def test_get_setup(serial_mock):
     response[3] = b"filter=none-350 kHz, order 4\n"
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
-    assert setup.filter_highpass_hz == None
+    assert setup.filter_highpass_hz is None
     assert setup.filter_lowpass_hz == 350_000
     assert setup.filter_order == 4
 
@@ -110,14 +109,14 @@ def test_get_setup(serial_mock):
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
     assert setup.filter_highpass_hz == 10_500
-    assert setup.filter_lowpass_hz == None
+    assert setup.filter_lowpass_hz is None
     assert setup.filter_order == 4
 
     response[3] = b"filter=none-none kHz, order 0\n"
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
-    assert setup.filter_highpass_hz == None
-    assert setup.filter_lowpass_hz == None
+    assert setup.filter_highpass_hz is None
+    assert setup.filter_lowpass_hz is None
     assert setup.filter_order == 0
 
     # empty response
@@ -176,8 +175,8 @@ def test_get_status(serial_mock):
     serial_mock.write.assert_called_with(b"get_status\n")
 
     assert status.temperature == 24
-    assert status.recording == False
-    assert status.logging == False
+    assert status.recording is False
+    assert status.logging is False
     assert status.log_data_usage == 13
     assert status.datetime == datetime(2020, 12, 17, 15, 11, 42, 170_000)
 
@@ -288,7 +287,7 @@ def test_get_ae_data(serial_mock):
     assert h.flags == 0
 
 
-@pytest.mark.parametrize("raw", (False, True))
+@pytest.mark.parametrize("raw", [False, True])
 def test_get_tr_data(serial_mock, raw):
     sw = SpotWave(serial_mock)
 
@@ -327,14 +326,14 @@ def test_get_tr_data(serial_mock, raw):
         assert_allclose(tr_data[1].data, data[1] * ADC_TO_VOLTS)
 
 
-@pytest.mark.parametrize("raw", (False, True))
+@pytest.mark.parametrize("raw", [False, True])
 @pytest.mark.parametrize(
     "samples",
-    (
+    [
         32,
         128,
         65536,
-    ),
+    ],
 )
 def test_get_data(serial_mock, samples, raw):
     sw = SpotWave(serial_mock)

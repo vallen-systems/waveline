@@ -17,7 +17,6 @@ from dataclasses import dataclass
 
 import numpy as np
 from asyncua import Server
-
 from waveline import LinWave
 
 SAMPLERATE = 1_000_000  # 1 MHz
@@ -136,7 +135,4 @@ if __name__ == "__main__":
     parser.add_argument("ip", help="IP address of linWave device")
     args = parser.parse_args()
 
-    try:
-        asyncio.run(main(args.ip))
-    except KeyboardInterrupt:
-        ...
+    asyncio.run(main(args.ip))

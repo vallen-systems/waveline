@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.mark.repeat(10)
-@pytest.mark.parametrize("channel", (1, 2))
+@pytest.mark.parametrize("channel", [1, 2])
 async def test_acq_stream_pause(lw, channel):
     stream = lw.stream(channel, blocksize=1000)
 
@@ -33,8 +33,8 @@ async def test_acq_stream_pause(lw, channel):
     await stream.aclose()
 
 
-@pytest.mark.parametrize("decimation", (1, 2, 5, 10, 50, 100))
-@pytest.mark.parametrize("channel", (1, 2))
+@pytest.mark.parametrize("decimation", [1, 2, 5, 10, 50, 100])
+@pytest.mark.parametrize("channel", [1, 2])
 async def test_acq_stream_decimation(lw, channel, decimation, duration_acq):
     samplerate = lw.MAX_SAMPLERATE / decimation
     block_size = 10_000
@@ -60,8 +60,8 @@ async def test_acq_stream_decimation(lw, channel, decimation, duration_acq):
     assert time_elapsed == pytest.approx(duration_acq, rel=0.05)
 
 
-@pytest.mark.parametrize("status_interval_seconds", (0, 0.1, 0.2))
-@pytest.mark.parametrize("channel", (1, 2))
+@pytest.mark.parametrize("status_interval_seconds", [0, 0.1, 0.2])
+@pytest.mark.parametrize("channel", [1, 2])
 async def test_acq_only_status(lw, channel, status_interval_seconds):
     await lw.set_channel(0, False)  # disable all channels
     await lw.set_channel(channel, True)  # enable selected channel
@@ -86,7 +86,7 @@ async def test_acq_only_status(lw, channel, status_interval_seconds):
         assert record.trai == 0
 
 
-@pytest.mark.parametrize("channel", (1, 2))
+@pytest.mark.parametrize("channel", [1, 2])
 async def test_acq_continuous_mode(lw, channel):
     ddt = 10_000  # 10 ms
     decimation = 1000  # prevent buffer overflows
@@ -120,9 +120,9 @@ async def test_acq_continuous_mode(lw, channel):
 
 
 @pytest.mark.xfail(reason="only available since firmware version 2.13")
-@pytest.mark.parametrize("channel", (0, 1, 2))
-@pytest.mark.parametrize("samples", (0, 1_000, 1_000_000))
-@pytest.mark.parametrize("pretrigger_samples", (0, 1_000))
+@pytest.mark.parametrize("channel", [0, 1, 2])
+@pytest.mark.parametrize("samples", [0, 1_000, 1_000_000])
+@pytest.mark.parametrize("pretrigger_samples", [0, 1_000])
 async def test_acq_tr_snapshot(lw, channel, samples, pretrigger_samples):
     await lw.set_tr_decimation(0, 1)
     records = await lw.get_tr_snapshot(channel, samples, pretrigger_samples)
@@ -141,9 +141,9 @@ async def test_acq_tr_snapshot(lw, channel, samples, pretrigger_samples):
         assert record.samples == samples + pretrigger_samples
 
 
-@pytest.mark.parametrize("count", (2, 4))
-@pytest.mark.parametrize("interval", (0.1, 0.5))
-@pytest.mark.parametrize("channel", (1, 2))
+@pytest.mark.parametrize("count", [2, 4])
+@pytest.mark.parametrize("interval", [0.1, 0.5])
+@pytest.mark.parametrize("channel", [1, 2])
 async def test_pulsing(lw, channel, interval, count):
     await lw.set_channel(0, False)  # disable all channels
     await lw.set_channel(channel, True)  # enable selected channel
@@ -166,8 +166,8 @@ async def test_pulsing(lw, channel, interval, count):
     assert len(tr_data) == count
 
 
-@pytest.mark.parametrize("interval", (0.1, 0.5))
-@pytest.mark.parametrize("channel", (1, 2))
+@pytest.mark.parametrize("interval", [0.1, 0.5])
+@pytest.mark.parametrize("channel", [1, 2])
 async def test_stop_infinite_pulsing(lw, channel, interval):
     acq_time = 1.0
     expected_pulse_count = (acq_time - 2 * 0.02) / interval

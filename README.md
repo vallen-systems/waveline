@@ -7,6 +7,7 @@
 [![PyPI](https://img.shields.io/pypi/v/waveline)](https://pypi.org/project/waveline)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/waveline)](https://pypi.org/project/waveline)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v1.json)](https://github.com/charliermarsh/ruff)
 
 **[Documentation](https://pywaveline.readthedocs.io) · [Examples](https://github.com/vallen-systems/pyWaveline/tree/master/examples)**
 
@@ -61,10 +62,9 @@ $ pip install -e .[dev]
 
 # Run auto-formatter
 $ black .
-$ isort .
 
 # Run linter
-$ pylint src/
+$ ruff check .
 
 # Run the test suite in the current environment
 $ pytest

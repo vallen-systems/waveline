@@ -92,7 +92,32 @@ async def test_get_info(mock_objects):
     assert info.firmware_version == "2.1"
     assert info.fpga_version == "3.1"
     assert info.channel_count == 2
-    assert info.range_count == 2
+    assert info.input_range == ["50 mV", "5 V"]
+    assert info.max_sample_rate == 10_000_000
+    assert info.adc_to_volts == [1.5625e-6, 156.25e-6]
+
+
+async def test_get_info_since_v2_13(mock_objects):
+    lw, reader, writer = mock_objects
+    reader.readline.side_effect = [
+        b"hw_id=E8EB1B3D9E76",  # new
+        b"fw_version=2.13\n",
+        b"fpga_version=3.3\n",
+        b"channel_count=2\n",
+        b"input_range=50 mV, 5 V\n",  # range_count -> input ranges as strings
+        b"max_tr_sample_rate=10000000\n",  # max_sample_rate -> max_tr_sample_rate
+        b"adc2uv=1.5625, 156.25\n",  # comma as delimiter
+        b"\n",
+        TimeoutError,
+    ]
+    info = await lw.get_info()
+    writer.write.assert_called_with(b"get_info\n")
+    reader.readline.assert_awaited()
+
+    assert info.firmware_version == "2.13"
+    assert info.fpga_version == "3.3"
+    assert info.channel_count == 2
+    assert info.input_range == ["50 mV", "5 V"]
     assert info.max_sample_rate == 10_000_000
     assert info.adc_to_volts == [1.5625e-6, 156.25e-6]
 
@@ -119,6 +144,48 @@ async def test_get_setup(mock_objects):
         b"channel=1\n",
         b"dsp\n",
         b"adc_range=0\n",
+        b"adc2uv=1.5625\n",
+        b"filter=none - 300 kHz, order 8\n",
+        b"ae\n",
+        b"enabled=1\n",
+        b"cont=0\n",
+        b"thr=100.0 uV\n",
+        b"ddt=500.0 us\n",
+        b"status_interval=100 ms\n",
+        b"tr\n",
+        b"tr_enabled=1\n",
+        b"tr_decimation=2\n",
+        b"tr_pre_trig=100\n",
+        b"tr_post_dur=50\n",
+        b"\n",
+        TimeoutError,
+    ]
+    setup = await lw.get_setup(1)
+    writer.write.assert_called_with(b"get_setup @1\n")
+    reader.readline.assert_awaited()
+
+    assert setup.adc_range_volts == 0.05
+    assert setup.adc_to_volts == 1.5625e-6
+    assert setup.filter_highpass_hz == None
+    assert setup.filter_lowpass_hz == 300e3
+    assert setup.filter_order == 8
+    assert setup.enabled == True
+    assert setup.continuous_mode == False
+    assert setup.threshold_volts == 100e-6
+    assert setup.ddt_seconds == 500e-6
+    assert setup.status_interval_seconds == 0.1
+    assert setup.tr_enabled == True
+    assert setup.tr_decimation == 2
+    assert setup.tr_pretrigger_samples == 100
+    assert setup.tr_postduration_samples == 50
+
+
+async def test_get_setup_since_v2_13(mock_objects):
+    lw, reader, writer = mock_objects
+    reader.readline.side_effect = [
+        b"channel=1\n",
+        b"dsp\n",
+        b"input_range=0\n",  # adc_range -> input_range
         b"adc2uv=1.5625\n",
         b"filter=none - 300 kHz, order 8\n",
         b"ae\n",

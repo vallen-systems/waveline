@@ -15,7 +15,15 @@ from warnings import warn
 
 import numpy as np
 
-from ._common import KV_PATTERN, as_float, as_int, multiline_output_to_dict, parse_filter_setup_line
+from ._common import (
+    KV_PATTERN,
+    as_float,
+    as_int,
+    multiline_output_to_dict,
+    dict_get_first,
+    parse_array,
+    parse_filter_setup_line,
+)
 from .datatypes import AERecord, TRRecord
 
 logger = logging.getLogger(__name__)
@@ -28,7 +36,7 @@ class Info:
     firmware_version: str  #: Firmware version
     fpga_version: str  #: FPGA version
     channel_count: int  #: Number of channels
-    range_count: int  #: Number of selectable ranges
+    input_range: List[str]  #: List of selectable input ranges
     max_sample_rate: float  #: Max sampling rate
     adc_to_volts: List[float]  #: Conversion factors from ADC values to V for both ranges
 
@@ -333,9 +341,17 @@ class LinWave:
             firmware_version=info_dict["fw_version"],
             fpga_version=info_dict["fpga_version"],
             channel_count=as_int(info_dict["channel_count"], 0),
-            range_count=as_int(info_dict["range_count"], 0),
-            max_sample_rate=as_int(info_dict["max_sample_rate"], 0),
-            adc_to_volts=[float(v) / 1e6 for v in info_dict["adc2uv"].strip().split(" ")],
+            input_range=(
+                parse_array(info_dict["input_range"])
+                if "input_range" in info_dict
+                else ["50 mV", "5 V"]
+            ),
+            max_sample_rate=as_int(
+                dict_get_first(
+                    info_dict, ("max_sample_rate", "max_tr_sample_rate"), self.MAX_SAMPLERATE
+                )
+            ),
+            adc_to_volts=[float(v) / 1e6 for v in parse_array(info_dict["adc2uv"])],
         )
 
     @_require_connected
@@ -375,9 +391,10 @@ class LinWave:
             raise RuntimeError("Could not get setup")
 
         setup_dict = multiline_output_to_dict(lines)
+        input_range = dict_get_first(setup_dict, ("input_range", "adc_range"))
         filter_setup = parse_filter_setup_line(setup_dict["filter"])
         return Setup(
-            adc_range_volts=self.RANGES[as_int(setup_dict["adc_range"])],
+            adc_range_volts=self.RANGES[as_int(input_range)],
             adc_to_volts=as_float(setup_dict["adc2uv"]) / 1e6,
             filter_highpass_hz=filter_setup[0],
             filter_lowpass_hz=filter_setup[1],

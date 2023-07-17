@@ -8,7 +8,7 @@ async def test_connected(lw):
 async def test_get_info(lw):
     info = await lw.get_info()
     assert info.channel_count == 2
-    assert info.range_count == 2
+    assert info.input_range == ["50 mV", "5 V"]
     assert info.max_sample_rate == 10_000_000
 
 

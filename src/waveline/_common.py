@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import Dict, Iterable, List
 
 # key = value pattern for ae/tr data
 # fast(est) and simple, accept spaces around "="
@@ -21,6 +21,23 @@ def as_float(string, default: float = 0.0):
 def multiline_output_to_dict(lines: List[bytes]):
     """Helper function to parse output from get_info, get_status and get_setup."""
     return {k.strip(): v.strip() for k, _, v in [line.decode().partition("=") for line in lines]}
+
+
+def dict_get_first(dict_: Dict, keys_desc_priority: Iterable[str], default=None, *, require=False):
+    keys = tuple(keys_desc_priority)
+    for key in keys:
+        if key in dict_:
+            return dict_[key]
+    if require:
+        raise KeyError(*keys)
+    return default
+
+
+def parse_array(line: str) -> List[str]:
+    """Accept both space and comma as delimiters of values, prefer comma."""
+    if "," in line:
+        return [value.strip() for value in line.split(",")]
+    return line.split()
 
 
 def parse_filter_setup_line(line: str):

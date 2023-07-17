@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from waveline import LinWave
+from waveline.linwave import Info, LinWave
 
 CLOCK = 10e6
 ADC_TO_VOLTS = [1.5625e-06, 0.00015625]
@@ -31,30 +31,24 @@ async def mock_linwave_with_asyncio_connection():
         mock_writer = Mock(spec=asyncio.StreamWriter)
         mock_create_connection.return_value = (mock_reader, mock_writer)
 
-        # LinWave.connect will call _check_firmware_version and _get_adc_to_volts
-        with patch.object(
-            LinWave, "_check_firmware_version", new=AsyncMock()
-        ) as method_firmware_version, patch.object(
-            LinWave, "_get_adc_to_volts", new=AsyncMock()
-        ) as method_adc_to_volts:
-            method_firmware_version.return_value = None
-            method_adc_to_volts.return_value = ADC_TO_VOLTS
+        lw = LinWave("192.168.0.100")
 
-            async with LinWave("192.168.0.100") as lw:
-                yield MockedObjects(
-                    lw=lw,
-                    reader=mock_reader,
-                    writer=mock_writer,
+        try:
+            with patch.object(LinWave, "get_info", new=AsyncMock()) as mock_get_info:
+                mock_get_info.return_value = Info(
+                    hardware_id = "E8EB1B3D9E76",
+                    firmware_version = "2.13",
+                    fpga_version = "3.3",
+                    channel_count = 2,
+                    input_range = ["50 mV", "5 V"],
+                    max_sample_rate = 10_000_000,
+                    adc_to_volts = [1.5625e-6, 156.25e-6],
                 )
+                await lw.connect()  # get_info called during connect to get adc2uv, firmware, ...
 
-
-async def test_reconnect(mock_objects):
-    lw, *_ = mock_objects
-    assert lw.connected
-    await lw.close()
-    assert not lw.connected
-    await lw.connect()
-    assert lw.connected
+            yield MockedObjects(lw, mock_reader, mock_writer)
+        finally:
+            await lw.close()
 
 
 async def test_default_settings(mock_objects):

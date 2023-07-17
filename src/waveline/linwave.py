@@ -104,6 +104,20 @@ def _channel_str(channel: int) -> str:
     return f"channel {channel:d}"
 
 
+def _adc_to_eu(adc_to_volts: List[float], samplerate: float) -> List[float]:
+    return [factor**2 * 1e14 / samplerate for factor in adc_to_volts]
+
+
+def _check_firmware_version(firmware_version: str, min_firmware_version: str):
+    def get_version_tuple(version_string: str):
+        return tuple((int(part) for part in version_string.split(".")))
+
+    if get_version_tuple(firmware_version) < get_version_tuple(min_firmware_version):
+        raise RuntimeError(
+            f"Firmware version {firmware_version} < {min_firmware_version}. Upgrade required."
+        )
+
+
 class LinWave:
     """
     Interface for linWave device.
@@ -175,7 +189,7 @@ class LinWave:
         # wait for stream connections before start acq
         self._stream_connection_tasks: Set[asyncio.Task] = set()
         self._adc_to_volts = [1.5625e-06, 0.00015625]  # defaults, update after connect
-        self._adc_to_eu = self._compute_adc_to_eu(self._adc_to_volts)
+        self._adc_to_eu = _adc_to_eu(self._adc_to_volts, self.MAX_SAMPLERATE)
 
     def __del__(self):
         if self._writer:
@@ -221,23 +235,6 @@ class LinWave:
 
         return sorted(ip_addresses)
 
-    async def _check_firmware_version(self):
-        def get_version_tuple(version_string: str):
-            return tuple((int(part) for part in version_string.split(".")))
-
-        version = (await self.get_info()).firmware_version
-        logger.debug(f"Detected firmware version: {version}")
-        if get_version_tuple(version) < get_version_tuple(self._MIN_FIRMWARE_VERSION):
-            raise RuntimeError(
-                f"Firmware version {version} < {self._MIN_FIRMWARE_VERSION}. Upgrade required."
-            )
-
-    def _compute_adc_to_eu(self, adc_to_volts: List[float]):
-        return [factor**2 * 1e14 / self.MAX_SAMPLERATE for factor in adc_to_volts]
-
-    async def _get_adc_to_volts(self):
-        return (await self.get_info()).adc_to_volts
-
     @property
     def connected(self) -> bool:
         """Check if connected to device."""
@@ -251,10 +248,11 @@ class LinWave:
         logger.info(f"Open connection {self._address}:{self.PORT}...")
         self._reader, self._writer = await asyncio.open_connection(self._address, self.PORT)
         self._connected = True
-        await self._check_firmware_version()
-        self._adc_to_volts = await self._get_adc_to_volts()
-        self._adc_to_eu = self._compute_adc_to_eu(self._adc_to_volts)
-        logger.debug(f"ADC to volt factors: {self._adc_to_volts}")
+        info = await self.get_info()
+        logger.debug(f"Info: {info}")
+        _check_firmware_version(info.firmware_version, self._MIN_FIRMWARE_VERSION)
+        self._adc_to_volts = info.adc_to_volts
+        self._adc_to_eu = _adc_to_eu(self._adc_to_volts, self.MAX_SAMPLERATE)
 
         logger.info("Set default settings...")
         await self.set_range(0, self.RANGES[self._DEFAULT_SETTINGS.range_index])

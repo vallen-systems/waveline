@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 class Info:
     """Device information."""
 
+    hardware_id: str  #: Unique hardware id (since firmware version 2.13)
     firmware_version: str  #: Firmware version
     fpga_version: str  #: FPGA version
     channel_count: int  #: Number of channels
@@ -338,6 +339,7 @@ class LinWave:
 
         info_dict = multiline_output_to_dict(lines)
         return Info(
+            hardware_id=info_dict.get("hw_id", ""),
             firmware_version=info_dict["fw_version"],
             fpga_version=info_dict["fpga_version"],
             channel_count=as_int(info_dict["channel_count"], 0),

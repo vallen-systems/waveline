@@ -89,6 +89,7 @@ async def test_get_info(mock_objects):
     writer.write.assert_called_with(b"get_info\n")
     reader.readline.assert_awaited()
 
+    assert info.hardware_id == ""
     assert info.firmware_version == "2.1"
     assert info.fpga_version == "3.1"
     assert info.channel_count == 2
@@ -114,6 +115,7 @@ async def test_get_info_since_v2_13(mock_objects):
     writer.write.assert_called_with(b"get_info\n")
     reader.readline.assert_awaited()
 
+    assert info.hardware_id == "E8EB1B3D9E76"
     assert info.firmware_version == "2.13"
     assert info.fpga_version == "3.3"
     assert info.channel_count == 2

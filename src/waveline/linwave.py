@@ -709,7 +709,6 @@ class LinWave:
         records = []
         while True:
             headerline = await self._readline(timeout_seconds=1)
-            print(headerline)
             if headerline == b"\n":  # last line is an empty new line
                 break
 

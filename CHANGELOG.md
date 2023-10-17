@@ -10,16 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - [linwave] Add `LinWave.set_range_index` method
-- [linwave] Add Pulsing example for linWave
 - [linwave] Add `LinWave.identify` method to blind all LEDs or single channel to identify device/channel
+- [linwave] Add `hardware_id` to `get_info` output
+- [linwave] Add `get_tr_snapshot` method (experimental)
 - [spotwave] Add `LinWave.identify` method to blind LED
 - Add Python 3.11 to CI pipeline
+- Examples:
+  - `linwave_pulsing`
+  - `linwave_cont_tr`
 
 ### Changed
 
 - [spotwave] Remove `cct_seconds` field in `get_setup` response `Setup`
 - [spotwave] Make `readlines` method private
-
+- List input range(s) in `get_info` response `Info.input_range` (human-readable format)
+  - Remove `linwave.Info.range_count` field
+  - Remove `spotwave.Info.input_range_decibel` field
 
 ## [0.6.0] - 2022-08-01
 

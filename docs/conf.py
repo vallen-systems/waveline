@@ -4,8 +4,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 from datetime import date
-
-import pkg_resources
+from importlib import metadata
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -13,7 +12,7 @@ import pkg_resources
 project = "waveline"
 copyright = f"{date.today().year}, Vallen Systeme GmbH"  # noqa
 author = "Lukas Berbuer (Vallen Systeme GmbH)"
-release = pkg_resources.get_distribution("waveline").version
+release = metadata.version("waveline")
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

@@ -7,14 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2023-10-17
+
 ### Added
 
-- [linwave] Add `LinWave.set_range_index` method
-- [linwave] Add `LinWave.identify` method to blind all LEDs or single channel to identify device/channel
+- [linwave] `LinWave.set_range_index` method
+- [linwave] `LinWave.identify` method to blind all LEDs or single channel to identify device/channel
+- [linwave] `LinWave.get_tr_snapshot` method (experimental)
 - [linwave] Add `hardware_id` to `get_info` output
-- [linwave] Add `get_tr_snapshot` method (experimental)
-- [spotwave] Add `LinWave.identify` method to blind LED
-- Add Python 3.11 to CI pipeline
+- [spotwave] `LinWave.identify` method to blind LED
+- Add Python 3.11 and 3.12 to CI pipeline
 - Examples:
   - `linwave_pulsing`
   - `linwave_cont_tr`
@@ -108,7 +110,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First public release
 
-[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.7.0...HEAD
+[0.7.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.0...0.4.1

@@ -60,7 +60,7 @@ def main(basename: str, seconds_per_file: float):
             while trqueue:
                 try:
                     tr = trqueue.get(timeout=0.1)
-                except queue.Empty:  # noqa
+                except queue.Empty:
                     continue
                 if chunks >= chunks_per_file:
                     logger.info(f"{chunks_per_file} chunks acquired")

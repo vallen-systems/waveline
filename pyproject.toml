@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development",
@@ -132,7 +133,7 @@ asyncio_mode = "auto"
 legacy_tox_ini = """
 [tox]
 isolated_build = True
-envlist = black, isort, pylint, mypy, py36, py37, py38, py39, py310, py311, coverage-report
+envlist = black, isort, pylint, mypy, py36, py37, py38, py39, py310, py311, py312, coverage-report
 
 [testenv:black]
 skip_install = true

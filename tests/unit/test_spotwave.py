@@ -152,7 +152,7 @@ def test_get_info(serial_mock):
     assert info.firmware_version == "00.2C"
     assert info.type_ == "spotWave"
     assert info.model == "201"
-    assert info.input_range_decibel == 94
+    assert info.input_range == "94 dBAE"
 
     # empty response
     serial_mock.readlines.return_value = []

@@ -30,7 +30,7 @@ class Info:
     firmware_version: str  #: Firmware version (major, minor)
     type_: str  #: Device type
     model: str  #: Model identifier
-    input_range_decibel: int  #: Input range in dBAE
+    input_range: str  #: Input range
 
 
 @dataclass
@@ -231,7 +231,7 @@ class SpotWave:
             firmware_version=info_dict["fw_version"],
             type_=info_dict["type"],
             model=info_dict["model"],
-            input_range_decibel=as_int(info_dict["input_range"]),
+            input_range=info_dict["input_range"],
         )
 
     def get_setup(self) -> Setup:

@@ -187,7 +187,7 @@ class SpotWave:
             lambda p: (p.vid == cls.VENDOR_ID) & (p.pid == cls.PRODUCT_ID),
             ports,
         )
-        return [port.name for port in ports_spotwave]
+        return [port.device for port in ports_spotwave]
 
     def identify(self):
         """

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "waveline"
-version = "0.7.0"
+version = "0.7.1"
 description = "Library to easily interface with Vallen Systeme WaveLine™ devices"
 authors = [{ name = "Lukas Berbuer", email = "software@vallen.de" }]
 readme = "README.md"

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2023-10-18
+
+### Fixed
+
+- [spotwave] Return device names/paths from `SpotWave.discover` method, e.g. `/dev/ttyACM0` instead of `ttyACM0` on Linux systems
+
 ## [0.7.0] - 2023-10-17
 
 ### Added
@@ -110,7 +116,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First public release
 
-[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.7.0...HEAD
+[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.7.1...HEAD
+[0.7.1]: https://github.com/vallen-systems/pyWaveLine/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.4.1...0.5.0

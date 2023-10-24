@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- [linwave] Deprecate `LinWave.set_range` method, use `LinWave.set_range_index` instead
+
 ## [0.7.1] - 2023-10-18
 
 ### Fixed

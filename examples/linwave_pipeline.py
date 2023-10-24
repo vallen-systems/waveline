@@ -21,7 +21,7 @@ from waveline import LinWave
 
 SAMPLERATE = 1_000_000  # 1 MHz
 BLOCKSIZE = 524288  # = 2^19 (use power of 2 for efficient FFT computation)
-RANGE = 0.05  # 50 mV
+RANGE_INDEX = 0  # 50 mV
 
 logging.basicConfig(level=logging.INFO)
 
@@ -70,7 +70,7 @@ async def pipeline(ip: str, queue: asyncio.Queue):
     """Pipeline: data acquisition, feature extraction and classification."""
     async with LinWave(ip) as lw:
         print(await lw.get_info())
-        await lw.set_range(0, range_volts=RANGE)
+        await lw.set_range_index(0, range_index=RANGE_INDEX)
         await lw.set_tr_decimation(0, factor=int(lw.MAX_SAMPLERATE / SAMPLERATE))
         await lw.set_filter(0, highpass=100e3, lowpass=500e3, order=8)
 

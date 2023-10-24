@@ -16,7 +16,7 @@ async def main():
 
     async with LinWave(ip) as lw:
         await lw.set_tr_decimation(channel=0, factor=10)  # 10 MHz / 10 = 1 MHz
-        await lw.set_range(channel=0, range_volts=5)  # 5 V
+        await lw.set_range_index(channel=0, range_index=1)  # 1: 5 V
 
         # create channel acquisition streams (wrapping async generators)
         streams = [

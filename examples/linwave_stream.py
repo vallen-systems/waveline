@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 async def main(ip: str, samplerate: int, blocksize: int):
     async with LinWave(ip) as lw:
         print(await lw.get_info())
-        await lw.set_range(channel=0, range_volts=0.05)
+        await lw.set_range_index(channel=0, range_index=0)
         await lw.set_tr_decimation(channel=0, factor=int(lw.MAX_SAMPLERATE / samplerate))
         await lw.set_filter(channel=0, highpass=100e3, lowpass=500e3, order=8)
 

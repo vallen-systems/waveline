@@ -23,7 +23,7 @@ async def main(ip: str):
     async with LinWave(ip) as lw:
         print(await lw.get_info())
         await lw.set_channel(channel=0, enabled=False)
-        await lw.set_range(channel=0, range_volts=0.05)
+        await lw.set_range_index(channel=0, range_index=0)
         await lw.set_filter(channel=0, highpass=None, lowpass=None, order=0)
         await lw.set_tr_decimation(channel=0, factor=decimation)
 

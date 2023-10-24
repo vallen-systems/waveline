@@ -231,20 +231,6 @@ async def test_set_channel(mock_objects, channel, enabled, command):
 
 
 @pytest.mark.parametrize(
-    ("channel", "value", "command"),
-    [
-        (0, 0.05, b"set_adc_range 0 @0\n"),
-        (1, 5, b"set_adc_range 1 @1\n"),
-        (2, 5, b"set_adc_range 1 @2\n"),
-    ],
-)
-async def test_set_range(mock_objects, channel, value, command):
-    lw, _, writer = mock_objects
-    await lw.set_range(channel, value)
-    writer.write.assert_called_with(command)
-
-
-@pytest.mark.parametrize(
     ("channel", "index", "command"),
     [
         (0, 0, b"set_adc_range 0 @0\n"),
@@ -259,9 +245,23 @@ async def test_set_range_index(mock_objects, channel, index, command):
 
 
 @pytest.mark.parametrize("channel", [-1, 3])
-async def test_set_range_invalid_channel(mock_objects, channel):
+async def test_set_range_index_invalid_channel(mock_objects, channel):
     with pytest.raises(ValueError):
-        await mock_objects.lw.set_range(channel, 0.05)
+        await mock_objects.lw.set_range_index(channel, 0)
+
+
+@pytest.mark.parametrize(
+    ("channel", "value", "command"),
+    [
+        (0, 0.05, b"set_adc_range 0 @0\n"),
+        (1, 5, b"set_adc_range 1 @1\n"),
+        (2, 5, b"set_adc_range 1 @2\n"),
+    ],
+)
+async def test_set_range(mock_objects, channel, value, command):
+    lw, _, writer = mock_objects
+    await lw.set_range(channel, value)
+    writer.write.assert_called_with(command)
 
 
 @pytest.mark.parametrize("value", [-1, 0, 11])

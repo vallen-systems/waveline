@@ -255,7 +255,7 @@ class LinWave:
         self._adc_to_eu = _adc_to_eu(self._adc_to_volts, self.MAX_SAMPLERATE)
 
         logger.info("Set default settings")
-        await self.set_range(0, self.RANGES[self._DEFAULT_SETTINGS.range_index])
+        await self.set_range_index(0, self._DEFAULT_SETTINGS.range_index)
         await self.set_tr_decimation(0, self._DEFAULT_SETTINGS.decimation)
 
     async def close(self):
@@ -412,7 +412,19 @@ class LinWave:
             tr_postduration_samples=as_int(setup_dict["tr_post_dur"]),
         )
 
-    async def _set_range_index(self, channel: int, range_index: int):
+    @_require_connected
+    async def set_range_index(self, channel: int, range_index: int):
+        """
+        Set input range by index.
+
+        Retrieve selectable ranges with the `get_info` method.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            range_index: Input range index (0: 0.05 V, 1: 5 V)
+        """
+        self._check_channel_number(channel)
+        logger.info(f"Set {_channel_str(channel)} range to index {range_index}")
         await self._send_command(f"set_adc_range {range_index:d} @{channel:d}")
         if channel > 0:
             self._channel_settings[channel].range_index = range_index
@@ -425,31 +437,28 @@ class LinWave:
         """
         Set input range.
 
+        Retrieve selectable ranges with the `get_info` method.
+
         Args:
             channel: Channel number (0 for all channels)
             range_volts: Input range in volts (0.05, 5)
+
+        Deprecated: Please us the `set_range_index` method instead.
         """
+        warn(
+            (
+                "This method is deprecated and will be removed in the future. "
+                "Please use the set_range_index method instead."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._check_channel_number(channel)
         try:
             range_index = self._RANGE_INDEX[range_volts]
+            await self.set_range_index(channel, range_index)
         except KeyError:
             raise ValueError(f"Invalid range. Possible values: {self.RANGES}") from None
-
-        logger.info(f"Set {_channel_str(channel)} range to {range_volts} V")
-        await self._set_range_index(channel, range_index)
-
-    @_require_connected
-    async def set_range_index(self, channel: int, range_index: int):
-        """
-        Set input range by index.
-
-        Args:
-            channel: Channel number (0 for all channels)
-            range_index: Input range index (0: 0.05 V, 1: 5 V)
-        """
-        self._check_channel_number(channel)
-        logger.info(f"Set {_channel_str(channel)} range to index {range_index}")
-        await self._set_range_index(channel, range_index)
 
     @_require_connected
     async def set_channel(self, channel: int, enabled: bool):
@@ -809,7 +818,7 @@ class LinWave:
             >>>     # apply settings
             >>>     await lw.set_channel(channel=1, enabled=True)
             >>>     await lw.set_channel(channel=2, enabled=False)
-            >>>     await lw.set_range(channel=1, range_volts=0.05)
+            >>>     await lw.set_range_index(channel=1, range_index=0)  # 0: 50 mV
             >>>     async for record in lw.acquire():
             >>>         # do something with the data depending on the type
             >>>         if isinstance(record, waveline.AERecord):
@@ -862,8 +871,8 @@ class LinWave:
         Example:
             >>> async with waveline.LinWave("192.168.0.100") as lw:
             >>>     # apply settings
-            >>>     await lw.set_range(0.05)
-            >>>     await lw.set_filter(100e3, 500e3, 8)
+            >>>     await lw.set_range_index(channel=1, range_index=0)  # 0: 50 mV
+            >>>     await lw.set_filter(channel=1, highpass=100e3, lowpass=500e3, order=8)
             >>>     # open streaming port before start acq afterwards (order matters!)
             >>>     stream = lw.stream(channel=1, blocksize=65536)
             >>>     await lw.start_acquisition()

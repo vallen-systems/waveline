@@ -24,7 +24,7 @@ async def main(ip: str):
         print(await lw.get_info())
 
         await lw.set_channel(channel=0, enabled=True)  # enabled all channels
-        await lw.set_range(channel=0, range_volts=0.05)  # set input range to 50 mV
+        await lw.set_range_index(channel=0, range_index=0)  # set input range to 50 mV
         await lw.set_filter(channel=0, highpass=None, lowpass=500e3)  # 500 kHz lowpass
         await lw.set_continuous_mode(channel=0, enabled=True)  # enable continous mode
         await lw.set_ddt(channel=0, microseconds=100_000)  # set block size to 100 ms

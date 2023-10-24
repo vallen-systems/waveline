@@ -8,7 +8,8 @@ import asyncio
 import logging
 import socket
 import time
-from dataclasses import dataclass, replace
+from copy import copy
+from dataclasses import dataclass
 from functools import wraps
 from typing import AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, Union
 from warnings import warn
@@ -183,7 +184,8 @@ class LinWave:
         self._connected = False
         self._recording = False
         self._channel_settings = {
-            channel: replace(self._DEFAULT_SETTINGS) for channel in self.CHANNELS  # return copy
+            channel: copy(self._DEFAULT_SETTINGS)
+            for channel in self.CHANNELS  # return copy
         }
         # wait for stream connections before start acq
         self._stream_connection_tasks: Set[asyncio.Task] = set()

@@ -129,11 +129,11 @@ async def test_acq_tr_snapshot(lw, channel, samples, pretrigger_samples):
 
     if channel == 0:
         assert len(records) == 2
-        assert records[0] == 1
-        assert records[1] == 2
+        assert records[0].channel == 1
+        assert records[1].channel == 2
     else:
         assert len(records) == 1
-        assert records[0] == channel
+        assert records[0].channel == channel
 
     for record in records:
         assert record.trai == 0

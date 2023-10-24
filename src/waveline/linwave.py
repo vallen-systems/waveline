@@ -245,7 +245,7 @@ class LinWave:
         if self.connected:
             return
 
-        logger.info(f"Open connection {self._address}:{self.PORT}...")
+        logger.info(f"Open connection {self._address}:{self.PORT}")
         self._reader, self._writer = await asyncio.open_connection(self._address, self.PORT)
         self._connected = True
         info = await self.get_info()
@@ -254,7 +254,7 @@ class LinWave:
         self._adc_to_volts = info.adc_to_volts
         self._adc_to_eu = _adc_to_eu(self._adc_to_volts, self.MAX_SAMPLERATE)
 
-        logger.info("Set default settings...")
+        logger.info("Set default settings")
         await self.set_range(0, self.RANGES[self._DEFAULT_SETTINGS.range_index])
         await self.set_tr_decimation(0, self._DEFAULT_SETTINGS.decimation)
 
@@ -266,7 +266,7 @@ class LinWave:
         if self._recording:
             await self.stop_acquisition()
 
-        logger.info(f"Close connection {self._address}:{self.PORT}...")
+        logger.info(f"Close connection {self._address}:{self.PORT}")
         try:
             self._writer.close()
             await self._writer.wait_closed()  # new in 3.7 -> might raise AttributeError
@@ -435,7 +435,7 @@ class LinWave:
         except KeyError:
             raise ValueError(f"Invalid range. Possible values: {self.RANGES}") from None
 
-        logger.info(f"Set {_channel_str(channel)} range to {range_volts} V...")
+        logger.info(f"Set {_channel_str(channel)} range to {range_volts} V")
         await self._set_range_index(channel, range_index)
 
     @_require_connected
@@ -448,7 +448,7 @@ class LinWave:
             range_index: Input range index (0: 0.05 V, 1: 5 V)
         """
         self._check_channel_number(channel)
-        logger.info(f"Set {_channel_str(channel)} range to index {range_index}...")
+        logger.info(f"Set {_channel_str(channel)} range to index {range_index}")
         await self._set_range_index(channel, range_index)
 
     @_require_connected
@@ -607,7 +607,7 @@ class LinWave:
             await asyncio.wait(self._stream_connection_tasks)
             self._stream_connection_tasks.clear()
 
-        logger.info("Start data acquisition...")
+        logger.info("Start data acquisition")
         await self._send_command("start_acq")
         self._recording = True
 
@@ -616,7 +616,7 @@ class LinWave:
         """Stop data acquisition."""
         if not self._recording:
             return
-        logger.info("Stop data acquisition...")
+        logger.info("Stop data acquisition")
         await self._send_command("stop_acq")
         self._recording = False
 

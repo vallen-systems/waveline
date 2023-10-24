@@ -348,7 +348,9 @@ class LinWave:
             ),
             max_sample_rate=as_int(
                 dict_get_first(
-                    info_dict, ("max_sample_rate", "max_tr_sample_rate"), self.MAX_SAMPLERATE
+                    info_dict,
+                    ("max_samplerate", "max_sample_rate", "max_tr_sample_rate"),
+                    str(self.MAX_SAMPLERATE),
                 )
             ),
             adc_to_volts=[float(v) / 1e6 for v in parse_array(info_dict["adc2uv"])],

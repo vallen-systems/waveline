@@ -40,7 +40,6 @@ async def mock_linwave_with_asyncio_connection():
                     fpga_version="3.3",
                     channel_count=2,
                     input_range=["50 mV", "5 V"],
-                    max_sample_rate=10_000_000,
                     adc_to_volts=[1.5625e-6, 156.25e-6],
                 )
                 await lw.connect()  # get_info called during connect to get adc2uv, firmware, ...
@@ -87,7 +86,6 @@ async def test_get_info(mock_objects):
     assert info.fpga_version == "3.1"
     assert info.channel_count == 2
     assert info.input_range == ["50 mV", "5 V"]
-    assert info.max_sample_rate == 10_000_000
     assert info.adc_to_volts == [1.5625e-6, 156.25e-6]
 
 
@@ -99,7 +97,7 @@ async def test_get_info_since_v2_13(mock_objects):
         b"fpga_version=3.3\n",
         b"channel_count=2\n",
         b"input_range=50 mV, 5 V\n",  # range_count -> input ranges as strings
-        b"max_tr_sample_rate=10000000\n",  # max_sample_rate -> max_tr_sample_rate
+        b"max_samplerate=10000000\n",  # max_sample_rate -> max_samplerate
         b"adc2uv=1.5625, 156.25\n",  # comma as delimiter
         b"\n",
         TimeoutError,
@@ -113,7 +111,6 @@ async def test_get_info_since_v2_13(mock_objects):
     assert info.fpga_version == "3.3"
     assert info.channel_count == 2
     assert info.input_range == ["50 mV", "5 V"]
-    assert info.max_sample_rate == 10_000_000
     assert info.adc_to_volts == [1.5625e-6, 156.25e-6]
 
 

@@ -38,7 +38,6 @@ class Info:
     fpga_version: str  #: FPGA version
     channel_count: int  #: Number of channels
     input_range: List[str]  #: List of selectable input ranges
-    max_sample_rate: float  #: Max sampling rate
     adc_to_volts: List[float]  #: Conversion factors from ADC values to V for both ranges
 
 
@@ -345,13 +344,6 @@ class LinWave:
                 parse_array(info_dict["input_range"])
                 if "input_range" in info_dict
                 else ["50 mV", "5 V"]
-            ),
-            max_sample_rate=as_int(
-                dict_get_first(
-                    info_dict,
-                    ("max_samplerate", "max_sample_rate", "max_tr_sample_rate"),
-                    str(self.MAX_SAMPLERATE),
-                )
             ),
             adc_to_volts=[float(v) / 1e6 for v in parse_array(info_dict["adc2uv"])],
         )

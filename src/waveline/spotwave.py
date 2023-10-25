@@ -377,7 +377,7 @@ class SpotWave:
         """
         self._send_command(f"set_acq tr_post_dur {int(samples)}")
 
-    def set_cct(self, interval_seconds: int, sync: bool = False):
+    def set_cct(self, interval_seconds: float, sync: bool = False):
         """
         Set coupling check ransmitter (CCT) / pulser interval.
 

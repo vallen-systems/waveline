@@ -8,8 +8,7 @@ import collections
 import logging
 import time
 from contextlib import contextmanager
-from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Iterator, List, Optional, Union
 from warnings import warn
 
@@ -17,51 +16,16 @@ import numpy as np
 from serial import EIGHTBITS, Serial
 from serial.tools import list_ports
 
-from ._common import KV_PATTERN, as_float, as_int, multiline_output_to_dict, parse_filter_setup_line
-from .datatypes import AERecord, TRRecord
+from ._common import (
+    _KV_PATTERN,
+    _adc_to_eu,
+    _parse_get_info_output,
+    _parse_get_setup_output,
+    _parse_get_status_output,
+)
+from .datatypes import AERecord, Info, Setup, Status, TRRecord
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Info:
-    """Device information."""
-
-    firmware_version: str  #: Firmware version (major, minor)
-    type_: str  #: Device type
-    model: str  #: Model identifier
-    input_range: str  #: Input range
-
-
-@dataclass
-class Status:
-    """Status information."""
-
-    temperature: int  #: Device temperature in °C
-    recording: bool  #: Flag if acquisition is active
-    logging: bool  #: Flag if logging is active
-    log_data_usage: int  #: Log buffer usage in sets
-    datetime: datetime  #: Device datetime
-
-
-@dataclass
-class Setup:
-    """Setup."""
-
-    recording: bool  #: Flag if acquisition is active
-    logging: bool  #: Flag if logging is active
-    cont_enabled: bool  #: Flag if continuous mode is enabled
-    adc_to_volts: float  #: Conversion factor from ADC values to volts
-    threshold_volts: float  #: Threshold for hit-based acquisition in volts
-    ddt_seconds: float  #: Duration discrimination time (DDT) in seconds
-    status_interval_seconds: float  #: Status interval in seconds
-    filter_highpass_hz: Optional[float]  #: Highpass frequency in Hz
-    filter_lowpass_hz: Optional[float]  #: Lowpass frequency in Hz
-    filter_order: int  #: Filter order
-    tr_enabled: bool  #: Flag in transient data recording is enabled
-    tr_decimation: int  #: Decimation factor for transient data
-    tr_pretrigger_samples: int  #: Pre-trigger samples for transient data
-    tr_postduration_samples: int  #: Post-duration samples for transient data
 
 
 class SpotWave:
@@ -119,7 +83,7 @@ class SpotWave:
         self._check_firmware_version()
         self.stop_acquisition()  # stop acquisition if running
         self._adc_to_volts = self._get_adc_to_volts()  # get and save adc conversion factor
-        self._adc_to_eu = (self._adc_to_volts**2) * 1e14 / self.CLOCK
+        self._adc_to_eu = _adc_to_eu(self._adc_to_volts, self.CLOCK)
 
     def __del__(self):
         self.close()
@@ -226,13 +190,10 @@ class SpotWave:
         if not lines:
             raise RuntimeError("Could not get device information")
 
-        info_dict = multiline_output_to_dict(lines)
-        return Info(
-            firmware_version=info_dict["fw_version"],
-            type_=info_dict["type"],
-            model=info_dict["model"],
-            input_range=info_dict["input_range"],
-        )
+        info = _parse_get_info_output(lines)
+        info.channel_count = 1
+        assert len(info.input_range) == len(info.adc_to_volts)
+        return info
 
     def get_setup(self) -> Setup:
         """
@@ -246,24 +207,9 @@ class SpotWave:
         if not lines:
             raise RuntimeError("Could not get setup")
 
-        setup_dict = multiline_output_to_dict(lines)
-        filter_settings = parse_filter_setup_line(setup_dict["filter"])
-        return Setup(
-            recording=as_int(setup_dict["recording"]) == 1,
-            logging=as_int(setup_dict["logging"]) == 1,
-            cont_enabled=as_int(setup_dict["cont"]) == 1,
-            adc_to_volts=as_float(setup_dict["adc2uv"]) / 1e6,
-            threshold_volts=as_float(setup_dict["thr"]) / 1e6,
-            ddt_seconds=as_float(setup_dict["ddt"]) / 1e6,
-            status_interval_seconds=as_float(setup_dict["status_interval"]) / 1e3,
-            filter_highpass_hz=filter_settings[0],
-            filter_lowpass_hz=filter_settings[1],
-            filter_order=filter_settings[2],
-            tr_enabled=as_int(setup_dict["tr_enabled"]) == 1,
-            tr_decimation=as_int(setup_dict["tr_decimation"]),
-            tr_pretrigger_samples=as_int(setup_dict["tr_pre_trig"]),
-            tr_postduration_samples=as_int(setup_dict["tr_post_dur"]),
-        )
+        setup = _parse_get_setup_output(lines)
+        setup.enabled = True  # channel is always enabled
+        return setup
 
     def get_status(self) -> Status:
         """
@@ -277,21 +223,7 @@ class SpotWave:
         if not lines:
             raise RuntimeError("Could not get status")
 
-        def parse_datetime(string) -> datetime:
-            """Parse datetime with any digit number of second fractions."""
-            dt, _, fsec = string.partition(".")
-            result = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
-            result += timedelta(seconds=int(fsec) / 10 ** len(fsec))
-            return result
-
-        status_dict = multiline_output_to_dict(lines)
-        return Status(
-            temperature=as_int(status_dict["temp"]),
-            recording=as_int(status_dict["recording"]) == 1,
-            logging=as_int(status_dict["logging"]) == 1,
-            log_data_usage=as_int(status_dict["log_data_usage"]),
-            datetime=parse_datetime(status_dict["date"]),
-        )
+        return _parse_get_status_output(lines)
 
     def set_continuous_mode(self, enabled: bool):
         """
@@ -464,7 +396,7 @@ class SpotWave:
 
             record_type = line[:1]
             # parse key-value pairs in line; default value: 0
-            matches = collections.defaultdict(int, KV_PATTERN.findall(line))
+            matches = collections.defaultdict(int, _KV_PATTERN.findall(line))
 
             if record_type in (b"H", b"S"):  # hit or status data
                 record = AERecord(
@@ -518,7 +450,7 @@ class SpotWave:
             logger.debug(f"Received TR data: {headerline}")
 
             # parse key-value pairs in line; default value: 0
-            matches = collections.defaultdict(int, KV_PATTERN.findall(headerline))
+            matches = collections.defaultdict(int, _KV_PATTERN.findall(headerline))
             samples = int(matches[b"NS"])
 
             data = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)

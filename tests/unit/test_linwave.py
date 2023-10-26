@@ -37,10 +37,10 @@ async def mock_linwave_with_asyncio_connection():
                 mock_get_info.return_value = Info(
                     hardware_id="E8EB1B3D9E76",
                     firmware_version="2.13",
-                    fpga_version="3.3",
                     channel_count=2,
                     input_range=["50 mV", "5 V"],
                     adc_to_volts=[1.5625e-6, 156.25e-6],
+                    extra={},
                 )
                 await lw.connect()  # get_info called during connect to get adc2uv, firmware, ...
 
@@ -81,12 +81,12 @@ async def test_get_info(mock_objects):
     writer.write.assert_called_with(b"get_info\n")
     reader.readline.assert_awaited()
 
-    assert info.hardware_id == ""
+    assert info.hardware_id is None
     assert info.firmware_version == "2.1"
-    assert info.fpga_version == "3.1"
     assert info.channel_count == 2
     assert info.input_range == ["50 mV", "5 V"]
     assert info.adc_to_volts == [1.5625e-6, 156.25e-6]
+    assert {"fpga_version", "range_count", "max_sample_rate"} == info.extra.keys()
 
 
 async def test_get_info_since_v2_13(mock_objects):
@@ -108,17 +108,20 @@ async def test_get_info_since_v2_13(mock_objects):
 
     assert info.hardware_id == "E8EB1B3D9E76"
     assert info.firmware_version == "2.13"
-    assert info.fpga_version == "3.3"
     assert info.channel_count == 2
     assert info.input_range == ["50 mV", "5 V"]
     assert info.adc_to_volts == [1.5625e-6, 156.25e-6]
+    assert {"fpga_version", "max_samplerate"} == info.extra.keys()
 
 
 async def test_get_status(mock_objects):
     lw, reader, writer = mock_objects
     reader.readline.side_effect = [
-        b"temp=55\n",
-        b"buffer_size=112014\n",
+        b"temp=42\n",
+        b"recording=1\n",
+        b"pulsing=0\n",
+        b"buffer_size=0\n",
+        b"buffer_capacity=1024\n",
         b"\n",
         TimeoutError,
     ]
@@ -126,8 +129,10 @@ async def test_get_status(mock_objects):
     writer.write.assert_called_with(b"get_status\n")
     reader.readline.assert_awaited()
 
-    assert status.temperature == 55
-    assert status.buffer_size == 112014
+    assert status.temperature == 42
+    assert status.recording is True
+    assert status.pulsing is False
+    assert {"buffer_size", "buffer_capacity"} == status.extra.keys()
 
 
 async def test_get_setup(mock_objects):
@@ -135,7 +140,7 @@ async def test_get_setup(mock_objects):
     reader.readline.side_effect = [
         b"channel=1\n",
         b"dsp\n",
-        b"adc_range=0\n",
+        b"adc_range=1\n",
         b"adc2uv=1.5625\n",
         b"filter=none - 300 kHz, order 8\n",
         b"ae\n",
@@ -156,12 +161,12 @@ async def test_get_setup(mock_objects):
     writer.write.assert_called_with(b"get_setup @1\n")
     reader.readline.assert_awaited()
 
-    assert setup.adc_range_volts == 0.05
+    assert setup.enabled is True
+    assert setup.input_range == 1
     assert setup.adc_to_volts == 1.5625e-6
     assert setup.filter_highpass_hz is None
     assert setup.filter_lowpass_hz == 300e3
     assert setup.filter_order == 8
-    assert setup.enabled is True
     assert setup.continuous_mode is False
     assert setup.threshold_volts == 100e-6
     assert setup.ddt_seconds == 500e-6
@@ -170,23 +175,24 @@ async def test_get_setup(mock_objects):
     assert setup.tr_decimation == 2
     assert setup.tr_pretrigger_samples == 100
     assert setup.tr_postduration_samples == 50
+    assert {"channel"} == setup.extra.keys()
 
 
 async def test_get_setup_since_v2_13(mock_objects):
     lw, reader, writer = mock_objects
     reader.readline.side_effect = [
-        b"channel=1\n",
-        b"dsp\n",
-        b"input_range=0\n",  # adc_range -> input_range
+        b"[ch1]\n",
+        b"# dsp\n",
+        b"input_range=1\n",  # adc_range -> input_range
         b"adc2uv=1.5625\n",
         b"filter=none - 300 kHz, order 8\n",
-        b"ae\n",
+        b"# ae\n",
         b"enabled=1\n",
         b"cont=0\n",
         b"thr=100.0 uV\n",
         b"ddt=500.0 us\n",
         b"status_interval=100 ms\n",
-        b"tr\n",
+        b"# tr\n",
         b"tr_enabled=1\n",
         b"tr_decimation=2\n",
         b"tr_pre_trig=100\n",
@@ -198,12 +204,12 @@ async def test_get_setup_since_v2_13(mock_objects):
     writer.write.assert_called_with(b"get_setup @1\n")
     reader.readline.assert_awaited()
 
-    assert setup.adc_range_volts == 0.05
+    assert setup.enabled is True
+    assert setup.input_range == 1
     assert setup.adc_to_volts == 1.5625e-6
     assert setup.filter_highpass_hz is None
     assert setup.filter_lowpass_hz == 300e3
     assert setup.filter_order == 8
-    assert setup.enabled is True
     assert setup.continuous_mode is False
     assert setup.threshold_volts == 100e-6
     assert setup.ddt_seconds == 500e-6
@@ -212,6 +218,7 @@ async def test_get_setup_since_v2_13(mock_objects):
     assert setup.tr_decimation == 2
     assert setup.tr_pretrigger_samples == 100
     assert setup.tr_postduration_samples == 50
+    assert setup.extra == {}
 
 
 @pytest.mark.parametrize(

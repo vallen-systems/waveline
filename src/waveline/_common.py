@@ -1,46 +1,90 @@
 import re
 from typing import Dict, Iterable, List
 
+from waveline.datatypes import Info, Setup, Status
+
 # key = value pattern for ae/tr data
 # fast(est) and simple, accept spaces around "="
 # _KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
 # accept words as keys w/o values; this seems next faster (incl. \S)?!
-KV_PATTERN = re.compile(rb"([^\s=]+)(?:\s*=\s*(\S+))?")
+_KV_PATTERN = re.compile(rb"([^\s=]+)(?:\s*=\s*(\S+))?")
 
 
-def as_int(string, default: int = 0):
-    """Return first sequence as int."""
-    return int(string.strip().partition(" ")[0] or default)
-
-
-def as_float(string, default: float = 0.0):
-    """Return first sequence as float."""
-    return float(string.strip().partition(" ")[0] or default)
-
-
-def multiline_output_to_dict(lines: List[bytes]):
+def _multiline_output_to_dict(lines: List[bytes]):
     """Helper function to parse output from get_info, get_status and get_setup."""
-    return {k.strip(): v.strip() for k, _, v in [line.decode().partition("=") for line in lines]}
+    return {
+        key.strip(): value.strip()
+        for key, sep, value in [line.decode().partition("=") for line in lines]
+        if sep == "="
+    }
 
 
-def dict_get_first(dict_: Dict, keys_desc_priority: Iterable[str], default=None, *, require=False):
+def _dict_pop_first(
+    dct: Dict, keys_desc_priority: Iterable[str], default: str = "", *, require=False
+):
     keys = tuple(keys_desc_priority)
     for key in keys:
-        if key in dict_:
-            return dict_[key]
+        if key in dct:
+            return dct.pop(key)
     if require:
         raise KeyError(*keys)
     return default
 
 
-def parse_array(line: str) -> List[str]:
-    """Accept both space and comma as delimiters of values, prefer comma."""
+def _strip_unit(s: str):
+    """Return first sequence."""
+    return s.strip().partition(" ")[0]
+
+
+def _parse_array(line: str, allow_space: bool) -> List[str]:
+    """Accept both comma and optionally space as delimiters of values, prefer comma."""
     if "," in line:
         return [value.strip() for value in line.split(",")]
-    return line.split()
+    if allow_space:
+        return line.split()
+    if line:
+        return [line]
+    return []
 
 
-def parse_filter_setup_line(line: str):
+def _adc_to_eu(adc_to_volts: float, samplerate: float) -> float:
+    return adc_to_volts**2 * 1e14 / samplerate
+
+
+def _is_number(s: str) -> bool:
+    # https://stackoverflow.com/a/354130/9967707
+    return s.replace(".", "", 1).isdigit()
+
+
+def _parse_get_info_output(lines: List[bytes]) -> Info:
+    def parse_input_range(s: str):
+        return _parse_array(s, allow_space=False)
+
+    def parse_adc_to_volts(s: str):
+        return [float(v) / 1e6 for v in _parse_array(s, allow_space=True) if _is_number(v)]
+
+    dct = _multiline_output_to_dict(lines)
+    return Info(
+        hardware_id=dct.pop("hw_id", None),
+        firmware_version=dct.pop("fw_version"),
+        channel_count=int(dct.pop("channel_count", "0"), 0),
+        input_range=parse_input_range(dct.pop("input_range", "")),
+        adc_to_volts=parse_adc_to_volts(dct.pop("adc2uv")),
+        extra=dct,
+    )
+
+
+def _parse_get_status_output(lines: List[bytes]) -> Status:
+    dct = _multiline_output_to_dict(lines)
+    return Status(
+        temperature=float(_strip_unit(dct.pop("temp", "0"))),
+        recording=int(dct.pop("recording", "0")) == 1,
+        pulsing=int(dct.pop("pulsing", "0")) == 1,
+        extra=dct,
+    )
+
+
+def _parse_filter_setup_line(line: str):
     """
     Parse special filter setup row from get_setup.
 
@@ -58,10 +102,32 @@ def parse_filter_setup_line(line: str):
     if not match:
         return None, None, 0
 
-    def khz_or_none(k):
+    def hz_or_none(k):
         try:
             return 1e3 * float(match.group(k))
         except:  # noqa
             return None
 
-    return khz_or_none("hp"), khz_or_none("lp"), int(match.group("order"))
+    return hz_or_none("hp"), hz_or_none("lp"), int(match.group("order"))
+
+
+def _parse_get_setup_output(lines: List[bytes]) -> Setup:
+    dct = _multiline_output_to_dict(lines)
+    filter_setup = _parse_filter_setup_line(dct.pop("filter"))
+    return Setup(
+        enabled=int(dct.pop("enabled", "0")) == 1,
+        input_range=int(_dict_pop_first(dct, ("input_range", "adc_range"), "0")),
+        adc_to_volts=float(_strip_unit(dct.pop("adc2uv"))) / 1e6,
+        filter_highpass_hz=filter_setup[0],
+        filter_lowpass_hz=filter_setup[1],
+        filter_order=filter_setup[2],
+        continuous_mode=int(dct.pop("cont", "0")) == 1,
+        threshold_volts=float(_strip_unit(dct.pop("thr", "0"))) / 1e6,
+        ddt_seconds=float(_strip_unit(dct.pop("ddt", "0"))) / 1e6,
+        status_interval_seconds=float(_strip_unit(dct.pop("status_interval", "0"))) / 1e3,
+        tr_enabled=int(dct.pop("tr_enabled", "0")) == 1,
+        tr_decimation=int(dct.pop("tr_decimation", "1")),
+        tr_pretrigger_samples=int(dct.pop("tr_pre_trig", "0")),
+        tr_postduration_samples=int(dct.pop("tr_post_dur", "0")),
+        extra=dct,
+    )

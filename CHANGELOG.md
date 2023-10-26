@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Use common `Info`, `Status` and `Setup` dataclass for both spotWave and linWave
 - [linwave] Deprecate `LinWave.set_range` method, use `LinWave.set_range_index` instead
 - [linwave] Remove `Info.max_sample_rate` field
 

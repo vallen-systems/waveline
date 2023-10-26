@@ -17,64 +17,22 @@ from warnings import warn
 import numpy as np
 
 from ._common import (
-    KV_PATTERN,
-    as_float,
-    as_int,
-    dict_get_first,
-    multiline_output_to_dict,
-    parse_array,
-    parse_filter_setup_line,
+    _KV_PATTERN,
+    _adc_to_eu,
+    _parse_get_info_output,
+    _parse_get_setup_output,
+    _parse_get_status_output,
 )
-from .datatypes import AERecord, TRRecord
+from .datatypes import AERecord, Info, Setup, Status, TRRecord
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Info:
-    """Device information."""
-
-    hardware_id: str  #: Unique hardware id (since firmware version 2.13)
-    firmware_version: str  #: Firmware version
-    fpga_version: str  #: FPGA version
-    channel_count: int  #: Number of channels
-    input_range: List[str]  #: List of selectable input ranges
-    adc_to_volts: List[float]  #: Conversion factors from ADC values to V for both ranges
-
-
-@dataclass
-class Status:
-    """Status information."""
-
-    temperature: float  #: Device temperature in °C
-    buffer_size: int  #: Buffer size in bytes
-
-
-@dataclass
-class Setup:
-    """Setup."""
-
-    adc_range_volts: float  #: ADC input range in volts
-    adc_to_volts: float  #: Conversion factor from ADC values to volts
-    filter_highpass_hz: Optional[float]  #: Highpass frequency in Hz
-    filter_lowpass_hz: Optional[float]  #: Lowpass frequency in Hz
-    filter_order: int  #: Filter order
-    enabled: bool  #: Flag if channel is enabled
-    continuous_mode: bool  #: Flag if continuous mode is enabled
-    threshold_volts: float  #: Threshold for hit-based acquisition in volts
-    ddt_seconds: float  #: Duration discrimination time (DDT) in seconds
-    status_interval_seconds: float  #: Status interval in seconds
-    tr_enabled: bool  #: Flag in transient data recording is enabled
-    tr_decimation: int  #: Decimation factor for transient data
-    tr_pretrigger_samples: int  #: Pre-trigger samples for transient data
-    tr_postduration_samples: int  #: Post-duration samples for transient data
 
 
 @dataclass
 class _ChannelSettings:
     """Channel settings."""
 
-    range_index: int  #: Input range in volts
+    range_index: int  #: Input range index
     decimation: int  #: Decimation factor
 
 
@@ -102,10 +60,6 @@ def _channel_str(channel: int) -> str:
     if channel == 0:
         return "all channels"
     return f"channel {channel:d}"
-
-
-def _adc_to_eu(adc_to_volts: List[float], samplerate: float) -> List[float]:
-    return [factor**2 * 1e14 / samplerate for factor in adc_to_volts]
 
 
 def _check_firmware_version(firmware_version: str, min_firmware_version: str):
@@ -190,7 +144,6 @@ class LinWave:
         # wait for stream connections before start acq
         self._stream_connection_tasks: Set[asyncio.Task] = set()
         self._adc_to_volts = [1.5625e-06, 0.00015625]  # defaults, update after connect
-        self._adc_to_eu = _adc_to_eu(self._adc_to_volts, self.MAX_SAMPLERATE)
 
     def __del__(self):
         if self._writer:
@@ -253,7 +206,6 @@ class LinWave:
         logger.debug(f"Info: {info}")
         _check_firmware_version(info.firmware_version, self._MIN_FIRMWARE_VERSION)
         self._adc_to_volts = info.adc_to_volts
-        self._adc_to_eu = _adc_to_eu(self._adc_to_volts, self.MAX_SAMPLERATE)
 
         logger.info("Set default settings")
         await self.set_range_index(0, self._DEFAULT_SETTINGS.range_index)
@@ -336,19 +288,11 @@ class LinWave:
         if not lines:
             raise RuntimeError("Could not get device information")
 
-        info_dict = multiline_output_to_dict(lines)
-        return Info(
-            hardware_id=info_dict.get("hw_id", ""),
-            firmware_version=info_dict["fw_version"],
-            fpga_version=info_dict["fpga_version"],
-            channel_count=as_int(info_dict["channel_count"], 0),
-            input_range=(
-                parse_array(info_dict["input_range"])
-                if "input_range" in info_dict
-                else ["50 mV", "5 V"]
-            ),
-            adc_to_volts=[float(v) / 1e6 for v in parse_array(info_dict["adc2uv"])],
-        )
+        info = _parse_get_info_output(lines)
+        if not info.input_range:
+            info.input_range = ["50 mV", "5 V"]
+        assert len(info.input_range) == len(info.adc_to_volts)
+        return info
 
     @_require_connected
     async def get_status(self) -> Status:
@@ -358,11 +302,7 @@ class LinWave:
         if not lines:
             raise RuntimeError("Could not get status")
 
-        status_dict = multiline_output_to_dict(lines)
-        return Status(
-            temperature=as_float(status_dict["temp"]),
-            buffer_size=as_int(status_dict["buffer_size"]),
-        )
+        return _parse_get_status_output(lines)
 
     def _check_channel_number(self, channel: int, *, allow_all: bool = True):
         allowed_channels = (0, *self.CHANNELS) if allow_all else self.CHANNELS
@@ -386,25 +326,7 @@ class LinWave:
         if not lines:
             raise RuntimeError("Could not get setup")
 
-        setup_dict = multiline_output_to_dict(lines)
-        input_range = dict_get_first(setup_dict, ("input_range", "adc_range"))
-        filter_setup = parse_filter_setup_line(setup_dict["filter"])
-        return Setup(
-            adc_range_volts=self.RANGES[as_int(input_range)],
-            adc_to_volts=as_float(setup_dict["adc2uv"]) / 1e6,
-            filter_highpass_hz=filter_setup[0],
-            filter_lowpass_hz=filter_setup[1],
-            filter_order=filter_setup[2],
-            enabled=as_int(setup_dict["enabled"]) == 1,
-            continuous_mode=as_int(setup_dict["cont"]) == 1,
-            threshold_volts=as_float(setup_dict["thr"]) / 1e6,
-            ddt_seconds=as_float(setup_dict["ddt"]) / 1e6,
-            status_interval_seconds=as_float(setup_dict["status_interval"]) / 1e3,
-            tr_enabled=as_int(setup_dict["tr_enabled"]) == 1,
-            tr_decimation=as_int(setup_dict["tr_decimation"]),
-            tr_pretrigger_samples=as_int(setup_dict["tr_pre_trig"]),
-            tr_postduration_samples=as_int(setup_dict["tr_post_dur"]),
-        )
+        return _parse_get_setup_output(lines)
 
     @_require_connected
     async def set_range_index(self, channel: int, range_index: int):
@@ -684,11 +606,11 @@ class LinWave:
             logger.debug(f"Received AE data: {line}")
 
             record_type = line[:1]
-            matches = dict(KV_PATTERN.findall(line))  # parse key-value pairs in line
+            matches = dict(_KV_PATTERN.findall(line))  # parse key-value pairs in line
             channel = int(matches[b"Ch"])
             range_index = self._channel_settings[channel].range_index
             adc_to_volts = self._adc_to_volts[range_index]
-            adc_to_eu = self._adc_to_eu[range_index]
+            adc_to_eu = _adc_to_eu(adc_to_volts, self.MAX_SAMPLERATE)
 
             if record_type in (b"H", b"S"):  # hit or status data
                 record = AERecord(
@@ -719,7 +641,7 @@ class LinWave:
 
             logger.debug(f"Received TR data: {headerline}")
 
-            matches = dict(KV_PATTERN.findall(headerline))  # parse key-value pairs in line
+            matches = dict(_KV_PATTERN.findall(headerline))  # parse key-value pairs in line
             channel = int(matches[b"Ch"])
             samples = int(matches[b"NS"])
             range_index = self._channel_settings[channel].range_index

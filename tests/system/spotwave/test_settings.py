@@ -26,7 +26,7 @@ def test_get_status(sw):
 )
 def test_set_continuous_mode(sw, set_, expect):
     sw.set_continuous_mode(set_)
-    assert sw.get_setup().cont_enabled == expect
+    assert sw.get_setup().continuous_mode == expect
 
 
 @pytest.mark.parametrize(
@@ -140,9 +140,8 @@ def test_set_filter(sw, set_, expect):
 
 
 def test_set_datetime(sw):
-    timestamp = datetime(2020, 12, 17, 18, 12, 33)
-    sw.set_datetime(timestamp)
-    assert sw.get_status().datetime == timestamp
+    sw.set_datetime(datetime(2020, 12, 17, 18, 12, 33))
+    assert sw.get_status().extra["date"].startswith("2020-12-17 18:12:")
 
 
 @pytest.mark.parametrize(
@@ -157,17 +156,3 @@ def test_set_datetime(sw):
 def test_threshold(sw, set_, expect):
     sw.set_threshold(set_)
     assert sw.get_setup().threshold_volts == expect / 1e6
-
-
-@pytest.mark.parametrize(
-    ("set_", "expect"),
-    [
-        (False, False),
-        (True, True),
-    ],
-)
-def test_set_logging_mode(sw, set_, expect):
-    sw.clear_data_log()
-    # logging can not be enabled if internal memory isn't cleared
-    sw.set_logging_mode(set_)
-    assert sw.get_setup().logging == expect

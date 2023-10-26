@@ -7,7 +7,6 @@ from freezegun import freeze_time
 from numpy.testing import assert_allclose
 from serial import Serial, SerialException
 from waveline import SpotWave
-from waveline.spotwave import Setup
 
 CLOCK = 2e6
 ADC_TO_VOLTS = 1.74e-6
@@ -80,22 +79,21 @@ def test_get_setup(serial_mock):
     serial_mock.readlines.return_value = response
     setup = sw.get_setup()
     serial_mock.write.assert_called_with(b"get_setup\n")
-    assert setup == Setup(
-        recording=True,
-        logging=False,
-        cont_enabled=False,
-        adc_to_volts=1.74e-6,
-        threshold_volts=3162.5e-6,
-        ddt_seconds=250e-6,
-        status_interval_seconds=1,
-        filter_highpass_hz=10.5e3,
-        filter_lowpass_hz=350e3,
-        filter_order=4,
-        tr_enabled=1,
-        tr_decimation=2,
-        tr_pretrigger_samples=100,
-        tr_postduration_samples=100,
-    )
+    assert setup.enabled is True
+    assert setup.input_range == 0
+    assert setup.adc_to_volts == 1.74e-6
+    assert setup.filter_highpass_hz == 10.5e3
+    assert setup.filter_lowpass_hz == 350e3
+    assert setup.filter_order == 4
+    assert setup.continuous_mode is False
+    assert setup.threshold_volts == 3162.5e-6
+    assert setup.ddt_seconds == 250e-6
+    assert setup.status_interval_seconds == 1
+    assert setup.tr_enabled is True
+    assert setup.tr_decimation == 2
+    assert setup.tr_pretrigger_samples == 100
+    assert setup.tr_postduration_samples == 100
+    assert {"recording", "logging"} == setup.extra.keys()
 
     # test special filter outputs
     response[3] = b"filter=none-350 kHz, order 4\n"
@@ -129,6 +127,7 @@ def test_get_info(serial_mock):
     sw = SpotWave(serial_mock)
 
     response = [
+        b"hw_id=002E004B3139511638303932\n",  # included in firmware version 00.2E
         b"fw_version=00.2C\n",
         b"type=spotWave\n",
         b"model=201\n",
@@ -149,10 +148,24 @@ def test_get_info(serial_mock):
     info = sw.get_info()
     serial_mock.write.assert_called_with(b"get_info\n")
 
+    assert info.hardware_id == "002E004B3139511638303932"
     assert info.firmware_version == "00.2C"
-    assert info.type_ == "spotWave"
-    assert info.model == "201"
-    assert info.input_range == "94 dBAE"
+    assert info.channel_count == 1
+    assert info.input_range == ["94 dBAE"]
+    assert info.adc_to_volts == [1.74e-6]
+    assert {
+        "type",
+        "model",
+        "input_resistance",
+        "input_capacity",
+        "max_samplerate",
+        "analog_bandwidth",
+        "cct_voltage",
+        "flash_memory",
+        "serial_number",
+        "pcb_vid",
+        "verification",
+    } == info.extra.keys()
 
     # empty response
     serial_mock.readlines.return_value = []
@@ -167,6 +180,8 @@ def test_get_status(serial_mock):
         b"temp=24 \xc2\xb0C\n",
         b"recording=0\n",
         b"logging=0\n",
+        b"pulsing=1\n",
+        b"usb_speed=high\n",
         b"log_data_usage=13 sets (0.12 %)\n",
         b"date=2020-12-17 15:11:42.17\n",
     ]
@@ -176,9 +191,8 @@ def test_get_status(serial_mock):
 
     assert status.temperature == 24
     assert status.recording is False
-    assert status.logging is False
-    assert status.log_data_usage == 13
-    assert status.datetime == datetime(2020, 12, 17, 15, 11, 42, 170_000)
+    assert status.pulsing is True
+    assert {"logging", "usb_speed", "log_data_usage", "date"} == status.extra.keys()
 
     # empty response
     serial_mock.readlines.return_value = []
@@ -232,11 +246,11 @@ def test_commands_without_response(serial_mock):
     sw.set_filter(highpass=100_000, lowpass=300_000, order=6)
     assert_write(b"set_filter 100.0 300.0 6\n")
 
-    sw.set_datetime(datetime(2020, 12, 16, 17, 55, 13))
-    assert_write(b"set_datetime 2020-12-16 17:55:13\n")
-
     sw.set_datetime()  # datetime.now() -> frozen time
     assert_write(b"set_datetime 2022-11-11 00:00:00\n")
+
+    sw.set_datetime(datetime(2020, 12, 16, 17, 55, 13))
+    assert_write(b"set_datetime 2020-12-16 17:55:13\n")
 
     sw.set_threshold(100)
     assert_write(b"set_acq thr 100\n")

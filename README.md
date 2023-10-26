@@ -74,7 +74,8 @@ $ tox
 
 # Build the documentation
 $ cd docs
-$ sphinx-build . _build
+$ make html  # Linux
+$ .\make.bat html  # Windows
 ```
 
 ### Run system tests

@@ -10,7 +10,6 @@ Library to easily interface with Vallen Systeme WaveLine™ devices using the pu
 
     waveline.spotwave
     waveline.linwave
-    waveline.conditionwave
     waveline.datatypes
     waveline.utils
 

@@ -108,7 +108,7 @@ def test_logging_only_status(sw, duration_acq):
     sw.set_logging_mode(True)
     sw.set_status_interval(status_interval_seconds)
     sw.set_threshold(10_000_000)  # above range
-    assert sw.get_setup().logging is True
+    assert sw.get_setup().extra["logging"] == "1"
 
     sw.start_acquisition()
     sleep(duration_acq)
@@ -127,7 +127,7 @@ def test_logging_continuous(sw, duration_acq):
     sw.set_logging_mode(True)
     sw.set_ddt(ddt_seconds * 1e6)
     sw.set_status_interval(0)
-    assert sw.get_setup().logging is True
+    assert sw.get_setup().extra["logging"] == "1"
 
     sw.start_acquisition()
     sleep(duration_acq)

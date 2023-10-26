@@ -20,15 +20,15 @@ class TestChannelSettings:
     async def test_get_setup(self, lw, channel):
         await lw.get_setup(channel)
 
-    @pytest.mark.parametrize("range_volts", [0.05, 5])
-    async def test_set_range(self, lw, channel, range_volts):
-        await lw.set_range(channel, range_volts)
-        assert (await lw.get_setup(channel)).adc_range_volts == range_volts
+    @pytest.mark.parametrize("range_index", [0, 1])
+    async def test_set_range_index(self, lw, channel, range_index):
+        await lw.set_range_index(channel, range_index)
+        assert (await lw.get_setup(channel)).input_range == range_index
 
-    @pytest.mark.parametrize("range_volts", [-1, 0, 0.5])
-    async def test_set_range_invalid(self, lw, channel, range_volts):
+    @pytest.mark.parametrize("range_index", [-1, 2])
+    async def test_set_range_index_invalid(self, lw, channel, range_index):
         with pytest.raises(ValueError):
-            await lw.set_range(channel, range_volts)
+            await lw.set_range(channel, range_index)
 
     @pytest.mark.parametrize("enabled", [False, True])
     async def test_set_channel(self, lw, channel, enabled):

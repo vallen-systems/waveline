@@ -25,7 +25,7 @@ def _parse_ae_headerline(
     get_adc_to_volts_by_channel: Callable[[int], float],
     default_channel: Optional[int] = None,
 ) -> Optional[AERecord]:
-    logger.debug(f"Parse AE data: {line}")
+    logger.debug("Parse AE data: %s", line)
     record_type = line[:1]
     matches = dict(_KV_PATTERN.findall(line))  # parse key-value pairs in line
     if record_type in (b"H", b"S"):  # hit or status data
@@ -46,7 +46,7 @@ def _parse_ae_headerline(
         )
     if record_type == b"R":  # marker record start
         return None  # TODO
-    logger.warning(f"Unknown AE data record: {line}")
+    logger.warning("Unknown AE data record: %s", line)
     return None
 
 
@@ -55,7 +55,7 @@ def _parse_tr_headerline(
     samplerate: float,
     default_channel: Optional[int] = None,
 ) -> TRRecord:
-    logger.debug(f"Parse TR data: {line}")
+    logger.debug("Parse TR data: %s", line)
     matches = dict(_KV_PATTERN.findall(line))  # parse key-value pairs in line
     return TRRecord(
         channel=int(matches[b"Ch"]) if default_channel is None else default_channel,

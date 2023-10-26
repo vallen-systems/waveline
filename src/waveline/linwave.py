@@ -138,8 +138,7 @@ class LinWave:
         self._connected = False
         self._recording = False
         self._channel_settings = {
-            channel: copy(self._DEFAULT_SETTINGS)
-            for channel in self.CHANNELS  # return copy
+            channel: copy(self._DEFAULT_SETTINGS) for channel in self.CHANNELS  # return copy
         }
         # wait for stream connections before start acq
         self._stream_connection_tasks: Set[asyncio.Task] = set()
@@ -199,11 +198,11 @@ class LinWave:
         if self.connected:
             return
 
-        logger.info(f"Open connection {self._address}:{self.PORT}")
+        logger.info("Open connection %s:%d", self._address, self.PORT)
         self._reader, self._writer = await asyncio.open_connection(self._address, self.PORT)
         self._connected = True
         info = await self.get_info()
-        logger.debug(f"Info: {info}")
+        logger.debug("Info: %s", info)
         _check_firmware_version(info.firmware_version, self._MIN_FIRMWARE_VERSION)
         self._adc_to_volts = info.adc_to_volts
 
@@ -219,7 +218,7 @@ class LinWave:
         if self._recording:
             await self.stop_acquisition()
 
-        logger.info(f"Close connection {self._address}:{self.PORT}")
+        logger.info("Close connection %s:%d", self._address, self.PORT)
         try:
             self._writer.close()
             await self._writer.wait_closed()  # new in 3.7 -> might raise AttributeError
@@ -340,7 +339,7 @@ class LinWave:
             range_index: Input range index (0: 0.05 V, 1: 5 V)
         """
         self._check_channel_number(channel)
-        logger.info(f"Set {_channel_str(channel)} range to index {range_index}")
+        logger.info("Set %s range to index %d", _channel_str(channel), range_index)
         await self._send_command(f"set_adc_range {range_index:d} @{channel:d}")
         if channel > 0:
             self._channel_settings[channel].range_index = range_index
@@ -570,10 +569,11 @@ class LinWave:
         if count % 2 != 0:
             warn("Number of pulse counts should be even", stacklevel=1)
         logger.info(
-            f"Start pulsing on {_channel_str(channel)} ("
-            f"interval: {interval} s, "
-            f"count: {count}, "
-            f"cycles: {cycles})..."
+            "Start pulsing on %s (interval: %f s, count: %d, cycles: %d)",
+            _channel_str(channel),
+            interval,
+            count,
+            cycles,
         )
         await self._send_command(f"start_pulsing {interval} {count} {cycles} @{channel}")
 
@@ -767,10 +767,10 @@ class LinWave:
 
         settings = self._channel_settings[channel]
         logger.info(
-            (
-                f"Start streaming acquisition on channel {channel} "
-                f"(blocksize: {blocksize}, range: {self.RANGES[settings.range_index]} V)"
-            )
+            "Start streaming acquisition on channel %d (blocksize: %d, range: %f V)",
+            channel,
+            blocksize,
+            self.RANGES[settings.range_index],
         )
 
         port = int(self.PORT + channel)
@@ -821,7 +821,7 @@ class LinWave:
                         data_adc if raw else np.multiply(data_adc, to_volts, dtype=np.float32),
                     )
                 except asyncio.IncompleteReadError:
-                    logger.info(f"Stop streaming on channel {channel}: EOF reached")
+                    logger.info("Stop streaming on channel %d: EOF reached", channel)
                     raise StopAsyncIteration from None
 
         return StreamGenerator()

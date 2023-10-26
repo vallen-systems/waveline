@@ -21,7 +21,7 @@ class WavWriter:
     """Incremental WAV file writer."""
 
     def __init__(self, filename: str, samplerate: int):
-        logger.info(f"Create new wav file: {filename}")
+        logger.info("Create new wav file: %s", filename)
         self._file = wave.open(filename, "wb")
         self._file.setparams((1, 2, samplerate, 0, "NONE", ""))
 
@@ -63,8 +63,8 @@ def main(basename: str, seconds_per_file: float):
                 except queue.Empty:
                     continue
                 if chunks >= chunks_per_file:
-                    logger.info(f"{chunks_per_file} chunks acquired")
-                    writer = WavWriter(get_filename(), samplerate)
+                    logger.info("%d chunks acquired", chunks_per_file)
+                    writer = WavWriter(get_filename(), int(samplerate))
                     chunks = 0
                 writer.write(tr.data)
                 chunks += 1
@@ -83,7 +83,7 @@ def main(basename: str, seconds_per_file: float):
                     missed += 1
 
                 if missed > 0 and time.monotonic() - last_t > 1:
-                    logger.warning(f"Missed {missed} record(s)")
+                    logger.warning("Missed %d record(s)", missed)
                     missed = 0
                     last_t = time.monotonic()
         finally:

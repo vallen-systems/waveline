@@ -99,7 +99,7 @@ class SpotWave:
             return tuple((int(hx, base=16) for hx in version_string.split(".")))
 
         version = self.get_info().firmware_version
-        logger.debug(f"Detected firmware version: {version}")
+        logger.debug("Detected firmware version: %s", version)
         if get_version_tuple(version) < get_version_tuple(self._MIN_FIRMWARE_VERSION):
             raise RuntimeError(
                 f"Firmware version {version} < {self._MIN_FIRMWARE_VERSION}. Upgrade required."

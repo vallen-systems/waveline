@@ -97,7 +97,6 @@ select = [
     "RUF", # ruff specific rules
 ]
 ignore = [
-    "G004", # logging statement uses f-string
     "PLR0913", # too many arguments in function call
     "PLR2004", # magic value used in comparison
 ]

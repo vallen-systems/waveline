@@ -17,11 +17,11 @@ from warnings import warn
 import numpy as np
 
 from ._common import (
-    _KV_PATTERN,
-    _adc_to_eu,
+    _parse_ae_headerline,
     _parse_get_info_output,
     _parse_get_setup_output,
     _parse_get_status_output,
+    _parse_tr_headerline,
 )
 from .datatypes import AERecord, Info, Setup, Status, TRRecord
 
@@ -588,6 +588,11 @@ class LinWave:
         logger.info("Stop pulsing")
         await self._send_command("stop_pulsing")
 
+    def _get_adc_to_volts(self, channel: int) -> float:
+        assert channel in self.CHANNELS
+        range_index = self._channel_settings[channel].range_index
+        return self._adc_to_volts[range_index]
+
     @_require_connected
     async def get_ae_data(self) -> List[AERecord]:
         """
@@ -596,6 +601,7 @@ class LinWave:
         Returns:
             List of AE data records (either status or hit data)
         """
+
         await self._send_command("get_ae_data")
         records = []
         while True:
@@ -603,33 +609,9 @@ class LinWave:
             if line == b"\n":  # last line is an empty new line
                 break
 
-            logger.debug(f"Received AE data: {line}")
-
-            record_type = line[:1]
-            matches = dict(_KV_PATTERN.findall(line))  # parse key-value pairs in line
-            channel = int(matches[b"Ch"])
-            range_index = self._channel_settings[channel].range_index
-            adc_to_volts = self._adc_to_volts[range_index]
-            adc_to_eu = _adc_to_eu(adc_to_volts, self.MAX_SAMPLERATE)
-
-            if record_type in (b"H", b"S"):  # hit or status data
-                record = AERecord(
-                    type_=record_type.decode(),
-                    channel=channel,
-                    time=int(matches[b"T"]) / self.MAX_SAMPLERATE,
-                    amplitude=int(matches.get(b"A", 0)) * adc_to_volts,
-                    rise_time=int(matches.get(b"R", 0)) / self.MAX_SAMPLERATE,
-                    duration=int(matches.get(b"D", 0)) / self.MAX_SAMPLERATE,
-                    counts=int(matches.get(b"C", 0)),
-                    energy=int(matches.get(b"E", 0)) * adc_to_eu,
-                    trai=int(matches.get(b"TRAI", 0)),
-                    flags=int(matches.get(b"flags", 0)),
-                )
+            record = _parse_ae_headerline(line, self.MAX_SAMPLERATE, self._get_adc_to_volts)
+            if record is not None:
                 records.append(record)
-            elif record_type == b"R":  # marker record start
-                ...
-            else:
-                logger.warning(f"Unknown AE data record: {line}")
         return records
 
     async def _read_tr_records(self, raw: bool) -> List[TRRecord]:
@@ -639,31 +621,16 @@ class LinWave:
             if headerline == b"\n":  # last line is an empty new line
                 break
 
-            logger.debug(f"Received TR data: {headerline}")
-
-            matches = dict(_KV_PATTERN.findall(headerline))  # parse key-value pairs in line
-            channel = int(matches[b"Ch"])
-            samples = int(matches[b"NS"])
-            range_index = self._channel_settings[channel].range_index
-            adc_to_volts = self._adc_to_volts[range_index]
-
-            data = np.frombuffer(
-                await self._reader.readexactly(2 * samples),  # type: ignore
+            record = _parse_tr_headerline(headerline, self.MAX_SAMPLERATE)
+            record.data = np.frombuffer(
+                await self._reader.readexactly(2 * record.samples),  # type: ignore
                 dtype=np.int16,
             )
-            assert len(data) == samples
-
+            record.raw = raw
+            assert len(record.data) == record.samples
             if not raw:
-                data = np.multiply(data, adc_to_volts, dtype=np.float32)
-
-            record = TRRecord(
-                channel=channel,
-                trai=int(matches.get(b"TRAI", 0)),
-                time=int(matches.get(b"T", 0)) / self.MAX_SAMPLERATE,
-                samples=samples,
-                data=data,
-                raw=raw,
-            )
+                adc_to_volts = self._get_adc_to_volts(record.channel)
+                record.data = np.multiply(record.data, adc_to_volts, dtype=np.float32)
             records.append(record)
         return records
 

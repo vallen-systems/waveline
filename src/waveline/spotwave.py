@@ -4,7 +4,6 @@ Module for spotWave device.
 All device-related functions are exposed by the `SpotWave` class.
 """
 
-import collections
 import logging
 import time
 from contextlib import contextmanager
@@ -17,11 +16,12 @@ from serial import EIGHTBITS, Serial
 from serial.tools import list_ports
 
 from ._common import (
-    _KV_PATTERN,
     _adc_to_eu,
+    _parse_ae_headerline,
     _parse_get_info_output,
     _parse_get_setup_output,
     _parse_get_status_output,
+    _parse_tr_headerline,
 )
 from .datatypes import AERecord, Info, Setup, Status, TRRecord
 
@@ -392,31 +392,11 @@ class SpotWave:
             if line == b"\n":  # last line is an empty new line
                 break
 
-            logger.debug(f"Received AE data: {line}")
-
-            record_type = line[:1]
-            # parse key-value pairs in line; default value: 0
-            matches = collections.defaultdict(int, _KV_PATTERN.findall(line))
-
-            if record_type in (b"H", b"S"):  # hit or status data
-                record = AERecord(
-                    type_=record_type.decode(),
-                    channel=1,
-                    time=int(matches[b"T"]) / self.CLOCK,
-                    amplitude=int(matches[b"A"]) * self._adc_to_volts,
-                    rise_time=int(matches[b"R"]) / self.CLOCK,
-                    duration=int(matches[b"D"]) / self.CLOCK,
-                    counts=int(matches[b"C"]),
-                    energy=int(matches[b"E"]) * self._adc_to_eu,
-                    trai=int(matches[b"TRAI"]),
-                    flags=int(matches[b"flags"]),
-                )
+            record = _parse_ae_headerline(
+                line, self.CLOCK, lambda _: self._adc_to_volts, default_channel=1
+            )
+            if record is not None:
                 records.append(record)
-            elif record_type == b"R":  # marker record start
-                ...
-            else:
-                logger.warning(f"Unknown AE data record: {line}")
-
         return records
 
     def get_ae_data(self) -> List[AERecord]:
@@ -447,28 +427,13 @@ class SpotWave:
             if headerline == b"\n":  # last line is an empty new line
                 break
 
-            logger.debug(f"Received TR data: {headerline}")
-
-            # parse key-value pairs in line; default value: 0
-            matches = collections.defaultdict(int, _KV_PATTERN.findall(headerline))
-            samples = int(matches[b"NS"])
-
-            data = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
-            assert len(data) == samples
-
+            record = _parse_tr_headerline(headerline, self.CLOCK, default_channel=1)
+            record.data = np.frombuffer(self._ser.read(2 * record.samples), dtype=np.int16)
+            record.raw = raw
+            assert len(record.data) == record.samples
             if not raw:
-                data = np.multiply(data, self._adc_to_volts, dtype=np.float32)
-
-            record = TRRecord(
-                channel=1,
-                trai=int(matches[b"TRAI"]),
-                time=int(matches[b"T"]) / self.CLOCK,
-                samples=samples,
-                data=data,
-                raw=raw,
-            )
+                record.data = np.multiply(record.data, self._adc_to_volts, dtype=np.float32)
             records.append(record)
-
         return records
 
     def acquire(

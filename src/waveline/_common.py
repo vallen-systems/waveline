@@ -1,13 +1,70 @@
+import logging
 import re
-from typing import Dict, Iterable, List
+from typing import Callable, Dict, Iterable, List, Optional
 
-from waveline.datatypes import Info, Setup, Status
+import numpy as np
+
+from waveline.datatypes import AERecord, Info, Setup, Status, TRRecord
+
+logger = logging.getLogger(__name__)
 
 # key = value pattern for ae/tr data
 # fast(est) and simple, accept spaces around "="
 # _KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")
 # accept words as keys w/o values; this seems next faster (incl. \S)?!
 _KV_PATTERN = re.compile(rb"([^\s=]+)(?:\s*=\s*(\S+))?")
+
+
+def _adc_to_eu(adc_to_volts: float, samplerate: float) -> float:
+    return adc_to_volts**2 * 1e14 / samplerate
+
+
+def _parse_ae_headerline(
+    line: bytes,
+    samplerate: float,
+    get_adc_to_volts_by_channel: Callable[[int], float],
+    default_channel: Optional[int] = None,
+) -> Optional[AERecord]:
+    logger.debug(f"Parse AE data: {line}")
+    record_type = line[:1]
+    matches = dict(_KV_PATTERN.findall(line))  # parse key-value pairs in line
+    if record_type in (b"H", b"S"):  # hit or status data
+        channel = int(matches[b"Ch"]) if default_channel is None else default_channel
+        adc_to_volts = get_adc_to_volts_by_channel(channel)
+        adc_to_eu = _adc_to_eu(adc_to_volts, samplerate)
+        return AERecord(
+            type_=record_type.decode(),
+            channel=channel,
+            time=int(matches[b"T"]) / samplerate,
+            amplitude=int(matches.get(b"A", 0)) * adc_to_volts,
+            rise_time=int(matches.get(b"R", 0)) / samplerate,
+            duration=int(matches.get(b"D", 0)) / samplerate,
+            counts=int(matches.get(b"C", 0)),
+            energy=int(matches.get(b"E", 0)) * adc_to_eu,
+            trai=int(matches.get(b"TRAI", 0)),
+            flags=int(matches.get(b"flags", 0)),
+        )
+    if record_type == b"R":  # marker record start
+        return None  # TODO
+    logger.warning(f"Unknown AE data record: {line}")
+    return None
+
+
+def _parse_tr_headerline(
+    line: bytes,
+    samplerate: float,
+    default_channel: Optional[int] = None,
+) -> TRRecord:
+    logger.debug(f"Parse TR data: {line}")
+    matches = dict(_KV_PATTERN.findall(line))  # parse key-value pairs in line
+    return TRRecord(
+        channel=int(matches[b"Ch"]) if default_channel is None else default_channel,
+        trai=int(matches.get(b"TRAI", 0)),
+        time=int(matches.get(b"T", 0)) / samplerate,
+        samples=int(matches[b"NS"]),
+        data=np.empty(0, dtype=np.float32),
+        raw=False,
+    )
 
 
 def _multiline_output_to_dict(lines: List[bytes]):
@@ -45,10 +102,6 @@ def _parse_array(line: str, allow_space: bool) -> List[str]:
     if line:
         return [line]
     return []
-
-
-def _adc_to_eu(adc_to_volts: float, samplerate: float) -> float:
-    return adc_to_volts**2 * 1e14 / samplerate
 
 
 def _is_number(s: str) -> bool:

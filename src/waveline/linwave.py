@@ -17,6 +17,7 @@ from warnings import warn
 import numpy as np
 
 from ._common import (
+    _check_firmware_version,
     _parse_ae_headerline,
     _parse_get_info_output,
     _parse_get_setup_output,
@@ -60,16 +61,6 @@ def _channel_str(channel: int) -> str:
     if channel == 0:
         return "all channels"
     return f"channel {channel:d}"
-
-
-def _check_firmware_version(firmware_version: str, min_firmware_version: str):
-    def get_version_tuple(version_string: str):
-        return tuple((int(part) for part in version_string.split(".")))
-
-    if get_version_tuple(firmware_version) < get_version_tuple(min_firmware_version):
-        raise RuntimeError(
-            f"Firmware version {firmware_version} < {min_firmware_version}. Upgrade required."
-        )
 
 
 class LinWave:
@@ -202,8 +193,7 @@ class LinWave:
         self._reader, self._writer = await asyncio.open_connection(self._address, self.PORT)
         self._connected = True
         info = await self.get_info()
-        logger.debug("Info: %s", info)
-        _check_firmware_version(info.firmware_version, self._MIN_FIRMWARE_VERSION)
+        _check_firmware_version(info.firmware_version, self._MIN_FIRMWARE_VERSION, base=10)
         self._adc_to_volts = info.adc_to_volts
 
         logger.info("Set default settings")
@@ -317,7 +307,7 @@ class LinWave:
         Get setup information.
 
         Args:
-            channel: Channel number (0 for all channels)
+            channel: Channel number
         """
         self._check_channel_number(channel, allow_all=False)
         await self._send_command(f"get_setup @{channel:d}")

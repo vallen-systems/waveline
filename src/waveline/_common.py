@@ -8,6 +8,17 @@ from waveline.datatypes import AERecord, Info, Setup, Status, TRRecord
 
 logger = logging.getLogger(__name__)
 
+
+def _check_firmware_version(firmware_version: str, min_firmware_version: str, base: int):
+    def get_version_tuple(version_string: str):
+        return tuple((int(part, base=base) for part in version_string.split(".")))
+
+    if get_version_tuple(firmware_version) < get_version_tuple(min_firmware_version):
+        raise RuntimeError(
+            f"Firmware version {firmware_version} < {min_firmware_version}. Upgrade required."
+        )
+
+
 # key = value pattern for ae/tr data
 # fast(est) and simple, accept spaces around "="
 # _KV_PATTERN = re.compile(br"(\w+)\s*=\s*(\S+)")

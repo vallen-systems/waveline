@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import NamedTuple
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -7,44 +8,40 @@ from freezegun import freeze_time
 from numpy.testing import assert_allclose
 from serial import Serial, SerialException
 from waveline import SpotWave
+from waveline.datatypes import Info
 
 CLOCK = 2e6
 ADC_TO_VOLTS = 1.74e-6
 ADC_TO_EU = ADC_TO_VOLTS**2 * 1e14 / CLOCK
 
 
-@pytest.fixture(autouse=True)
-def mock_spotwave_adc_factor():
-    """
-    Mock SpotWave._adc_to_volts method globally.
-
-    SpotWave.__init__ will call get_setup() to get adc_to_volts.
-    Return a constant value instead.
-    """
-    with patch("waveline.spotwave.SpotWave._get_adc_to_volts") as method:
-        method.return_value = ADC_TO_VOLTS
-        yield method
+class MockedObjects(NamedTuple):
+    sw: SpotWave
+    serial: Serial
 
 
-@pytest.fixture(autouse=True)
-def mock_spotwave_check_firmware_version():
-    """Mock SpotWave._check_firmware_version method globally."""
-    with patch("waveline.spotwave.SpotWave._check_firmware_version") as method:
-        method.return_value = None
-        yield method
+@pytest.fixture(autouse=True, name="mock_objects")
+def mock_spotwave():
+    serial = Mock(spec=Serial)
+    serial.is_open = False
+
+    with patch.object(SpotWave, "get_info") as mock_get_info:
+        mock_get_info.return_value = Info(
+            hardware_id="002E004B3139511638303932",
+            firmware_version="00.2C",
+            channel_count=1,
+            input_range=["94 dBAE"],
+            adc_to_volts=[ADC_TO_VOLTS],
+            extra={},
+        )
+        sw = SpotWave(serial)
+    return MockedObjects(sw, serial)
 
 
-@pytest.fixture(name="serial_mock")
-def mock_serial_port():
-    serial_mock = Mock(spec=Serial)
-    serial_mock.is_open = False
-    return serial_mock
-
-
-def test_init_serial(serial_mock):
-    sw = SpotWave(serial_mock)
-    assert sw._ser == serial_mock  # pylint: disable=protected-access
-    serial_mock.open.assert_called()
+def test_init_serial(mock_objects):
+    sw, serial = mock_objects
+    assert sw._ser == serial  # pylint: disable=protected-access
+    serial.open.assert_called()
 
 
 def test_init_port():
@@ -57,76 +54,9 @@ def test_init_invalid_type():
         SpotWave(123)
 
 
-def test_get_setup(serial_mock):
-    sw = SpotWave(serial_mock)
-
-    response = [
-        b"recording=1\n",
-        b"logging=0\n",
-        b"adc2uv=1.74\n",
-        b"filter=10.5 - 350 kHz, order 4\n",
-        b"cont=0\n",
-        b"thr=3162.5 uV\n",
-        b"ddt=250  us\n",
-        b"dummy line without value",  # modified on puporse
-        b" status_interval = 1000 ms\n",  # modified on purpose
-        b"tr_enabled=1\n",
-        b"tr_decimation=2\n",
-        b"tr_pre_trig=100\n",
-        b"tr_post_dur=100\n",
-        b"\n",
-    ]
-    serial_mock.readlines.return_value = response
-    setup = sw.get_setup()
-    serial_mock.write.assert_called_with(b"get_setup\n")
-    assert setup.enabled is True
-    assert setup.input_range == 0
-    assert setup.adc_to_volts == 1.74e-6
-    assert setup.filter_highpass_hz == 10.5e3
-    assert setup.filter_lowpass_hz == 350e3
-    assert setup.filter_order == 4
-    assert setup.continuous_mode is False
-    assert setup.threshold_volts == 3162.5e-6
-    assert setup.ddt_seconds == 250e-6
-    assert setup.status_interval_seconds == 1
-    assert setup.tr_enabled is True
-    assert setup.tr_decimation == 2
-    assert setup.tr_pretrigger_samples == 100
-    assert setup.tr_postduration_samples == 100
-    assert {"recording", "logging"} == setup.extra.keys()
-
-    # test special filter outputs
-    response[3] = b"filter=none-350 kHz, order 4\n"
-    serial_mock.readlines.return_value = response
-    setup = sw.get_setup()
-    assert setup.filter_highpass_hz is None
-    assert setup.filter_lowpass_hz == 350_000
-    assert setup.filter_order == 4
-
-    response[3] = b"filter=10.5-none kHz, order 4\n"
-    serial_mock.readlines.return_value = response
-    setup = sw.get_setup()
-    assert setup.filter_highpass_hz == 10_500
-    assert setup.filter_lowpass_hz is None
-    assert setup.filter_order == 4
-
-    response[3] = b"filter=none-none kHz, order 0\n"
-    serial_mock.readlines.return_value = response
-    setup = sw.get_setup()
-    assert setup.filter_highpass_hz is None
-    assert setup.filter_lowpass_hz is None
-    assert setup.filter_order == 0
-
-    # empty response
-    serial_mock.readlines.return_value = []
-    with pytest.raises(RuntimeError):
-        sw.get_setup()
-
-
-def test_get_info(serial_mock):
-    sw = SpotWave(serial_mock)
-
-    response = [
+def test_get_info(mock_objects):
+    sw, serial = mock_objects
+    serial.readlines.return_value = [
         b"hw_id=002E004B3139511638303932\n",  # included in firmware version 00.2E
         b"fw_version=00.2C\n",
         b"type=spotWave\n",
@@ -144,9 +74,8 @@ def test_get_info(serial_mock):
         b"verification=2021-01-01 06:41:09.54\n",
         b"\n",
     ]
-    serial_mock.readlines.return_value = response
     info = sw.get_info()
-    serial_mock.write.assert_called_with(b"get_info\n")
+    serial.write.assert_called_with(b"get_info\n")
 
     assert info.hardware_id == "002E004B3139511638303932"
     assert info.firmware_version == "00.2C"
@@ -168,15 +97,14 @@ def test_get_info(serial_mock):
     } == info.extra.keys()
 
     # empty response
-    serial_mock.readlines.return_value = []
+    serial.readlines.return_value = []
     with pytest.raises(RuntimeError):
         sw.get_info()
 
 
-def test_get_status(serial_mock):
-    sw = SpotWave(serial_mock)
-
-    response = [
+def test_get_status(mock_objects):
+    sw, serial = mock_objects
+    serial.readlines.return_value = [
         b"temp=24 \xc2\xb0C\n",
         b"recording=0\n",
         b"logging=0\n",
@@ -185,9 +113,8 @@ def test_get_status(serial_mock):
         b"log_data_usage=13 sets (0.12 %)\n",
         b"date=2020-12-17 15:11:42.17\n",
     ]
-    serial_mock.readlines.return_value = response
     status = sw.get_status()
-    serial_mock.write.assert_called_with(b"get_status\n")
+    serial.write.assert_called_with(b"get_status\n")
 
     assert status.temperature == 24
     assert status.recording is False
@@ -195,17 +122,82 @@ def test_get_status(serial_mock):
     assert {"logging", "usb_speed", "log_data_usage", "date"} == status.extra.keys()
 
     # empty response
-    serial_mock.readlines.return_value = []
+    serial.readlines.return_value = []
     with pytest.raises(RuntimeError):
         sw.get_status()
 
 
+def test_get_setup(mock_objects):
+    sw, serial = mock_objects
+    response = [
+        b"recording=1\n",
+        b"logging=0\n",
+        b"adc2uv=1.74\n",
+        b"filter=10.5 - 350 kHz, order 4\n",
+        b"cont=0\n",
+        b"thr=3162.5 uV\n",
+        b"ddt=250  us\n",
+        b"dummy line without value",  # modified on puporse
+        b" status_interval = 1000 ms\n",  # modified on purpose
+        b"tr_enabled=1\n",
+        b"tr_decimation=2\n",
+        b"tr_pre_trig=100\n",
+        b"tr_post_dur=100\n",
+        b"\n",
+    ]
+    serial.readlines.return_value = response
+    setup = sw.get_setup()
+    serial.write.assert_called_with(b"get_setup\n")
+    assert setup.enabled is True
+    assert setup.input_range == 0
+    assert setup.adc_to_volts == 1.74e-6
+    assert setup.filter_highpass_hz == 10.5e3
+    assert setup.filter_lowpass_hz == 350e3
+    assert setup.filter_order == 4
+    assert setup.continuous_mode is False
+    assert setup.threshold_volts == 3162.5e-6
+    assert setup.ddt_seconds == 250e-6
+    assert setup.status_interval_seconds == 1
+    assert setup.tr_enabled is True
+    assert setup.tr_decimation == 2
+    assert setup.tr_pretrigger_samples == 100
+    assert setup.tr_postduration_samples == 100
+    assert {"recording", "logging"} == setup.extra.keys()
+
+    # test special filter outputs
+    response[3] = b"filter=none-350 kHz, order 4\n"
+    serial.readlines.return_value = response
+    setup = sw.get_setup()
+    assert setup.filter_highpass_hz is None
+    assert setup.filter_lowpass_hz == 350_000
+    assert setup.filter_order == 4
+
+    response[3] = b"filter=10.5-none kHz, order 4\n"
+    serial.readlines.return_value = response
+    setup = sw.get_setup()
+    assert setup.filter_highpass_hz == 10_500
+    assert setup.filter_lowpass_hz is None
+    assert setup.filter_order == 4
+
+    response[3] = b"filter=none-none kHz, order 0\n"
+    serial.readlines.return_value = response
+    setup = sw.get_setup()
+    assert setup.filter_highpass_hz is None
+    assert setup.filter_lowpass_hz is None
+    assert setup.filter_order == 0
+
+    # empty response
+    serial.readlines.return_value = []
+    with pytest.raises(RuntimeError):
+        sw.get_setup()
+
+
 @freeze_time("2022-11-11")
-def test_commands_without_response(serial_mock):
-    sw = SpotWave(serial_mock)
+def test_commands_without_response(mock_objects):
+    sw, serial = mock_objects
 
     def assert_write(expected):
-        serial_mock.write.assert_called_with(expected)
+        serial.write.assert_called_with(expected)
 
     sw.identify()
     assert_write(b"identify\n")
@@ -262,16 +254,13 @@ def test_commands_without_response(serial_mock):
     assert_write(b"stop_acq\n")
 
 
-def test_get_ae_data(serial_mock):
-    sw = SpotWave(serial_mock)
-
-    response = [
+def test_get_ae_data(mock_objects):
+    sw, serial = mock_objects
+    serial.readline.side_effect = [
         b"S temp=27 T = 2010240 A=21 R=502689 D=2000000 C=0 E=38849818 TRAI=0 flags=0\n",
         b"H temp=27 T=3044759 A=3557 R=24 D=819 C=31 E=518280026 TRAI=1 flags=0\n",
         b"\n",
     ]
-
-    serial_mock.readline.side_effect = response
     ae_data = sw.get_ae_data()
 
     # status record
@@ -302,8 +291,8 @@ def test_get_ae_data(serial_mock):
 
 
 @pytest.mark.parametrize("raw", [False, True])
-def test_get_tr_data(serial_mock, raw):
-    sw = SpotWave(serial_mock)
+def test_get_tr_data(mock_objects, raw):
+    sw, serial = mock_objects
 
     lines = [
         b"TRAI = 1 T=43686000 NS=13\n",
@@ -313,11 +302,11 @@ def test_get_tr_data(serial_mock, raw):
     data = [np.arange(samples, dtype=np.int16) for samples in (13, 27)]
     binary_data = [arr.tobytes() for arr in data]
 
-    serial_mock.readline.side_effect = lines
-    serial_mock.read.side_effect = binary_data
+    serial.readline.side_effect = lines
+    serial.read.side_effect = binary_data
 
     tr_data = sw.get_tr_data(raw=raw)
-    serial_mock.write.assert_called_with(b"get_tr_data\n")
+    serial.write.assert_called_with(b"get_tr_data\n")
 
     assert tr_data[0].channel == 1
     assert tr_data[0].trai == 1
@@ -349,16 +338,16 @@ def test_get_tr_data(serial_mock, raw):
         65536,
     ],
 )
-def test_get_data(serial_mock, samples, raw):
-    sw = SpotWave(serial_mock)
+def test_get_data(mock_objects, samples, raw):
+    sw, serial = mock_objects
 
     mock_data = (2**15 * np.random.randn(samples)).astype(np.int16)
-    serial_mock.readline.return_value = f"NS={samples}\n".encode()
-    serial_mock.read.return_value = mock_data.tobytes()
+    serial.readline.return_value = f"NS={samples}\n".encode()
+    serial.read.return_value = mock_data.tobytes()
 
     data = sw.get_data(samples, raw=raw)
-    serial_mock.write.assert_called_with(f"get_data {samples}\n".encode())
-    serial_mock.read.assert_called_with(samples * 2)
+    serial.write.assert_called_with(f"get_data {samples}\n".encode())
+    serial.read.assert_called_with(samples * 2)
     if raw:
         assert_allclose(data, mock_data)
     else:

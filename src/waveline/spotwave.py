@@ -16,7 +16,7 @@ from serial import EIGHTBITS, Serial
 from serial.tools import list_ports
 
 from ._common import (
-    _adc_to_eu,
+    _check_firmware_version,
     _parse_ae_headerline,
     _parse_get_info_output,
     _parse_get_setup_output,
@@ -80,10 +80,9 @@ class SpotWave:
         self._ser.exclusive = True
 
         self.connect()
-        self._check_firmware_version()
-        self.stop_acquisition()  # stop acquisition if running
-        self._adc_to_volts = self._get_adc_to_volts()  # get and save adc conversion factor
-        self._adc_to_eu = _adc_to_eu(self._adc_to_volts, self.CLOCK)
+        info = self.get_info()
+        _check_firmware_version(info.firmware_version, self._MIN_FIRMWARE_VERSION, base=16)
+        self._adc_to_volts = info.adc_to_volts[0]  # TODO: support for multi-range devices
 
     def __del__(self):
         self.close()
@@ -93,20 +92,6 @@ class SpotWave:
 
     def __exit__(self, *args, **kwargs):
         self.close()
-
-    def _check_firmware_version(self):
-        def get_version_tuple(version_string: str):
-            return tuple((int(hx, base=16) for hx in version_string.split(".")))
-
-        version = self.get_info().firmware_version
-        logger.debug("Detected firmware version: %s", version)
-        if get_version_tuple(version) < get_version_tuple(self._MIN_FIRMWARE_VERSION):
-            raise RuntimeError(
-                f"Firmware version {version} < {self._MIN_FIRMWARE_VERSION}. Upgrade required."
-            )
-
-    def _get_adc_to_volts(self):
-        return self.get_setup().adc_to_volts
 
     def connect(self):
         """

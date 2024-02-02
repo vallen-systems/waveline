@@ -757,10 +757,11 @@ class LinWave:
 
         settings = self._channel_settings[channel]
         logger.info(
-            "Start streaming acquisition on channel %d (blocksize: %d, range: %f V)",
+            "Start streaming of channel %d (decimation: %d, blocksize: %d, range: %d)",
             channel,
+            settings.decimation,
             blocksize,
-            self.RANGES[settings.range_index],
+            settings.range_index,
         )
 
         port = int(self.PORT + channel)

@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from waveline import LinWave
 
@@ -16,5 +18,6 @@ async def lw(linwave_ip):
         return devices[0]
 
     async with LinWave(get_ip()) as lw_:
-        await lw_.stop_acquisition()
         yield lw_
+
+    await asyncio.sleep(0.05)  # wait for connection to be closed

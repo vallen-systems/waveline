@@ -7,6 +7,7 @@ import pytest
 @pytest.mark.repeat(10)
 @pytest.mark.parametrize("channel", [1, 2])
 async def test_acq_stream_pause(lw, channel):
+    await lw.set_tr_decimation(0, 1)
     stream = lw.stream(channel, blocksize=1000)
 
     async def consume_n_blocks(n: int):
@@ -21,13 +22,13 @@ async def test_acq_stream_pause(lw, channel):
 
     await lw.start_acquisition()
 
-    await consume_n_blocks(10)
+    await consume_n_blocks(100)
 
     # stop acq should not close stream port
     await lw.stop_acquisition()
     await lw.start_acquisition()
 
-    await consume_n_blocks(10)
+    await consume_n_blocks(100)
 
     await lw.stop_acquisition()
     await stream.aclose()

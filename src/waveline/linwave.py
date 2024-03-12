@@ -569,12 +569,7 @@ class LinWave:
 
     @_require_connected
     async def stop_pulsing(self):
-        """
-        Start pulsing.
-
-        Args:
-
-        """
+        """Stop pulsing."""
         logger.info("Stop pulsing")
         await self._send_command("stop_pulsing")
 

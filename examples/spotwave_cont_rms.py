@@ -22,7 +22,6 @@ def main():
 
     with SpotWave(port) as sw:
         sw.set_datetime()
-        sw.set_cct(0)  # disable cct/pulser
         sw.set_continuous_mode(True)  # enable continous mode
         sw.set_ddt(100_000)  # 100 ms block size
         sw.set_filter(highpass=50e3, lowpass=300e3, order=4)  # 50-300 kHz bandpass

@@ -68,7 +68,6 @@ def main():
         print(sw.get_info())
 
         sw.set_continuous_mode(False)  # -> hit-based
-        sw.set_cct(0)  # disable pulser
         sw.set_ddt(10_000)  # 10.000 µs
         sw.set_status_interval(2)  # generate status data every 2 seconds
         sw.set_threshold(1000)  # 1000 µV = 60 dB(AE)

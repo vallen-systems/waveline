@@ -44,7 +44,6 @@ def main(basename: str, seconds_per_file: float):
     with SpotWave(port) as sw:
         sw.set_datetime()
         sw.set_continuous_mode(True)
-        sw.set_cct(0)
         sw.set_status_interval(0)
         sw.set_tr_enabled(True)
         sw.set_tr_decimation(1)  # 2 MHz

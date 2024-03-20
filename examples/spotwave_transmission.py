@@ -27,7 +27,7 @@ def main():
     _, ax = plt.subplots(figsize=(10, 3), tight_layout=True)
 
     with SpotWave(port) as sw:
-        sw.set_cct(1, sync=True)
+        sw.set_cct(-1)  # sync pulse with get_tr_snapshot command
         sw.set_filter(90e3, 150e3, 4)  # 90-150 kHz bandpass
 
         while True:

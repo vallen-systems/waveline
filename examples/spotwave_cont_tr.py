@@ -25,7 +25,6 @@ def main():
     with SpotWave(port) as sw:
         # apply settings
         sw.set_continuous_mode(True)
-        sw.set_cct(0)
         sw.set_status_interval(0)
         sw.set_tr_enabled(True)
         sw.set_tr_decimation(4)  # 2 MHz / 4 = 500 kHz

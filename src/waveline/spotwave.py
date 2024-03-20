@@ -147,7 +147,7 @@ class SpotWave:
         """
         self._send_command("identify")
 
-    def _readlines(self, return_emptyline: bool = True,):
+    def _readlines(self, return_emptyline: bool = True):
         """Read lines using custom timeout."""
         lines: List[bytes] = []
         # long timeout (1000 ms) for first line, then short timeouts (100 ms)
@@ -305,18 +305,16 @@ class SpotWave:
         """
         self._send_command(f"set_acq tr_post_dur {int(samples)}")
 
-    def set_cct(self, interval_seconds: float, sync: bool = False):
+    def set_cct(self, interval_seconds: float):
         """
         Set coupling check ransmitter (CCT) / pulser interval.
 
         The pulser amplitude is 3.3 V.
 
         Args:
-            interval_seconds: Pulser interval in seconds
-            sync: Synchronize the pulser with the first sample of the `get_data` command
+            interval_seconds: Pulser interval in seconds. If < 0, the pulse is synchronized with the
+                              first sample of the `get_tr_snapshot` command.
         """
-        if sync and interval_seconds > 0:
-            interval_seconds *= -1
         self._send_command(f"set_cct interval {interval_seconds}")
 
     def set_filter(

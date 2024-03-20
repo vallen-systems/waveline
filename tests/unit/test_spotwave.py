@@ -231,12 +231,10 @@ def test_commands_without_response(mock_objects):
     sw.set_tr_postduration(0)
     assert_write(b"set_acq tr_post_dur 0\n")
 
-    sw.set_cct(0.1, sync=False)
+    sw.set_cct(0.1)
     assert_write(b"set_cct interval 0.1\n")
-    sw.set_cct(-0.1, sync=False)
-    assert_write(b"set_cct interval -0.1\n")
-    sw.set_cct(0.1, sync=True)
-    assert_write(b"set_cct interval -0.1\n")
+    sw.set_cct(-1)
+    assert_write(b"set_cct interval -1\n")
 
     sw.set_filter(highpass=100_000, lowpass=300_000, order=6)
     assert_write(b"set_filter 100.0 300.0 6\n")

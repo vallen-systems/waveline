@@ -103,6 +103,14 @@ def test_acq_continuous_tr_loss(sw, ddt_us, decimation, duration_acq):
             break
 
 
+def test_pulsing(sw):
+    assert not sw.get_status().pulsing
+    sw.start_pulsing(1, 4)
+    assert sw.get_status().pulsing
+    sw.stop_pulsing()
+    assert not sw.get_status().pulsing
+
+
 def test_logging_only_status(sw, duration_acq):
     status_interval_seconds = 0.1  # 100 ms
 

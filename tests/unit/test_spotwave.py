@@ -56,7 +56,7 @@ def test_init_invalid_type():
 
 def test_get_info(mock_objects):
     sw, serial = mock_objects
-    serial.readlines.return_value = [
+    serial.readline.side_effect = [
         b"hw_id=002E004B3139511638303932\n",  # included in firmware version 00.2E
         b"fw_version=00.2C\n",
         b"type=spotWave\n",
@@ -73,6 +73,7 @@ def test_get_info(mock_objects):
         b"pcb_vid=200505-06-0123\n",
         b"verification=2021-01-01 06:41:09.54\n",
         b"\n",
+        b"",
     ]
     info = sw.get_info()
     serial.write.assert_called_with(b"get_info\n")
@@ -97,14 +98,14 @@ def test_get_info(mock_objects):
     } == info.extra.keys()
 
     # empty response
-    serial.readlines.return_value = []
+    serial.readline.side_effects = [b""]
     with pytest.raises(RuntimeError):
         sw.get_info()
 
 
 def test_get_status(mock_objects):
     sw, serial = mock_objects
-    serial.readlines.return_value = [
+    serial.readline.side_effect = [
         b"temp=24 \xc2\xb0C\n",
         b"recording=0\n",
         b"logging=0\n",
@@ -112,6 +113,7 @@ def test_get_status(mock_objects):
         b"usb_speed=high\n",
         b"log_data_usage=13 sets (0.12 %)\n",
         b"date=2020-12-17 15:11:42.17\n",
+        b"",
     ]
     status = sw.get_status()
     serial.write.assert_called_with(b"get_status\n")
@@ -122,7 +124,7 @@ def test_get_status(mock_objects):
     assert {"logging", "usb_speed", "log_data_usage", "date"} == status.extra.keys()
 
     # empty response
-    serial.readlines.return_value = []
+    serial.readline.side_effect = [b""]
     with pytest.raises(RuntimeError):
         sw.get_status()
 
@@ -144,8 +146,9 @@ def test_get_setup(mock_objects):
         b"tr_pre_trig=100\n",
         b"tr_post_dur=100\n",
         b"\n",
+        b"",
     ]
-    serial.readlines.return_value = response
+    serial.readline.side_effect = response
     setup = sw.get_setup()
     serial.write.assert_called_with(b"get_setup\n")
     assert setup.enabled is True
@@ -166,28 +169,28 @@ def test_get_setup(mock_objects):
 
     # test special filter outputs
     response[3] = b"filter=none-350 kHz, order 4\n"
-    serial.readlines.return_value = response
+    serial.readline.side_effect = response
     setup = sw.get_setup()
     assert setup.filter_highpass_hz is None
     assert setup.filter_lowpass_hz == 350_000
     assert setup.filter_order == 4
 
     response[3] = b"filter=10.5-none kHz, order 4\n"
-    serial.readlines.return_value = response
+    serial.readline.side_effect = response
     setup = sw.get_setup()
     assert setup.filter_highpass_hz == 10_500
     assert setup.filter_lowpass_hz is None
     assert setup.filter_order == 4
 
     response[3] = b"filter=none-none kHz, order 0\n"
-    serial.readlines.return_value = response
+    serial.readline.side_effect = response
     setup = sw.get_setup()
     assert setup.filter_highpass_hz is None
     assert setup.filter_lowpass_hz is None
     assert setup.filter_order == 0
 
     # empty response
-    serial.readlines.return_value = []
+    serial.readline.side_effect = [b""]
     with pytest.raises(RuntimeError):
         sw.get_setup()
 

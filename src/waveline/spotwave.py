@@ -147,10 +147,21 @@ class SpotWave:
         """
         self._send_command("identify")
 
-    def _readlines(self, timeout: float = 0.1):
+    def _readlines(self, return_emptyline: bool = True,):
         """Read lines using custom timeout."""
-        with self._timeout_context(timeout):
-            return self._ser.readlines()
+        lines: List[bytes] = []
+        # long timeout (1000 ms) for first line, then short timeouts (100 ms)
+        with self._timeout_context(1.0):
+            while True:
+                if lines:
+                    self._ser.timeout = 0.1
+                line = self._ser.readline()
+                if line == b"":  # -> timeout
+                    break
+                lines.append(line)
+                if return_emptyline and line == b"\n":
+                    break
+        return lines
 
     def clear_buffer(self):
         """Clear input and output buffer."""

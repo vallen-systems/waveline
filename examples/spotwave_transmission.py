@@ -31,11 +31,11 @@ def main():
         sw.set_filter(90e3, 150e3, 4)  # 90-150 kHz bandpass
 
         while True:
-            data = sw.get_data(2048)  # read snapshot -> trigger pulser
-            t = np.arange(len(data)) / sw.CLOCK  # create time axis
+            tr_record = sw.get_tr_snapshot(2048)  # read snapshot -> trigger pulser
+            t = np.arange(tr_record.samples) / sw.CLOCK  # create time axis
 
             ax.clear()
-            ax.plot(t * 1e6, data * 1e6)
+            ax.plot(t * 1e6, tr_record.data * 1e6)
             ax.set_xlabel("Time [µs]")
             ax.set_ylabel("Amplitude [µV]")
             plt.pause(1)

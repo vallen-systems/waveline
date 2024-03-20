@@ -394,18 +394,7 @@ class SpotWave:
         self._send_command("get_ae_data")
         return self._read_ae_data()
 
-    def get_tr_data(self, raw: bool = False) -> List[TRRecord]:
-        """
-        Get transient data records.
-
-        Args:
-            raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
-
-        Returns:
-            List of transient data records
-        """
-        self._send_command("get_tr_data")
-
+    def _read_tr_data(self, raw: bool, records_expected: Optional[int] = None) -> List[TRRecord]:
         records = []
         while True:
             headerline = self._ser.readline()
@@ -419,7 +408,64 @@ class SpotWave:
             if not raw:
                 record.data = np.multiply(record.data, self._adc_to_volts, dtype=np.float32)
             records.append(record)
+            if records_expected is not None and len(records) >= records_expected:
+                break
         return records
+
+    def get_tr_data(self, raw: bool = False) -> List[TRRecord]:
+        """
+        Get transient data records.
+
+        Args:
+            raw: Return TR amplitudes as ADC values if `True`, skip conversion to volts
+
+        Returns:
+            List of transient data records
+        """
+        self._send_command("get_tr_data")
+        return self._read_tr_data(raw)
+
+    def get_tr_snapshot(self, samples: int, raw: bool = False) -> TRRecord:
+        """
+        Read snapshot of transient data.
+
+        The recording starts with the execution of the command.
+        The trai and time of the returned records are always `0`.
+
+        Args:
+            samples: Number of samples to read
+            raw: Return ADC values if `True`, skip conversion to volts
+
+        Returns:
+            Transient data record
+        """
+        self._send_command(f"get_tr_snapshot {int(samples)}")
+        return self._read_tr_data(raw, records_expected=1)[0]
+
+    def get_data(self, samples: int, raw: bool = False) -> np.ndarray:
+        """
+        Read snapshot of transient data.
+
+        The recording starts with the execution of the command.
+
+        Deprecated: Please us the `get_tr_snapshot` method instead.
+
+        Args:
+            samples: Number of samples to read
+            raw: Return ADC values if `True`, skip conversion to volts
+
+        Returns:
+            Array with amplitudes in volts (or ADC values if `raw` is `True`)
+        """
+        warn(
+            (
+                "This method is deprecated and will be removed in the future. "
+                "Please use the get_tr_snapshot method instead."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_tr_snapshot(samples, raw).data
 
     def acquire(
         self,
@@ -475,25 +521,6 @@ class SpotWave:
             stacklevel=2,
         )
         return self.acquire(*args, **kwargs)
-
-    def get_data(self, samples: int, raw: bool = False) -> np.ndarray:
-        """
-        Read snapshot of transient data with maximum sampling rate (2 MHz).
-
-        Args:
-            samples: Number of samples to read
-            raw: Return ADC values if `True`, skip conversion to volts
-
-        Returns:
-            Array with amplitudes in volts (or ADC values if `raw` is `True`)
-        """
-        samples = int(samples)
-        self._send_command(f"get_data {samples}")
-        _ = self._ser.readline()  # will return NS=<samples>
-        adc_values = np.frombuffer(self._ser.read(2 * samples), dtype=np.int16)
-        if raw:
-            return adc_values
-        return np.multiply(adc_values, self._adc_to_volts, dtype=np.float32)
 
     def get_data_log(self) -> List[AERecord]:
         """

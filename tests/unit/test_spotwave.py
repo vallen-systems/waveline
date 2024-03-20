@@ -346,9 +346,37 @@ def test_get_data(mock_objects, samples, raw):
     serial.read.return_value = mock_data.tobytes()
 
     data = sw.get_data(samples, raw=raw)
-    serial.write.assert_called_with(f"get_data {samples}\n".encode())
-    serial.read.assert_called_with(samples * 2)
+    serial.write.assert_called_with(f"get_tr_snapshot {samples}\n".encode())
     if raw:
         assert_allclose(data, mock_data)
     else:
         assert_allclose(data, mock_data * ADC_TO_VOLTS)
+
+
+@pytest.mark.parametrize("raw", [False, True])
+@pytest.mark.parametrize(
+    "samples",
+    [
+        32,
+        128,
+        65536,
+    ],
+)
+def test_get_tr_snapshot(mock_objects, samples, raw):
+    sw, serial = mock_objects
+
+    mock_data = (2**15 * np.random.randn(samples)).astype(np.int16)
+    serial.readline.return_value = f"NS={samples}\n".encode()
+    serial.read.return_value = mock_data.tobytes()
+
+    tr_record = sw.get_tr_snapshot(samples, raw=raw)
+    serial.write.assert_called_with(f"get_tr_snapshot {samples}\n".encode())
+    assert tr_record.channel == 1
+    assert tr_record.trai == 0
+    assert tr_record.time == 0
+    assert tr_record.samples == samples
+    assert tr_record.raw == raw
+    if raw:
+        assert_allclose(tr_record.data, mock_data)
+    else:
+        assert_allclose(tr_record.data, mock_data * ADC_TO_VOLTS)

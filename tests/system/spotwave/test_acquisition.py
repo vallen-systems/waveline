@@ -13,10 +13,14 @@ from waveline.spotwave import AERecord
         200_000,
     ],
 )
-def test_get_data(sw, samples):
+def test_get_tr_snapshot(sw, samples):
     sw.set_tr_decimation(1)
-    data = sw.get_data(samples)
-    assert len(data) == samples
+    tr_record = sw.get_tr_snapshot(samples)
+    assert tr_record.channel == 1
+    assert tr_record.trai == 0
+    assert tr_record.time == 0
+    assert tr_record.samples == samples
+    assert len(tr_record.data) == samples
 
 
 @pytest.mark.parametrize("status_interval_seconds", [0.1, 0.2])

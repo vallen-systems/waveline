@@ -16,12 +16,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install Tox
         run: pip install tox
-      # - name: Run black
-      #   run: tox -e black
-      # - name: Run isort
-      #   run: tox -e isort
-      - name: Run pylint
-        run: tox -e pylint
+      - name: Run ruff
+        run: tox -e ruff
       - name: Run mypy
         run: tox -e mypy
       - name: Run pytest

@@ -119,6 +119,7 @@ source = ["waveline"]
 [tool.coverage.paths]
 source = [
     "src",
+    ".tox/**/site-packages/src",
     ".tox/**/site-packages",
 ]
 

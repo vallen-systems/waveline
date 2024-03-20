@@ -134,7 +134,7 @@ asyncio_mode = "auto"
 legacy_tox_ini = """
 [tox]
 isolated_build = True
-envlist = black, isort, pylint, mypy, py36, py37, py38, py39, py310, py311, py312, coverage-report
+envlist = black, ruff, mypy, py36, py37, py38, py39, py310, py311, py312, coverage-report
 
 [testenv:black]
 skip_install = true

@@ -119,8 +119,7 @@ source = ["waveline"]
 [tool.coverage.paths]
 source = [
     "src",
-    ".tox/*/site-packages",
-    ".tox/*/Lib/site-packages",
+    ".tox/**/site-packages",
 ]
 
 [tool.mypy]

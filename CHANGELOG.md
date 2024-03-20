@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- [spotwave] `SpotWave.get_tr_snapshot` method
+- [spotwave] `SpotWave.start_pulsing`, `SpotWave.stop_pulsing` methods
+
 ### Changed
 
 - Use common `Info`, `Status` and `Setup` dataclass for both spotWave and linWave
 - [linwave] Deprecate `LinWave.set_range` method, use `LinWave.set_range_index` instead
 - [linwave] Remove `Info.max_sample_rate` field
+- [spotwave] Deprecate `SpotWave.get_data`, use `SpotWave.get_tr_snapshot` instead
+- [spotwave] Remove `sync` parameter of `SpotWave.set_cct` method
+- Remove deprecated `conditionwave` module
 
 ## [0.7.1] - 2023-10-18
 

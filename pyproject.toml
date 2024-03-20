@@ -117,7 +117,11 @@ parallel = true
 source = ["waveline"]
 
 [tool.coverage.paths]
-source = ["src", ".tox/*/site-packages"]
+source = [
+    "src",
+    ".tox/*/site-packages",
+    ".tox/*/Lib/site-packages",
+]
 
 [tool.mypy]
 ignore_missing_imports = true

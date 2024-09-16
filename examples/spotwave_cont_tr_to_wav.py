@@ -10,6 +10,7 @@ import wave
 from datetime import datetime
 
 import numpy as np
+
 from waveline import SpotWave
 from waveline.spotwave import AERecord, TRRecord
 

@@ -7,6 +7,7 @@ import pytest
 from freezegun import freeze_time
 from numpy.testing import assert_allclose
 from serial import Serial, SerialException
+
 from waveline import SpotWave
 from waveline.datatypes import Info
 

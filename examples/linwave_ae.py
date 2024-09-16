@@ -21,6 +21,7 @@ from dataclasses import asdict, dataclass
 from typing import Dict
 
 import numpy as np
+
 from waveline import AERecord, LinWave, TRRecord
 
 logging.basicConfig(level=logging.INFO)

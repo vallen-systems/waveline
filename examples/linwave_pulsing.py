@@ -5,12 +5,12 @@ Both channels are acquired in streaming mode and a pulsing cycles with 4 pulses 
 started. This could be used as a coupling check for example.
 """
 
-
 import argparse
 import asyncio
 import logging
 
 import matplotlib.pyplot as plt
+
 from waveline import LinWave
 
 logging.basicConfig(level=logging.INFO)
@@ -32,8 +32,8 @@ async def main(ip: str):
         await lw.start_acquisition()
         await lw.start_pulsing(channel=0, interval=0.01, count=4, cycles=1)
 
-        _, y_ch1 = await anext(stream_ch1)
-        _, y_ch2 = await anext(stream_ch2)
+        _, y_ch1 = await anext(stream_ch1)  # noqa: F821
+        _, y_ch2 = await anext(stream_ch2)  # noqa: F821
 
         await lw.stop_acquisition()
 

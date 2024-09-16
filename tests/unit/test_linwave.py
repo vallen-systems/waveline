@@ -10,6 +10,7 @@ except ImportError:
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
+
 from waveline.linwave import Info, LinWave
 
 CLOCK = 10e6

@@ -59,8 +59,8 @@ $ .venv\Scripts\activate  # Windows
 # Install package (editable) and all development tools
 $ pip install -e .[dev]
 
-# Run auto-formatter
-$ black .
+# Run formatter
+$ ruff format .
 
 # Run linter
 $ ruff check .

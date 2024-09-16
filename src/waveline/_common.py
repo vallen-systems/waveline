@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import logging
 import re
-from typing import Callable, Dict, Iterable, List, Optional
+from typing import Callable, Iterable
 
 import numpy as np
 
@@ -34,8 +36,8 @@ def _parse_ae_headerline(
     line: bytes,
     samplerate: float,
     get_adc_to_volts_by_channel: Callable[[int], float],
-    default_channel: Optional[int] = None,
-) -> Optional[AERecord]:
+    default_channel: int | None = None,
+) -> AERecord | None:
     logger.debug("Parse AE data: %s", line)
     record_type = line[:1]
     matches = dict(_KV_PATTERN.findall(line))  # parse key-value pairs in line
@@ -64,7 +66,7 @@ def _parse_ae_headerline(
 def _parse_tr_headerline(
     line: bytes,
     samplerate: float,
-    default_channel: Optional[int] = None,
+    default_channel: int | None = None,
 ) -> TRRecord:
     logger.debug("Parse TR data: %s", line)
     matches = dict(_KV_PATTERN.findall(line))  # parse key-value pairs in line
@@ -78,7 +80,7 @@ def _parse_tr_headerline(
     )
 
 
-def _multiline_output_to_dict(lines: List[bytes]):
+def _multiline_output_to_dict(lines: list[bytes]):
     """Helper function to parse output from get_info, get_status and get_setup."""
     return {
         key.strip(): value.strip()
@@ -88,7 +90,7 @@ def _multiline_output_to_dict(lines: List[bytes]):
 
 
 def _dict_pop_first(
-    dct: Dict, keys_desc_priority: Iterable[str], default: str = "", *, require=False
+    dct: dict, keys_desc_priority: Iterable[str], default: str = "", *, require=False
 ):
     keys = tuple(keys_desc_priority)
     for key in keys:
@@ -104,7 +106,7 @@ def _strip_unit(s: str):
     return s.strip().partition(" ")[0]
 
 
-def _parse_array(line: str, allow_space: bool) -> List[str]:
+def _parse_array(line: str, allow_space: bool) -> list[str]:
     """Accept both comma and optionally space as delimiters of values, prefer comma."""
     if "," in line:
         return [value.strip() for value in line.split(",")]
@@ -120,7 +122,7 @@ def _is_number(s: str) -> bool:
     return s.replace(".", "", 1).isdigit()
 
 
-def _parse_get_info_output(lines: List[bytes]) -> Info:
+def _parse_get_info_output(lines: list[bytes]) -> Info:
     def parse_input_range(s: str):
         return _parse_array(s, allow_space=False)
 
@@ -138,7 +140,7 @@ def _parse_get_info_output(lines: List[bytes]) -> Info:
     )
 
 
-def _parse_get_status_output(lines: List[bytes]) -> Status:
+def _parse_get_status_output(lines: list[bytes]) -> Status:
     dct = _multiline_output_to_dict(lines)
     return Status(
         temperature=float(_strip_unit(dct.pop("temp", "0"))),
@@ -175,7 +177,7 @@ def _parse_filter_setup_line(line: str):
     return hz_or_none("hp"), hz_or_none("lp"), int(match.group("order"))
 
 
-def _parse_get_setup_output(lines: List[bytes]) -> Setup:
+def _parse_get_setup_output(lines: list[bytes]) -> Setup:
     dct = _multiline_output_to_dict(lines)
     filter_setup = _parse_filter_setup_line(dct.pop("filter"))
     return Setup(

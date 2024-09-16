@@ -4,11 +4,13 @@ Module for spotWave device.
 All device-related functions are exposed by the `SpotWave` class.
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Iterator, List, Optional, Union
+from typing import Iterator
 from warnings import warn
 
 import numpy as np
@@ -41,7 +43,7 @@ class SpotWave:
     # TICKS_TO_SEC = 1 / CLOCK  # precision lost...?
     _MIN_FIRMWARE_VERSION = "00.25"
 
-    def __init__(self, port: Union[str, Serial]):
+    def __init__(self, port: str | Serial):
         """
         Initialize device.
 
@@ -124,7 +126,7 @@ class SpotWave:
         self._ser.timeout = old_timeout
 
     @classmethod
-    def discover(cls) -> List[str]:
+    def discover(cls) -> list[str]:
         """
         Discover connected spotWave devices.
 
@@ -149,7 +151,7 @@ class SpotWave:
 
     def _readlines(self, return_emptyline: bool = True):
         """Read lines using custom timeout."""
-        lines: List[bytes] = []
+        lines: list[bytes] = []
         # long timeout (1000 ms) for first line, then short timeouts (100 ms)
         with self._timeout_context(1.0):
             while True:
@@ -319,8 +321,8 @@ class SpotWave:
 
     def set_filter(
         self,
-        highpass: Optional[float] = None,
-        lowpass: Optional[float] = None,
+        highpass: float | None = None,
+        lowpass: float | None = None,
         order: int = 4,
     ):
         """
@@ -332,14 +334,14 @@ class SpotWave:
             order: Filter order
         """
 
-        def khz_or_none(freq: Optional[float]):
+        def khz_or_none(freq: float | None):
             return freq / 1e3 if freq is not None else "none"
 
         self._send_command(
             f"set_filter {khz_or_none(highpass)} {khz_or_none(lowpass)} {int(order)}"
         )
 
-    def set_datetime(self, timestamp: Optional[datetime] = None):
+    def set_datetime(self, timestamp: datetime | None = None):
         """
         Set current date and time.
 
@@ -397,7 +399,7 @@ class SpotWave:
         """Stop pulsing."""
         self._send_command("stop_pulsing")
 
-    def _read_ae_data(self) -> List[AERecord]:
+    def _read_ae_data(self) -> list[AERecord]:
         records = []
         while True:
             line = self._ser.readline()
@@ -411,7 +413,7 @@ class SpotWave:
                 records.append(record)
         return records
 
-    def get_ae_data(self) -> List[AERecord]:
+    def get_ae_data(self) -> list[AERecord]:
         """
         Get AE data records.
 
@@ -421,7 +423,7 @@ class SpotWave:
         self._send_command("get_ae_data")
         return self._read_ae_data()
 
-    def _read_tr_data(self, raw: bool, records_expected: Optional[int] = None) -> List[TRRecord]:
+    def _read_tr_data(self, raw: bool, records_expected: int | None = None) -> list[TRRecord]:
         records = []
         while True:
             headerline = self._ser.readline()
@@ -439,7 +441,7 @@ class SpotWave:
                 break
         return records
 
-    def get_tr_data(self, raw: bool = False) -> List[TRRecord]:
+    def get_tr_data(self, raw: bool = False) -> list[TRRecord]:
         """
         Get transient data records.
 
@@ -498,7 +500,7 @@ class SpotWave:
         self,
         raw: bool = False,
         poll_interval_seconds: float = 0.01,
-    ) -> Iterator[Union[AERecord, TRRecord]]:
+    ) -> Iterator[AERecord | TRRecord]:
         """
         High-level method to continuously acquire data.
 
@@ -549,7 +551,7 @@ class SpotWave:
         )
         return self.acquire(*args, **kwargs)
 
-    def get_data_log(self) -> List[AERecord]:
+    def get_data_log(self) -> list[AERecord]:
         """
         Get logged AE data records data from internal memory
 

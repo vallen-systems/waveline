@@ -1,14 +1,14 @@
 # WaveLine
 
-[![CI](https://github.com/vallen-systems/pyWaveLine/workflows/CI/badge.svg)](https://github.com/vallen-systems/pyWaveLine/actions)
+[![CI](https://github.com/vallen-systems/waveline/workflows/CI/badge.svg)](https://github.com/vallen-systems/waveline/actions)
 [![Documentation Status](https://readthedocs.org/projects/pywaveline/badge/?version=latest)](https://pywaveline.readthedocs.io/en/latest/?badge=latest)
-[![Coverage Status](https://coveralls.io/repos/github/vallen-systems/pyWaveLine/badge.svg?branch=master)](https://coveralls.io/github/vallen-systems/pyWaveLine)
+[![Coverage Status](https://coveralls.io/repos/github/vallen-systems/waveline/badge.svg?branch=master)](https://coveralls.io/github/vallen-systems/waveline)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI](https://img.shields.io/pypi/v/waveline)](https://pypi.org/project/waveline)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/waveline)](https://pypi.org/project/waveline)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v1.json)](https://github.com/charliermarsh/ruff)
 
-**[Documentation](https://pywaveline.readthedocs.io) · [Examples](https://github.com/vallen-systems/pyWaveline/tree/master/examples)**
+**[Documentation](https://pywaveline.readthedocs.io) · [Examples](https://github.com/vallen-systems/waveline/tree/master/examples)**
 
 Python library to easily interface with Vallen Systeme [WaveLine™ devices](https://www.vallen.de/products/data-acquisiton-units/waveline-products/) using the public APIs:
 
@@ -34,7 +34,7 @@ $ python examples/linwave_ae.py  # if you have a linWave device
 $ python examples/spotwave_ae.py  # if you have a spotWave device
 ```
 
-Explore further [examples](https://github.com/vallen-systems/pyWaveline/tree/master/examples) and have a look at the [documentation](https://pywaveline.readthedocs.io).
+Explore further [examples](https://github.com/vallen-systems/waveline/tree/master/examples) and have a look at the [documentation](https://pywaveline.readthedocs.io).
 
 ## Contributing
 
@@ -47,8 +47,8 @@ After cloning the repository, you can easily install the development environment
 with. Using a [virtual environment](https://docs.python.org/3/library/venv.html) is strongly recommended.
 
 ```shell
-$ git clone https://github.com/vallen-systems/pyWaveLine.git
-$ cd pyWaveLine
+$ git clone https://github.com/vallen-systems/waveline.git
+$ cd waveline
 
 # Create virtual environment in directory .venv
 $ python -m venv .venv

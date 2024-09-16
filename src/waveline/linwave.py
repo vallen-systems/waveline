@@ -4,6 +4,8 @@ Module for linWave device.
 All device-related functions are exposed by the `LinWave` class.
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import socket
@@ -11,7 +13,7 @@ import time
 from copy import copy
 from dataclasses import dataclass
 from functools import wraps
-from typing import AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, Union
+from typing import AsyncIterator, ClassVar
 from warnings import warn
 
 import numpy as np
@@ -85,7 +87,7 @@ class LinWave:
     RANGES = (0.05, 5.0)
 
     _DEFAULT_SETTINGS = _ChannelSettings(range_index=0, decimation=1)  #: Default settings
-    _RANGE_INDEX: ClassVar[Dict[float, int]] = {
+    _RANGE_INDEX: ClassVar[dict[float, int]] = {
         0.05: 0,  # 50 mV
         5.0: 1,  # 5 V
     }  #: Mapping of range in volts and range index
@@ -124,15 +126,15 @@ class LinWave:
                 >>> asyncio.run(main())
         """
         self._address = address
-        self._reader: Optional[asyncio.StreamReader] = None
-        self._writer: Optional[asyncio.StreamWriter] = None
+        self._reader: asyncio.StreamReader | None = None
+        self._writer: asyncio.StreamWriter | None = None
         self._connected = False
         self._recording = False
         self._channel_settings = {
             channel: copy(self._DEFAULT_SETTINGS) for channel in self.CHANNELS
         }
         # wait for stream connections before start acq
-        self._stream_connection_tasks: Set[asyncio.Task] = set()
+        self._stream_connection_tasks: set[asyncio.Task] = set()
         self._adc_to_volts = [1.5625e-06, 0.00015625]  # defaults, update after connect
 
     def __del__(self):
@@ -147,7 +149,7 @@ class LinWave:
         await self.close()
 
     @classmethod
-    def discover(cls, timeout: float = 0.5) -> List[str]:
+    def discover(cls, timeout: float = 0.5) -> list[str]:
         """
         Discover linWave devices in network.
 
@@ -225,7 +227,7 @@ class LinWave:
         await self._writer.drain()
 
     @_require_connected
-    async def _readline(self, timeout_seconds: Optional[float] = None) -> bytes:
+    async def _readline(self, timeout_seconds: float | None = None) -> bytes:
         return await asyncio.wait_for(
             self._reader.readline(),  # type: ignore
             timeout=timeout_seconds,
@@ -235,8 +237,8 @@ class LinWave:
     async def _readlines(
         self,
         return_emptyline: bool = True,
-    ) -> List[bytes]:
-        lines: List[bytes] = []
+    ) -> list[bytes]:
+        lines: list[bytes] = []
         try:
             while True:
                 # long timeout (1000 ms) for first line, then short timeouts (100 ms)
@@ -473,8 +475,8 @@ class LinWave:
     async def set_filter(
         self,
         channel: int,
-        highpass: Optional[float] = None,
-        lowpass: Optional[float] = None,
+        highpass: float | None = None,
+        lowpass: float | None = None,
         order: int = 8,
     ):
         """
@@ -488,7 +490,7 @@ class LinWave:
         """
         self._check_channel_number(channel)
 
-        def khz_or_none(freq: Optional[float]):
+        def khz_or_none(freq: float | None):
             return freq / 1e3 if freq is not None else "none"
 
         await self._send_command(
@@ -576,7 +578,7 @@ class LinWave:
         return self._adc_to_volts[range_index]
 
     @_require_connected
-    async def get_ae_data(self) -> List[AERecord]:
+    async def get_ae_data(self) -> list[AERecord]:
         """
         Get AE data records.
 
@@ -596,7 +598,7 @@ class LinWave:
                 records.append(record)
         return records
 
-    async def _read_tr_records(self, raw: bool) -> List[TRRecord]:
+    async def _read_tr_records(self, raw: bool) -> list[TRRecord]:
         records = []
         while True:
             headerline = await self._readline(timeout_seconds=1)
@@ -617,7 +619,7 @@ class LinWave:
         return records
 
     @_require_connected
-    async def get_tr_data(self, raw: bool = False) -> List[TRRecord]:
+    async def get_tr_data(self, raw: bool = False) -> list[TRRecord]:
         """
         Get transient data records.
 
@@ -633,7 +635,7 @@ class LinWave:
     @_require_connected
     async def get_tr_snapshot(
         self, channel: int, samples: int, pretrigger_samples: int = 0, *, raw: bool = False
-    ) -> List[TRRecord]:
+    ) -> list[TRRecord]:
         """
         Get snapshot of transient data.
 
@@ -667,7 +669,7 @@ class LinWave:
         self,
         raw: bool = False,
         poll_interval_seconds: float = 0.05,
-    ) -> AsyncIterator[Union[AERecord, TRRecord]]:
+    ) -> AsyncIterator[AERecord | TRRecord]:
         """
         High-level method to continuously acquire data.
 
@@ -713,8 +715,8 @@ class LinWave:
         blocksize: int,
         *,
         raw: bool = False,
-        timeout: Optional[float] = 5,
-    ) -> AsyncIterator[Tuple[float, np.ndarray]]:
+        timeout: float | None = 5,
+    ) -> AsyncIterator[tuple[float, np.ndarray]]:
         """
         Async generator to stream channel data.
 

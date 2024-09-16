@@ -14,9 +14,10 @@ Hit data (AERecord) and transient data (TRRecord) are returned from different fu
 merged by matching the transient recorder index (trai) field in both records.
 """
 
+from __future__ import annotations
+
 import logging
 from dataclasses import asdict, dataclass
-from typing import Dict
 
 import numpy as np
 
@@ -36,8 +37,8 @@ class HitRecord(AERecord):
 
 def merge_ae_tr_records(generator):
     """Helper function to merge matching AERecords and TRRecords (same trai)."""
-    dict_ae: Dict[int, AERecord] = {}
-    dict_tr: Dict[int, TRRecord] = {}
+    dict_ae: dict[int, AERecord] = {}
+    dict_tr: dict[int, TRRecord] = {}
 
     for record in generator:
         if isinstance(record, AERecord):

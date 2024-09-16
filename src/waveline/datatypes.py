@@ -2,8 +2,9 @@
 Common datatypes.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -57,17 +58,17 @@ class Info:
     """Device information (static)."""
 
     #: Unique hardware id
-    hardware_id: Optional[str]
+    hardware_id: str | None
     #: Firmware version
     firmware_version: str
     #: Number of channels
     channel_count: int
     #: List of selectable input ranges in human-readable format
-    input_range: List[str]
+    input_range: list[str]
     #: Conversion factors from ADC values to V for all input ranges
-    adc_to_volts: List[float]
+    adc_to_volts: list[float]
     #: Extra device information (specific to device and firmware version)
-    extra: Dict[str, str]
+    extra: dict[str, str]
 
 
 @dataclass
@@ -81,7 +82,7 @@ class Status:
     #: Flag if pulsing is active
     pulsing: bool
     #: Extra status information (specific to device and firmware version)
-    extra: Dict[str, str]
+    extra: dict[str, str]
 
 
 @dataclass
@@ -95,9 +96,9 @@ class Setup:
     #: Conversion factor from ADC values to volts
     adc_to_volts: float
     #: Highpass frequency in Hz
-    filter_highpass_hz: Optional[float]
+    filter_highpass_hz: float | None
     #: Lowpass frequency in Hz
-    filter_lowpass_hz: Optional[float]
+    filter_lowpass_hz: float | None
     #: Filter order
     filter_order: int
     #: Flag if continuous mode is enabled
@@ -117,4 +118,4 @@ class Setup:
     #: Post-duration samples for transient data
     tr_postduration_samples: int
     #: Extra setup information (specific to device and firmware version)
-    extra: Dict[str, str]
+    extra: dict[str, str]

@@ -28,14 +28,14 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 keywords = [
-    "Vallen",
-    "Acoustic Emission",
+    "vallen",
+    "acoustic emission",
     "ultrasonic",
     "data acquisition",
-    "WaveLine",
-    "conditionWave",
-    "linWave",
-    "spotWave",
+    "waveline",
+    "conditionwave",
+    "linwave",
+    "spotwave",
 ]
 dependencies = [
     "numpy",
@@ -60,7 +60,6 @@ tests = [
     "pytest-repeat",
 ]
 tools = [
-    "black",
     "mypy>=0.9",  # pyproject.toml support
     "ruff~=0.3",
     "tox>=3.4",  # pyproject.toml support
@@ -73,9 +72,6 @@ dev = [
 Changelog = "https://github.com/vallen-systems/pyWaveLine/blob/master/CHANGELOG.md"
 Source = "https://github.com/vallen-systems/pyWaveLine"
 Issues = "https://github.com/vallen-systems/pyWaveLine/issues"
-
-[tool.black]
-line-length = 100
 
 [tool.ruff]
 line-length = 100
@@ -135,14 +131,7 @@ asyncio_default_fixture_loop_scope = "module"
 legacy_tox_ini = """
 [tox]
 isolated_build = True
-envlist = black, ruff, mypy, py36, py37, py38, py39, py310, py311, py312, coverage-report
-
-[testenv:black]
-skip_install = true
-deps = black
-commands =
-    black --diff src/
-    black --check src/
+envlist = ruff, mypy, py36, py37, py38, py39, py310, py311, py312, coverage-report
 
 [testenv:ruff]
 skip_install = true

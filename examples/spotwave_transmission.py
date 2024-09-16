@@ -14,6 +14,7 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 from waveline import SpotWave
 
 logging.basicConfig(level=logging.INFO)

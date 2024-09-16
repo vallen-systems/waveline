@@ -4,6 +4,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
+
 from waveline import LinWave
 
 logging.basicConfig(level=logging.INFO)

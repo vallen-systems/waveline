@@ -129,7 +129,7 @@ class LinWave:
         self._connected = False
         self._recording = False
         self._channel_settings = {
-            channel: copy(self._DEFAULT_SETTINGS) for channel in self.CHANNELS  # return copy
+            channel: copy(self._DEFAULT_SETTINGS) for channel in self.CHANNELS
         }
         # wait for stream connections before start acq
         self._stream_connection_tasks: Set[asyncio.Task] = set()

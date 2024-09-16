@@ -1,10 +1,11 @@
 import asyncio
 
 import pytest
+
 from waveline import LinWave
 
 
-@pytest.fixture()
+@pytest.fixture
 async def lw(linwave_ip):
     def get_ip():
         if linwave_ip:

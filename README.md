@@ -24,7 +24,7 @@ $ pip install waveline
 ```
 
 > **Note**:
-> `waveline` requires Python 3.6 or newer. On Linux systems, `pip` is usually mapped to Python 2, so use `pip<version>` (e.g. `pip3` or `pip3.7`) instead.
+> `waveline` requires Python 3.7 or newer. On Linux systems, `pip` is usually mapped to Python 2, so use `pip<version>` (e.g. `pip3` or `pip3.12`) instead.
 > Alternatively, you can run `pip` from your specific Python version with `python<version> -m pip`.
 
 Run examples:

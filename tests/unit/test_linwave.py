@@ -456,7 +456,7 @@ async def test_get_ae_data(mock_objects):
 
     # status record
     s = ae_data[0]
-    assert s.type_ == "S"
+    assert s.type == "S"
     assert s.channel == 1
     assert s.time == pytest.approx(20000000 / CLOCK)
     assert s.amplitude == 0
@@ -469,7 +469,7 @@ async def test_get_ae_data(mock_objects):
 
     # hit record
     h = ae_data[1]
-    assert h.type_ == "H"
+    assert h.type == "H"
     assert h.channel == 2
     assert h.time == pytest.approx(43686000 / CLOCK)
     assert h.amplitude == pytest.approx(31004 * adc_to_volts)

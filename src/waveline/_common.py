@@ -46,7 +46,7 @@ def _parse_ae_headerline(
         adc_to_volts = get_adc_to_volts_by_channel(channel)
         adc_to_eu = _adc_to_eu(adc_to_volts, samplerate)
         return AERecord(
-            type_=record_type.decode(),
+            type=record_type.decode(),
             channel=channel,
             time=int(matches[b"T"]) / samplerate,
             amplitude=int(matches.get(b"A", 0)) * adc_to_volts,

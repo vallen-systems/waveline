@@ -14,7 +14,7 @@ class AERecord:
     """AE data record, either status or hit data."""
 
     #: Record type (`H` for hit or `S` for status data)
-    type_: str
+    type: str
     #: Channel number
     channel: int
     #: Time in seconds (since `start_acq` command)

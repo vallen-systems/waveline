@@ -23,7 +23,7 @@ class WavWriter:
 
     def __init__(self, filename: str, samplerate: int):
         logger.info("Create new wav file: %s", filename)
-        self._file = wave.open(filename, "wb")
+        self._file = wave.open(filename, "wb")  # noqa: SIM115
         self._file.setparams((1, 2, samplerate, 0, "NONE", ""))
 
     def __del__(self):

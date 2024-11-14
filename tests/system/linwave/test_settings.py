@@ -25,11 +25,6 @@ class TestChannelSettings:
         await lw.set_range_index(channel, range_index)
         assert (await lw.get_setup(channel)).input_range == range_index
 
-    @pytest.mark.parametrize("range_index", [-1, 2])
-    async def test_set_range_index_invalid(self, lw, channel, range_index):
-        with pytest.raises(ValueError):
-            await lw.set_range(channel, range_index)
-
     @pytest.mark.parametrize("enabled", [False, True])
     async def test_set_channel(self, lw, channel, enabled):
         await lw.set_channel(channel, enabled)

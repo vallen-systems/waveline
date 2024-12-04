@@ -2,7 +2,7 @@ from time import sleep
 
 import pytest
 
-from waveline.spotwave import AERecord
+from waveline import AERecord, RecordType
 
 
 @pytest.mark.parametrize(
@@ -40,7 +40,7 @@ def test_acq_only_status(sw, status_interval_seconds):
 
     for i, record in enumerate(ae_data, start=1):
         assert record.time == pytest.approx(i * status_interval_seconds)
-        assert record.type_ == "S"
+        assert record.type_ == RecordType.STATUS
         assert record.duration == status_interval_seconds
         assert record.trai == 0
 
@@ -66,7 +66,7 @@ def test_acq_continuous(sw, tr_enabled):
 
     for i, record in enumerate(ae_data, start=0):
         assert record.time == i * ddt_seconds
-        assert record.type_ == "H"
+        assert record.type_ == RecordType.HIT
         assert record.duration == ddt_seconds
         if tr_enabled:
             assert record.trai == i + 1

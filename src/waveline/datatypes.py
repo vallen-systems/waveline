@@ -5,16 +5,24 @@ Common datatypes.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 
 import numpy as np
 
 
+class RecordType(str, Enum):
+    """Record type."""
+
+    HIT = "H"
+    STATUS = "S"
+
+
 @dataclass
 class AERecord:
-    """AE data record, either status or hit data."""
+    """AE data record."""
 
-    #: Record type (`H` for hit or `S` for status data)
-    type: str
+    #: Record type
+    type: RecordType
     #: Channel number
     channel: int
     #: Time in seconds (since `start_acq` command)

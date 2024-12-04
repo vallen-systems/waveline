@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from waveline.linwave import Info, LinWave
+from waveline import RecordType, Info, LinWave
 
 CLOCK = 10e6
 ADC_TO_VOLTS = [1.5625e-06, 0.00015625]
@@ -456,7 +456,7 @@ async def test_get_ae_data(mock_objects):
 
     # status record
     s = ae_data[0]
-    assert s.type == "S"
+    assert s.type == RecordType.STATUS
     assert s.channel == 1
     assert s.time == pytest.approx(20000000 / CLOCK)
     assert s.amplitude == 0
@@ -469,7 +469,7 @@ async def test_get_ae_data(mock_objects):
 
     # hit record
     h = ae_data[1]
-    assert h.type == "H"
+    assert h.type == RecordType.HIT
     assert h.channel == 2
     assert h.time == pytest.approx(43686000 / CLOCK)
     assert h.amplitude == pytest.approx(31004 * adc_to_volts)

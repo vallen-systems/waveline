@@ -3,6 +3,8 @@ from time import perf_counter
 
 import pytest
 
+from waveline import RecordType
+
 
 @pytest.mark.repeat(10)
 @pytest.mark.parametrize("channel", [1, 2])
@@ -82,7 +84,7 @@ async def test_acq_only_status(lw, channel, status_interval_seconds):
     for i, record in enumerate(ae_data, start=1):
         assert record.channel == channel
         assert record.time == pytest.approx(i * status_interval_seconds, rel=0.05)
-        assert record.type == "S"
+        assert record.type == RecordType.STATUS
         assert record.duration == pytest.approx(status_interval_seconds, rel=0.05)
         assert record.trai == 0
 

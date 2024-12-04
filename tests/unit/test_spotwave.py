@@ -8,8 +8,7 @@ from freezegun import freeze_time
 from numpy.testing import assert_allclose
 from serial import Serial, SerialException
 
-from waveline import SpotWave
-from waveline.datatypes import Info
+from waveline import Info, RecordType, SpotWave
 
 CLOCK = 2e6
 ADC_TO_VOLTS = 1.74e-6
@@ -267,7 +266,7 @@ def test_get_ae_data(mock_objects):
 
     # status record
     s = ae_data[0]
-    assert s.type == "S"
+    assert s.type == RecordType.STATUS
     assert s.channel == 1
     assert s.time == pytest.approx(2010240 / CLOCK)
     assert s.amplitude == pytest.approx(21 * ADC_TO_VOLTS)
@@ -280,7 +279,7 @@ def test_get_ae_data(mock_objects):
 
     # hit record
     h = ae_data[1]
-    assert h.type == "H"
+    assert h.type == RecordType.HIT
     assert h.channel == 1
     assert h.time == pytest.approx(3044759 / CLOCK)
     assert h.amplitude == pytest.approx(3557 * ADC_TO_VOLTS)

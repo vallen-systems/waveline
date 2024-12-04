@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from waveline import RecordType, Info, LinWave
+from waveline import Info, LinWave, RecordType
 
 CLOCK = 10e6
 ADC_TO_VOLTS = [1.5625e-06, 0.00015625]

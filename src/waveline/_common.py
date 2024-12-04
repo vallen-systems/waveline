@@ -6,7 +6,7 @@ from typing import Callable, Iterable
 
 import numpy as np
 
-from waveline.datatypes import AERecord, Info, Setup, Status, TRRecord
+from waveline.datatypes import AERecord, Info, RecordType, Setup, Status, TRRecord
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def _parse_ae_headerline(
         adc_to_volts = get_adc_to_volts_by_channel(channel)
         adc_to_eu = _adc_to_eu(adc_to_volts, samplerate)
         return AERecord(
-            type=record_type.decode(),
+            type=RecordType(record_type.decode()),
             channel=channel,
             time=int(matches[b"T"]) / samplerate,
             amplitude=int(matches.get(b"A", 0)) * adc_to_volts,

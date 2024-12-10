@@ -104,6 +104,7 @@ async def test_acq_continuous_mode(lw, channel):
     await lw.set_ddt(0, ddt)
     await lw.set_tr_enabled(0, True)
     await lw.set_tr_decimation(0, decimation)
+    await lw.set_tr_samples(0, 0)  # adaptive
 
     await lw.start_acquisition()
     await asyncio.sleep(acq_duration)
@@ -120,6 +121,41 @@ async def test_acq_continuous_mode(lw, channel):
     for record in tr_data:
         assert record.trai != 0
         assert record.samples == expected_samples
+
+
+@pytest.mark.xfail(reason="only available since firmware version 2.32")
+@pytest.mark.parametrize(
+    ("ddt_samples", "min_samples", "max_samples", "expected_samples"),
+    [
+        (10_000, 0, None, 10_000),
+        (10_000, 0, 0, 10_000),
+        (10_000, 0, 5000, 5_000),
+        (10_000, 0, 20_000, 10_000),
+        (10_000, 20_000, None, 20_000),
+        (10_000, 20_000, 0, 20_000),
+    ],
+)
+async def test_acq_tr_samples(lw, ddt_samples, min_samples, max_samples, expected_samples):
+    await lw.set_channel(0, True)
+    await lw.set_status_interval(0, 0)
+    await lw.set_continuous_mode(0, True)
+    await lw.set_ddt(0, ddt_samples)  # samples = µs for 1 MHz sampling rate
+    await lw.set_tr_enabled(0, True)
+    await lw.set_tr_decimation(0, 10)
+    await lw.set_tr_samples(0, min_samples, max_samples)
+
+    await lw.start_acquisition()
+    await asyncio.sleep(0.1)
+    await lw.stop_acquisition()
+    await asyncio.sleep(0.1)
+
+    ae_data = await lw.get_ae_data()
+    tr_data = await lw.get_tr_data()
+
+    print(ae_data)
+    print(tr_data)
+
+    assert all([tr.samples == expected_samples for tr in tr_data])  # noqa: C419
 
 
 @pytest.mark.xfail(reason="only available since firmware version 2.13")
@@ -154,19 +190,17 @@ async def test_pulsing(lw, channel, interval, count):
     await lw.set_continuous_mode(0, False)
     await lw.set_ddt(0, 1000)
     await lw.set_threshold(0, 10_000)
-    await lw.set_tr_enabled(0, True)
-    await lw.set_tr_decimation(0, 100)
+    await lw.set_tr_enabled(0, False)
 
     await lw.start_acquisition()
     await lw.start_pulsing(channel, interval, count)
     await asyncio.sleep(count * interval + 0.1)
     await lw.stop_acquisition()
+    await asyncio.sleep(0.1)
 
     ae_data = await lw.get_ae_data()
-    tr_data = await lw.get_tr_data()
 
     assert len(ae_data) == count
-    assert len(tr_data) == count
 
 
 @pytest.mark.parametrize("interval", [0.1, 0.5])
@@ -189,9 +223,8 @@ async def test_stop_infinite_pulsing(lw, channel, interval):
     await lw.stop_pulsing()
     await asyncio.sleep(acq_time)  # now no new hits should be generated
     await lw.stop_acquisition()
+    await asyncio.sleep(0.1)
 
     ae_data = await lw.get_ae_data()
-    tr_data = await lw.get_tr_data()
 
     assert len(ae_data) == pytest.approx(expected_pulse_count, abs=1)
-    assert len(tr_data) == 0

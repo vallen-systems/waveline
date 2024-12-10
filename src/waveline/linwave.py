@@ -445,6 +445,31 @@ class LinWave:
             self._channel_settings[2].decimation = factor
 
     @_require_connected
+    async def set_tr_samples(
+        self, channel: int, min_samples: int = 0, max_samples: int | None = None
+    ):
+        """
+        Set number of samples (limits) for transient data.
+
+        Per default, the number of samples matches the hit-duration (duration-adapted recording).
+        With this command, the number of TR samples can be defined with limits (minimum, maximum).
+        Fixing the length of transient data can be particularly useful for applications such as
+        frequency analysis, where a consistent frequency resolution is required.
+
+        Args:
+            channel: Channel number (0 for all channels)
+            min_samples: Minimum number of samples. Default is `0` (duration-adapted).
+                         Set to `0` to disable a fixed minimum limit.
+            max_samples: Maximum number of samples. Default is `None`, which sets `max_samples`
+                         equal to `min_samples`.
+                         Set to `0` to disable a fixed maximum limit.
+        """
+        self._check_channel_number(channel)
+        min_samples = int(min_samples)
+        max_samples = min_samples if max_samples is None else int(max_samples)
+        await self._send_command(f"set_acq tr_samples {min_samples} {max_samples} @{channel:d}")
+
+    @_require_connected
     async def set_tr_pretrigger(self, channel: int, samples: int):
         """
         Set pre-trigger samples for transient data.

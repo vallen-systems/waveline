@@ -371,6 +371,21 @@ async def test_set_filter_invalid_channel(mock_objects, channel):
 
 
 @pytest.mark.parametrize(
+    ("channel", "min_samples", "max_samples", "command"),
+    [
+        (0, 0, None, b"set_acq tr_samples 0 0 @0\n"),
+        (0, 2048, None, b"set_acq tr_samples 2048 2048 @0\n"),
+        (1, 1024, 2048, b"set_acq tr_samples 1024 2048 @1\n"),
+        (1, 1024, 0, b"set_acq tr_samples 1024 0 @1\n"),
+    ],
+)
+async def test_set_tr_samples(mock_objects, channel, min_samples, max_samples, command):
+    lw, _, writer = mock_objects
+    await lw.set_tr_samples(channel, min_samples, max_samples)
+    writer.write.assert_called_with(command)
+
+
+@pytest.mark.parametrize(
     ("channel", "samples", "command"),
     [
         (0, 0, b"set_acq tr_pre_trig 0 @0\n"),

@@ -234,10 +234,7 @@ class LinWave:
         )
 
     @_require_connected
-    async def _readlines(
-        self,
-        return_emptyline: bool = True,
-    ) -> list[bytes]:
+    async def _readlines(self, return_emptyline: bool = False) -> list[bytes]:
         lines: list[bytes] = []
         try:
             while True:

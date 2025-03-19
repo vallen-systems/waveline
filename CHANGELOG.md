@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `RecordType` string enum for `AERecord.type`
+- Add Python 3.13 to CI pipeline (#8)
+- [linwave] `LinWave.set_tr_samples` to set sample limits for transient data
+
+### Changed
+
+- Drop Python 3.6 support (#5)
+- Rename `AERecord.type_` -> `type` (#7)
+
+### Fixed
+
+- [linwave] Parse multiline outputs with trailing empty lines
+
+
 ## [0.8.0] - 2024-03-20
 
 ### Added
@@ -23,11 +39,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [spotwave] Remove `sync` parameter of `SpotWave.set_cct` method
 - Remove deprecated `conditionwave` module
 
+
 ## [0.7.1] - 2023-10-18
 
 ### Fixed
 
 - [spotwave] Return device names/paths from `SpotWave.discover` method, e.g. `/dev/ttyACM0` instead of `ttyACM0` on Linux systems
+
 
 ## [0.7.0] - 2023-10-17
 
@@ -50,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - List input range(s) in `get_info` response `Info.input_range` (human-readable format)
   - Remove `linwave.Info.range_count` field
   - Remove `spotwave.Info.input_range_decibel` field
+
 
 ## [0.6.0] - 2022-08-01
 

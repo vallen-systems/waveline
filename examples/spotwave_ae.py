@@ -17,50 +17,11 @@ merged by matching the transient recorder index (trai) field in both records.
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict, dataclass
-
-import numpy as np
 
 from waveline import SpotWave
-from waveline.spotwave import AERecord, TRRecord
+from waveline.utils import HitMerger
 
 logging.basicConfig(level=logging.INFO)
-
-
-@dataclass
-class HitRecord(AERecord):
-    """All fields from AERecord + fields for transient data."""
-
-    samples: int
-    data: np.ndarray
-
-
-def merge_ae_tr_records(generator):
-    """Helper function to merge matching AERecords and TRRecords (same trai)."""
-    dict_ae: dict[int, AERecord] = {}
-    dict_tr: dict[int, TRRecord] = {}
-
-    for record in generator:
-        if isinstance(record, AERecord):
-            if record.trai == 0:  # status data or hit without transient data -> return directly
-                yield record
-            else:
-                dict_ae[record.trai] = record  # store in buffer to merge later
-        if isinstance(record, TRRecord):
-            dict_tr[record.trai] = record  # store in buffer to merge later
-
-        # try to match and return merged HitRecords
-        trais_ae = set(dict_ae.keys())
-        trais_tr = set(dict_tr.keys())
-        trais_match = trais_ae.intersection(trais_tr)
-        for trai in trais_match:
-            ae_record = dict_ae.pop(trai)
-            tr_record = dict_tr.pop(trai)
-            yield HitRecord(
-                **asdict(ae_record),
-                samples=tr_record.samples,
-                data=tr_record.data,
-            )
 
 
 def main():
@@ -80,8 +41,11 @@ def main():
 
         print(sw.get_setup())
 
-        for record in merge_ae_tr_records(sw.acquire()):
-            print(record)
+        with HitMerger(max_queue_size=None) as merger:
+            for record in sw.acquire():
+                hit = merger.process(record)
+                if hit is not None:
+                    print(hit)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [0.10.0] - 2025-07-02
+
+### Added
+
+- `utils.HitMerger` class to efficiently merge AE and TR records (#9)
+
+
 ## [0.9.0] - 2025-03-19
 
 ### Added
@@ -153,7 +161,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First public release
 
-[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.9.0...HEAD
+[Unreleased]: https://github.com/vallen-systems/pyWaveLine/compare/0.10.0...HEAD
+[0.10.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/vallen-systems/pyWaveLine/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/vallen-systems/pyWaveLine/compare/0.7.0...0.7.1

@@ -28,10 +28,6 @@ def _check_firmware_version(firmware_version: str, min_firmware_version: str, ba
 _KV_PATTERN = re.compile(rb"([^\s=]+)(?:\s*=\s*(\S+))?")
 
 
-def _adc_to_eu(adc_to_volts: float, samplerate: float) -> float:
-    return adc_to_volts**2 * 1e14 / samplerate
-
-
 def _parse_ae_headerline(
     line: bytes,
     samplerate: float,
@@ -44,7 +40,7 @@ def _parse_ae_headerline(
     if record_type in (b"H", b"S"):  # hit or status data
         channel = int(matches[b"Ch"]) if default_channel is None else default_channel
         adc_to_volts = get_adc_to_volts_by_channel(channel)
-        adc_to_eu = _adc_to_eu(adc_to_volts, samplerate)
+        adc_to_eu = adc_to_volts**2 * 1e14 / samplerate
         return AERecord(
             type=RecordType(record_type.decode()),
             channel=channel,

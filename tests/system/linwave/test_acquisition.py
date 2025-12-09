@@ -1,6 +1,7 @@
 import asyncio
 from time import perf_counter
 
+import numpy as np
 import pytest
 
 from waveline import RecordType
@@ -99,7 +100,7 @@ async def test_acq_continuous_mode(lw, channel):
 
     await lw.set_channel(0, False)  # disable all channels
     await lw.set_channel(channel, True)  # enable selected channel
-    await lw.set_status_interval(0, 1000)  # disable status data
+    await lw.set_status_interval(0, 0)  # disable status data
     await lw.set_continuous_mode(0, True)
     await lw.set_ddt(0, ddt)
     await lw.set_tr_enabled(0, True)
@@ -121,6 +122,42 @@ async def test_acq_continuous_mode(lw, channel):
     for record in tr_data:
         assert record.trai != 0
         assert record.samples == expected_samples
+
+
+@pytest.mark.parametrize("channel", [1, 2])
+@pytest.mark.parametrize("range_index", [0, 1])
+async def test_acq_ae_features(lw, channel, range_index):
+    ddt = 10_000  # 10 ms
+    decimation = 1
+
+    await lw.set_channel(0, False)  # disable all channels
+    await lw.set_channel(channel, True)  # enable selected channel
+    await lw.set_status_interval(0, 0)  # disable status data
+    await lw.set_continuous_mode(0, True)
+    await lw.set_ddt(0, ddt)
+    await lw.set_tr_enabled(0, True)
+    await lw.set_tr_decimation(0, decimation)
+    await lw.set_tr_samples(0, 0)  # adaptive
+
+    await lw.start_acquisition()
+    await asyncio.sleep(0.1)
+    await lw.stop_acquisition()
+    await asyncio.sleep(0.1)
+
+    ae_data = await lw.get_ae_data()
+    tr_data = await lw.get_tr_data()
+
+    assert ae_data
+    assert ae_data
+
+    ae = ae_data[0]
+    tr = tr_data[0]
+
+    assert ae.channel == channel
+    assert ae.trai == tr.trai
+    assert ae.amplitude == pytest.approx(np.max(np.abs(tr.data)))
+    assert ae.energy == pytest.approx(1e14 * np.sum(tr.data**2) / lw.MAX_SAMPLERATE)
+    assert ae.duration == ddt / 1e6
 
 
 @pytest.mark.xfail(reason="only available since firmware version 2.32")

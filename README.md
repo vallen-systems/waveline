@@ -52,8 +52,8 @@ $ python -m venv .venv
 $ source .venv/bin/activate  # Linux
 $ .venv\Scripts\activate  # Windows
 
-# Install package (editable) and all development tools
-$ pip install -e .[dev]
+# Install package (editable) and all development tools (requires pip >= 25.1)
+$ pip install -e . --group dev
 
 # Run formatter
 $ ruff format .

@@ -43,7 +43,12 @@ dependencies = [
     "pyserial>=3",
 ]
 
-[project.optional-dependencies]
+[project.urls]
+Changelog = "https://github.com/vallen-systems/waveline/blob/master/CHANGELOG.md"
+Source = "https://github.com/vallen-systems/waveline"
+Issues = "https://github.com/vallen-systems/waveline/issues"
+
+[dependency-groups]
 docs = [
     "sphinx>=5",
     "sphinx-autodoc-typehints",
@@ -62,16 +67,13 @@ tests = [
 tools = [
     "mypy>=0.9",  # pyproject.toml support
     "ruff~=0.3",
-    "tox>=3.4",  # pyproject.toml support
+    "tox>=4.22",  # PEP 735 dependency_groups support
 ]
 dev = [
-    "waveline[docs,tests,tools]", # recursive dependency since pip 21.2
+    { include-group = "docs" },
+    { include-group = "tests" },
+    { include-group = "tools" },
 ]
-
-[project.urls]
-Changelog = "https://github.com/vallen-systems/pyWaveLine/blob/master/CHANGELOG.md"
-Source = "https://github.com/vallen-systems/pyWaveLine"
-Issues = "https://github.com/vallen-systems/pyWaveLine/issues"
 
 [tool.ruff]
 line-length = 100
@@ -146,7 +148,7 @@ deps =
 commands = mypy src/
 
 [testenv]
-extras = tests
+dependency_groups = tests
 commands =
     coverage run -m pytest --benchmark-disable
 
@@ -160,7 +162,7 @@ commands =
     coverage xml
 
 [testenv:docs]
-extras = docs
+dependency_groups = docs
 changedir = docs
 commands =
     sphinx-build -b linkcheck . _build

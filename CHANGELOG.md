@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Migrate optional dependencies (`docs`, `tests`, `tools`, `dev`) to PEP 735 dependency groups; install dev tooling with `pip install -e . --group dev` (requires pip >= 25.1)
+
 
 ## [0.10.0] - 2025-07-02
 

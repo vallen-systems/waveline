@@ -358,7 +358,7 @@ async def test_set_tr_decimation_invalid_channel(mock_objects, channel):
         (2, 10e3, None, 8, b"set_filter 10.0 none 8 @2\n"),
     ],
 )
-async def test_set_filter(mock_objects, channel, highpass, lowpass, order, command):
+async def test_set_filter(mock_objects, channel, highpass, lowpass, order, command):  # noqa: PLR0917
     lw, _, writer = mock_objects
     await lw.set_filter(channel, highpass, lowpass, order)
     writer.write.assert_called_with(command)
@@ -439,7 +439,7 @@ async def test_start_stop_acquisition(mock_objects):
         (1, 0.1, 0, 0, b"start_pulsing 0.1 0 0 @1\n"),
     ],
 )
-async def test_start_pulsing(mock_objects, channel, interval, count, cycles, command):
+async def test_start_pulsing(mock_objects, channel, interval, count, cycles, command):  # noqa: PLR0917
     lw, _, writer = mock_objects
     await lw.start_pulsing(channel, interval, count, cycles)
     writer.write.assert_called_with(command)
